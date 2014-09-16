@@ -38,7 +38,7 @@ var new_client = function(api_key, config) {
     }
   });
 
-  client.get_flag = function(key, user, default_val) {
+  client.get_flag = function(key, user, default_val, fn) {
     if (!key || !user) {
       return default_val;
     }
@@ -51,7 +51,9 @@ var new_client = function(api_key, config) {
       }
     })
     .then(function(response) {      
-      console.log(response.getBody());
+      var feature = response.getBody();
+
+      fn(feature);
     });
   }
 
@@ -61,4 +63,15 @@ var new_client = function(api_key, config) {
 
 module.exports = {
   init: new_client
+}
+
+var main = function(){
+  var client = new_client("7f60f21f-0552-4756-ae32-ca65a0c96ca8", {base_uri: "http://localhost:3000"});
+  client.get_flag("engine.enable", {"key": "user@test.com"}, false, function(feature) {
+    console.log(feature);
+  });
+}
+
+if (require.main === module) {
+    main();
 }
