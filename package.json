@@ -21,6 +21,6 @@
   "homepage": "https://github.com/launchdarkly/node-client",
   "dependencies": {
     "node-sha1": "0.0.1",
-    "requestify": "~0.1.16",
+    "requestify": "~0.1.16"
   }
 }
