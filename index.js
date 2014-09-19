@@ -6,7 +6,7 @@ var defaultConfig = {
   base_uri : 'https://app.launchdarkly.com'
 };
 
-var VERSION = "0.0.1";
+var VERSION = "0.0.2";
 
 var new_client = function(api_key, config) {
   var client = {};
