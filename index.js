@@ -142,7 +142,7 @@ function evaluate(feature, user) {
 
   for (i = 0; i < feature.variations.length; i ++) {
     if (match_variation(feature.variations[i], user)) {
-      return variation.value;
+      return feature.variations[i].value;
     }
   }
 
