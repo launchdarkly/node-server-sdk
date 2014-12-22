@@ -2,7 +2,7 @@
   "name": "ldclient-node",
   "version": "0.0.2",
   "description": "LaunchDarkly SDK for Node.js",
-  "main": "lib/index.js",
+  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
