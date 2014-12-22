@@ -2,7 +2,7 @@
   "name": "ldclient-node",
   "version": "0.0.2",
   "description": "LaunchDarkly SDK for Node.js",
-  "main": "index.js",
+  "main": "lib/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -11,9 +11,10 @@
     "url": "git://github.com:launchdarkly/node-client.git"
   },
   "keywords": [
-    "launchdarkly"
+    "launchdarkly",
+    "analytics",
+    "client"
   ],
-  "author": "",
   "license": "Apache 2.0",
   "bugs": {
     "url": "https://github.com/launchdarkly/node-client/issues"
@@ -22,5 +23,8 @@
   "dependencies": {
     "node-sha1": "0.0.1",
     "requestify": "~0.1.16"
+  },
+  "engines": {
+    "node": ">= 0.8.x"
   }
 }
