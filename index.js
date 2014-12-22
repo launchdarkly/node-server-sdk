@@ -165,12 +165,13 @@ function match_target(target, user) {
     }
     uValue = user.custom[attr];
 
-    if (typeof uValue === 'string' || typeof uValue === 'number') {
-      return target.values.indexOf(uValue) >= 0;
-    }
-    else if (uValue instanceof Array) {
+    if (uValue instanceof Array) {
       return intersect_safe(uValue, target.values).length > 0;
     }
+    else {
+      return target.values.indexOf(uValue) >= 0;
+    }
+    else    
     return false;
   }
 }
