@@ -4,6 +4,8 @@ var util = require('util');
 
 var VERSION = "0.0.3";
 
+var noop = function(){};
+
 global.setImmediate = global.setImmediate || process.nextTick.bind(process);
 
 
@@ -12,7 +14,7 @@ var new_client = function(api_key, config) {
 
   config = config || {};
 
-  client.base_uri = config.base_uri || 'https://app.launchdarkly.com';
+  client.base_uri = (config.base_uri || 'https://app.launchdarkly.com').replace(/\/+$/, "");
   client.connect_timeout = config.connect_timeout || 2;
   client.read_timeout = config.read_timeout || 10;
   client.capacity = config.capacity || 1000;
@@ -42,9 +44,10 @@ var new_client = function(api_key, config) {
   });
 
   client.get_flag = function(key, user, default_val, fn) {
+    var cb = fn || noop;
     if (!key || !user) {
       send_flag_event(client, key, user, default_val);
-      fn(default_val);
+      cb(default_val);
     }
 
     requestify.request(this.base_uri + '/api/eval/features/' + key, {
@@ -61,7 +64,7 @@ var new_client = function(api_key, config) {
         fn(default_val);
       } else {
         send_flag_event(client, key, user, result);
-        fn(result);
+        cb(result);
       }
     });
   }
@@ -79,9 +82,14 @@ var new_client = function(api_key, config) {
   }
 
   client.flush = function(fn) {
+    var cb = fn || noop;
+    var worklist;
     if (!this.queue.length) {
-      process.nextTick(fn);
+      process.nextTick(cb);
     }
+
+    worklist = this.queue.slice(0);
+    this.queue = [];
 
     requestify.request(this.base_uri + '/api/events/bulk', {
       method: "POST",
@@ -89,15 +97,14 @@ var new_client = function(api_key, config) {
         'Authorization': 'api_key ' + this.api_key,
         'User-Agent': 'NodeJSClient/' + VERSION
       },
-      body: this.queue
+      body: worklist
     })
     .then(function(response) {
-      this.queue = [];
-      fn(response);
+      cb(response);
     });
   }
 
-  setTimeout(client.flush.bind(client), client.flush_interval);
+  setInterval(client.flush.bind(client), client.flush_interval * 1000);
 
   return client;
 };
