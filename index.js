@@ -8,7 +8,6 @@ var noop = function(){};
 
 global.setImmediate = global.setImmediate || process.nextTick.bind(process);
 
-
 var new_client = function(api_key, config) {
   var client = {};
 
@@ -239,25 +238,4 @@ function intersect_safe(a, b)
   }
 
   return result;
-}
-
-var main = function(){
-  var client = new_client("7f60f21f-0552-4756-ae32-ca65a0c96ca8", {base_uri: "http://localhost:3000"});
-
-  for (i = 0; i < 1000; i++) {
-    (function(i) {
-      client.get_flag("engine.enable", {"key": "user@test.com"}, false, function(flag) {
-      console.log("Iteration " + i + ": " +flag);
-      if (i == 999) {
-        client.flush(function() {
-          console.log("Flushing client");
-        })
-      }
-      })
-    })(i);    
-  }
-}
-
-if (require.main === module) {
-    main();
 }
