@@ -79,7 +79,9 @@ var new_client = function(api_key, config) {
   }
 
   client.flush = function(fn) {
-    if (!this.queue.length) return setImmediate(fn);
+    if (!this.queue.length) {
+      process.nextTick(fn);
+    }
 
     requestify.request(this.base_uri + '/api/events/bulk', {
       method: "POST",
