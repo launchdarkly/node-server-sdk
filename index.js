@@ -1,7 +1,6 @@
 var requestify = require('requestify');
 var sha1 = require('node-sha1');
 var util = require('util');
-
 var VERSION = "0.0.5";
 
 var noop = function(){};
@@ -61,7 +60,8 @@ var new_client = function(api_key, config) {
         headers: {
           'Authorization': 'api_key ' + this.api_key,
           'User-Agent': 'NodeJSClient/' + VERSION
-        }
+        },
+        timeout: this.timeout * 1000
       })
       .then(function(response) {      
         var result = evaluate(response.getBody(), user);
@@ -72,6 +72,10 @@ var new_client = function(api_key, config) {
           send_flag_event(client, key, user, result);
           cb(result);
         }
+      },
+      function(error) {
+        console.log("[LaunchDarkly] Error: %j", error);
+        cb(error);
       });
     }
 
@@ -125,11 +129,17 @@ var new_client = function(api_key, config) {
         'Authorization': 'api_key ' + this.api_key,
         'User-Agent': 'NodeJSClient/' + VERSION
       },
-      body: worklist
+      body: worklist,
+      timeout: this.timeout * 1000
     })
     .then(function(response) {
       cb(response);
+    }, function(error) {
+      console.log("[LaunchDarkly] Error: %j", error);
+      cb(error);
     });
+
+
   }
 
   setInterval(client.flush.bind(client), client.flush_interval * 1000);
