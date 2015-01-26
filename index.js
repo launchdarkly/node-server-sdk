@@ -20,6 +20,7 @@ var new_client = function(api_key, config) {
   client.flush_interval = config.flush_interval || 5;  
   client.api_key = api_key;
   client.queue = [];
+  client.offline = false;
 
 
   if (!api_key) {
@@ -44,28 +45,48 @@ var new_client = function(api_key, config) {
 
   client.get_flag = function(key, user, default_val, fn) {
     var cb = fn || noop;
-    if (!key || !user) {
+
+    if (this.offline) {
+      cb(default_val);
+    }
+
+    else if (!key || !user) {
       send_flag_event(client, key, user, default_val);
       cb(default_val);
     }
 
-    requestify.request(this.base_uri + '/api/eval/features/' + key, {
-      method: "GET",
-      headers: {
-        'Authorization': 'api_key ' + this.api_key,
-        'User-Agent': 'NodeJSClient/' + VERSION
-      }
-    })
-    .then(function(response) {      
-      var result = evaluate(response.getBody(), user);
-      if (result == null) {
-        send_flag_event(client, key, user, default_val);
-        fn(default_val);
-      } else {
-        send_flag_event(client, key, user, result);
-        cb(result);
-      }
-    });
+    else {
+      requestify.request(this.base_uri + '/api/eval/features/' + key, {
+        method: "GET",
+        headers: {
+          'Authorization': 'api_key ' + this.api_key,
+          'User-Agent': 'NodeJSClient/' + VERSION
+        }
+      })
+      .then(function(response) {      
+        var result = evaluate(response.getBody(), user);
+        if (result == null) {
+          send_flag_event(client, key, user, default_val);
+          fn(default_val);
+        } else {
+          send_flag_event(client, key, user, result);
+          cb(result);
+        }
+      });
+    }
+
+  }
+
+  client.set_offline = function() {
+    this.offline = true; 
+  }
+
+  client.set_online = function() {
+    this.offline = false;
+  }
+
+  client.is_offline = function() {
+    return this.offline;
   }
 
   client.track = function(eventName, user, data) {
@@ -77,6 +98,14 @@ var new_client = function(api_key, config) {
       event.data = data;
     }
 
+    enqueue(client, event);
+  }
+
+  client.identify = function(user) {
+    var event = {"key": user.key,
+                 "kind": "identify",
+                 "user": user,
+                 "creationDate": new Date().getTime()};
     enqueue(client, event);
   }
 
@@ -113,6 +142,10 @@ module.exports = {
 }
 
 function enqueue(client, event) {
+  if (client.offline) {
+    return;
+  }
+
   client.queue.push(event);
 
   if (client.queue.length >= client.capacity) {
