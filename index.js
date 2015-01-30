@@ -67,7 +67,7 @@ var new_client = function(api_key, config) {
         var result = evaluate(response.getBody(), user);
         if (result == null) {
           send_flag_event(client, key, user, default_val);
-          fn(default_val);
+          cb(default_val);
         } else {
           send_flag_event(client, key, user, result);
           cb(result);
@@ -75,7 +75,7 @@ var new_client = function(api_key, config) {
       },
       function(error) {
         console.log("[LaunchDarkly] Error: %j", error);
-        cb(error);
+        cb(default_val);
       });
     }
 
@@ -194,11 +194,13 @@ function param_for_user(feature, user) {
   return result
 }
 
+var builtins = ['key', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name'];
+
 function match_target(target, user) {
   var uValue;
   var attr = target.attribute;
 
-  if (attr === 'key' || attr === 'ip' || attr === 'country') {
+  if (builtins.indexOf(attr) >= 0) {
     uValue = user[attr];
     if (uValue) {
       return target.values.indexOf(uValue) >= 0;
@@ -223,8 +225,19 @@ function match_target(target, user) {
   }
 }
 
+function match_user(variation, user) {
+  if (variation.userTarget) {
+    return match_target(variation.userTarget, user);
+  }
+  return false;
+}
+
 function match_variation(variation, user) {
   for (i = 0; i < variation.targets.length; i++) {
+    if (variation.userTarget && variation.targets[i].attribute === 'key') {
+      continue;
+    }
+
     if (match_target(variation.targets[i], user)) {
       return true;
     }
@@ -242,6 +255,12 @@ function evaluate(feature, user) {
   if (!param) {
     return null;
   }
+
+  for (i = 0; i < feature.variations.length; i ++) {
+    if (match_user(feature.variations[i], user)) {
+      return feature.variations[i].value;
+    }
+  }  
 
   for (i = 0; i < feature.variations.length; i ++) {
     if (match_variation(feature.variations[i], user)) {
