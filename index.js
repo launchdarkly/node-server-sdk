@@ -95,6 +95,7 @@ var new_client = function(api_key, config) {
 
   client.track = function(eventName, user, data) {
     var event = {"key": eventName, 
+                "user": user,
                 "kind": "custom", 
                 "creationDate": new Date().getTime()};
 
