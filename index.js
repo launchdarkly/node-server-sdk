@@ -1,7 +1,7 @@
 var requestify = require('requestify');
 var sha1 = require('node-sha1');
 var util = require('util');
-var VERSION = "0.1.0";
+var VERSION = "0.1.2";
 
 var noop = function(){};
 
@@ -257,20 +257,20 @@ function evaluate(feature, user) {
     return null;
   }
 
-  for (i = 0; i < feature.variations.length; i ++) {
+  for (var i = 0; i < feature.variations.length; i ++) {
     if (match_user(feature.variations[i], user)) {
       return feature.variations[i].value;
     }
   }  
 
-  for (i = 0; i < feature.variations.length; i ++) {
+  for (var i = 0; i < feature.variations.length; i ++) {
     if (match_variation(feature.variations[i], user)) {
       return feature.variations[i].value;
     }
   }
 
   var total = 0.0;   
-  for (i = 0; i < feature.variations.length; i++) {
+  for (var i = 0; i < feature.variations.length; i++) {
     total += feature.variations[i].weight / 100.0
     if (param < total) {
       return feature.variations[i].value;
