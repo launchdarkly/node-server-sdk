@@ -118,7 +118,7 @@ var new_client = function(api_key, config) {
     var cb = fn || noop;
     var worklist;
     if (!this.queue.length) {
-      process.nextTick(cb);
+      return process.nextTick(cb);
     }
 
     worklist = this.queue.slice(0);
