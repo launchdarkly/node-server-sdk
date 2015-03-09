@@ -43,6 +43,10 @@ var new_client = function(api_key, config) {
   });
 
   client.get_flag = function(key, user, default_val, fn) {
+    client.toggle(key, user, default_val, fn);
+  }
+
+  client.toggle = function(key, user, default_val, fn) {
     var cb = fn || noop;
 
     if (this.offline) {
@@ -195,7 +199,7 @@ function param_for_user(feature, user) {
   return result
 }
 
-var builtins = ['key', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name'];
+var builtins = ['key', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name', 'anonymous'];
 
 function match_target(target, user) {
   var uValue;
