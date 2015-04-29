@@ -31,3 +31,9 @@ Your first feature flag
               # the code to run if the feature is off 
           }
         });
+
+
+Learn more
+-----------
+
+Check out our [documentation](http://docs.launchdarkly.com) for in-depth instructions on configuring and using LaunchDarkly. You can also head straight to the [complete reference guide for this SDK](http://docs.launchdarkly.com/v1.0/docs/nodejs-sdk-reference).
