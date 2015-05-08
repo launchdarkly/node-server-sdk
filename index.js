@@ -50,12 +50,17 @@ var new_client = function(api_key, config) {
     var cb = fn || noop;
 
     if (this.offline) {
-      cb(default_val);
+      cb(null, default_val);
     }
 
-    else if (!key || !user) {
+    else if (!key) {
       send_flag_event(client, key, user, default_val);
-      cb(default_val);
+      cb(new Error("[LaunchDarkly] No flag key specified in toggle call"), default_val);
+    }
+
+    else if (!user) {
+      send_flag_event(client, key, user, default_val);
+      cb(new Error("[LaunchDarkly] No user specified in toggle call"), default_val);
     }
 
     else {
@@ -71,15 +76,14 @@ var new_client = function(api_key, config) {
         var result = evaluate(response.getBody(), user);
         if (result == null) {
           send_flag_event(client, key, user, default_val);
-          cb(default_val);
+          cb(null, default_val);
         } else {
           send_flag_event(client, key, user, result);
-          cb(result);
+          cb(null, result);
         }
       },
       function(error) {
-        console.log("[LaunchDarkly] Error: %j", error);
-        cb(default_val);
+        cb(error, default_val);
       });
     }
 
@@ -138,10 +142,9 @@ var new_client = function(api_key, config) {
       timeout: this.timeout * 1000
     })
     .then(function(response) {
-      cb(response);
+      cb(null, response);
     }, function(error) {
-      console.log("[LaunchDarkly] Error: %j", error);
-      cb(error);
+      cb(error, null);
     });
 
 
