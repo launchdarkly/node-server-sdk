@@ -147,7 +147,7 @@ var new_client = function(api_key, config) {
 
   }
 
-  setInterval(client.flush.bind(client), client.flush_interval * 1000);
+  setInterval(client.flush.bind(client), client.flush_interval * 1000).unref();
 
   return client;
 };
