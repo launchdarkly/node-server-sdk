@@ -1,7 +1,7 @@
 var requestify = require('requestify');
 var sha1 = require('node-sha1');
 var util = require('util');
-var VERSION = "0.2.0";
+var VERSION = "0.2.1";
 
 var noop = function(){};
 
