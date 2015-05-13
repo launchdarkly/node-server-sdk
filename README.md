@@ -23,7 +23,7 @@ Your first feature flag
 1. Create a new feature flag on your [dashboard](https://app.launchdarkly.com)
 2. In your application code, use the feature's key to check whether the flag is on for each user:
 
-        ld_client.toggle("your.flag.key", {"key" : "user@test.com"}, false, function(show_feature) {
+        ld_client.toggle("your.flag.key", {"key" : "user@test.com"}, false, function(err, show_feature) {
           if (show_feature) {
               # application code to show the feature
           }
