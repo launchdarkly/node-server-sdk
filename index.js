@@ -1,6 +1,8 @@
 var requestify = require('requestify');
 var sha1 = require('node-sha1');
 var util = require('util');
+var EventSource = require('eventsource');
+var pointer = require('json-pointer');
 var VERSION = "1.0.0";
 
 var noop = function(){};
@@ -13,6 +15,8 @@ var new_client = function(api_key, config) {
   config = config || {};
 
   client.base_uri = (config.base_uri || 'https://app.launchdarkly.com').replace(/\/+$/, "");
+  client.stream_uri = (config.stream_uri || 'https://stream.launchdarkly.com').replace(/\/+$/, "");
+  client.stream = config.stream;
   client.connect_timeout = config.connect_timeout || 2;
   client.read_timeout = config.read_timeout || 10;
   client.capacity = config.capacity || 1000;
@@ -25,6 +29,32 @@ var new_client = function(api_key, config) {
   if (!api_key) {
     throw new Error("You must configure the client with an API key");
   }
+
+  if (client.stream) {
+    es = new EventSource(config.stream_uri + '/features', {headers: {'Authorization': 'api_key ' + client.api_key}});
+    client.features = {};
+
+    es.addEventListener('put', function(e) {
+      if (e.data) {
+        client.features = JSON.parse(e.data);
+      }
+    });
+
+    es.addEventListener('patch', function(e) {
+      if (e.data) {
+        var patch = JSON.parse(e.data);
+        if (patch.path && patch.data) {
+          pointer.set(client.features, patch.path, patch.data);        
+        }
+      }
+    })
+
+    es.onerror = function(e) {
+      if (e.status && e.status == 401) {
+        throw new Error("Invalid LaunchDarkly API key");
+      }
+    }
+}
 
   requestify.cacheTransporter({
     cache: {},
@@ -63,6 +93,16 @@ var new_client = function(api_key, config) {
       cb(new Error("[LaunchDarkly] No user specified in toggle call"), default_val);
     }
 
+    if (this.stream) {
+      var result = evaluate(this.features[key], user);
+      if (result == null) {
+          send_flag_event(client, key, user, default_val);
+          cb(null, default_val);
+      } else {
+        send_flag_event(client, key, user, result);
+        cb(null, result);
+      }        
+    }
     else {
       requestify.request(this.base_uri + '/api/eval/features/' + key, {
         method: "GET",
