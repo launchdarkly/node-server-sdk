@@ -53,20 +53,21 @@ var new_client = function(api_key, config) {
       this.es.close();
     }
 
-    this.es = new EventSource(this.stream_uri + '/features', {headers: {'Authorization': 'api_key ' + this.api_key}});
+    this.es = new EventSource(this.stream_uri, {headers: {'Authorization': 'api_key ' + this.api_key}});
     this.features = {};
 
     var _self = this;
 
-    this.es.addEventListener('put', function(e) {
+    this.es.addEventListener('put/features', function(e) {
       if (e.data) {
         _self.features = JSON.parse(e.data);
         _self.seeded = true;
       }
     });
 
-    this.es.addEventListener('patch', function(e) {
+    this.es.addEventListener('patch/features', function(e) {
       if (e && e.data) {
+        console.log("Patching feature")
         var patch = JSON.parse(e.data);
         if (patch && patch.path && patch.data) {
           pointer.set(_self.features, patch.path, patch.data);        
