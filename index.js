@@ -30,33 +30,6 @@ var new_client = function(api_key, config) {
     throw new Error("You must configure the client with an API key");
   }
 
-  if (client.stream) {
-    es = new EventSource(config.stream_uri + '/features', {headers: {'Authorization': 'api_key ' + client.api_key}});
-    client.features = {};
-
-    es.addEventListener('put', function(e) {
-      if (e.data) {
-        client.features = JSON.parse(e.data);
-        client.seeded = true;
-      }
-    });
-
-    es.addEventListener('patch', function(e) {
-      if (e && e.data) {
-        var patch = JSON.parse(e.data);
-        if (patch && patch.path && patch.data) {
-          pointer.set(client.features, patch.path, patch.data);        
-        }
-      }
-    })
-
-    es.onerror = function(e) {
-      if (e && e.status == 401) {
-        throw new Error("[LaunchDarkly] Invalid API key");
-      }
-    }
-}
-
   requestify.cacheTransporter({
     cache: {},
     get: function(url, fn) {
@@ -72,6 +45,41 @@ var new_client = function(api_key, config) {
       fn();
     }
   });
+
+  client.initializeStream = function() {
+    this.seeded = false;
+
+    if (this.es) {
+      this.es.close();
+    }
+
+    this.es = new EventSource(this.stream_uri + '/features', {headers: {'Authorization': 'api_key ' + this.api_key}});
+    this.features = {};
+
+    var _self = this;
+
+    this.es.addEventListener('put', function(e) {
+      if (e.data) {
+        _self.features = JSON.parse(e.data);
+        _self.seeded = true;
+      }
+    });
+
+    this.es.addEventListener('patch', function(e) {
+      if (e && e.data) {
+        var patch = JSON.parse(e.data);
+        if (patch && patch.path && patch.data) {
+          pointer.set(_self.features, patch.path, patch.data);        
+        }
+      }
+    })
+
+    this.es.onerror = function(e) {
+      if (e && e.status == 401) {
+        throw new Error("[LaunchDarkly] Invalid API key");
+      }
+    }    
+  }
 
   client.get_flag = function(key, user, default_val, fn) {
     client.toggle(key, user, default_val, fn);
@@ -131,11 +139,18 @@ var new_client = function(api_key, config) {
   }
 
   client.set_offline = function() {
-    this.offline = true; 
+    this.offline = true;
+    if (this.es) {
+      this.es.close();
+      this.es = null;
+    } 
   }
 
   client.set_online = function() {
     this.offline = false;
+    if (this.stream) {
+      this.initializeStream();
+    }
   }
 
   client.is_offline = function() {
@@ -189,6 +204,10 @@ var new_client = function(api_key, config) {
     });
 
 
+  }
+
+  if (client.stream) {
+    client.initializeStream();
   }
 
   setInterval(client.flush.bind(client), client.flush_interval * 1000).unref();
