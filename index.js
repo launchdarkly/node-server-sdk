@@ -37,21 +37,22 @@ var new_client = function(api_key, config) {
     es.addEventListener('put', function(e) {
       if (e.data) {
         client.features = JSON.parse(e.data);
+        client.seeded = true;
       }
     });
 
     es.addEventListener('patch', function(e) {
-      if (e.data) {
+      if (e && e.data) {
         var patch = JSON.parse(e.data);
-        if (patch.path && patch.data) {
+        if (patch && patch.path && patch.data) {
           pointer.set(client.features, patch.path, patch.data);        
         }
       }
     })
 
     es.onerror = function(e) {
-      if (e.status && e.status == 401) {
-        throw new Error("Invalid LaunchDarkly API key");
+      if (e && e.status == 401) {
+        throw new Error("[LaunchDarkly] Invalid API key");
       }
     }
 }
@@ -93,7 +94,7 @@ var new_client = function(api_key, config) {
       cb(new Error("[LaunchDarkly] No user specified in toggle call"), default_val);
     }
 
-    if (this.stream) {
+    if (this.stream && this.seeded) {
       var result = evaluate(this.features[key], user);
       if (result == null) {
           send_flag_event(client, key, user, default_val);
