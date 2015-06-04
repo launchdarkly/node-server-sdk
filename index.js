@@ -136,7 +136,8 @@ var new_client = function(api_key, config) {
       method: "POST",
       headers: {
         'Authorization': 'api_key ' + this.api_key,
-        'User-Agent': 'NodeJSClient/' + VERSION
+        'User-Agent': 'NodeJSClient/' + VERSION,
+        'Content-Type': 'application/json'
       },
       body: worklist,
       timeout: this.timeout * 1000
