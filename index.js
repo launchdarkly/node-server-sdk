@@ -3,7 +3,7 @@ var sha1 = require('node-sha1');
 var util = require('util');
 var EventSource = require('eventsource');
 var pointer = require('json-pointer');
-var VERSION = "1.0.0";
+var VERSION = "1.1.0";
 
 var noop = function(){};
 
@@ -67,7 +67,6 @@ var new_client = function(api_key, config) {
 
     this.es.addEventListener('patch/features', function(e) {
       if (e && e.data) {
-        console.log("Patching feature")
         var patch = JSON.parse(e.data);
         if (patch && patch.path && patch.data) {
           pointer.set(_self.features, patch.path, patch.data);        
@@ -193,7 +192,8 @@ var new_client = function(api_key, config) {
       method: "POST",
       headers: {
         'Authorization': 'api_key ' + this.api_key,
-        'User-Agent': 'NodeJSClient/' + VERSION
+        'User-Agent': 'NodeJSClient/' + VERSION,
+        'Content-Type': 'application/json'
       },
       body: worklist,
       timeout: this.timeout * 1000
