@@ -72,7 +72,17 @@ var new_client = function(api_key, config) {
           pointer.set(_self.features, patch.path, patch.data);        
         }
       }
-    })
+    });
+
+    this.es.addEventListener('delete/features', function(e) {
+      if (e && e.data) {
+        var data = JSON.parse(e.data);
+
+        if (data && data.path) {
+          pointer.remove(_self.features, data.path);
+        }
+      }
+    });
 
     this.es.onerror = function(e) {
       if (e && e.status == 401) {
