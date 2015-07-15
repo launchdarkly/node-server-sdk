@@ -53,7 +53,7 @@ var new_client = function(api_key, config) {
       this.es.close();
     }
 
-    this.es = new EventSource(this.stream_uri, {headers: {'Authorization': 'api_key ' + this.api_key}});
+    this.es = new EventSource(this.stream_uri + "/", {headers: {'Authorization': 'api_key ' + this.api_key}});
     this.features = {};
 
     var _self = this;
@@ -77,6 +77,8 @@ var new_client = function(api_key, config) {
     this.es.onerror = function(e) {
       if (e && e.status == 401) {
         throw new Error("[LaunchDarkly] Invalid API key");
+      } else {
+        throw new Error(e);
       }
     }    
   }
