@@ -87,9 +87,8 @@ var new_client = function(api_key, config) {
     this.es.onerror = function(e) {
       if (e && e.status == 401) {
         throw new Error("[LaunchDarkly] Invalid API key");
-      } else {
-        throw new Error(e);
       }
+      console.log("[LaunchDarkly] Error connecting to stream: %j", e);
     }    
   }
 
