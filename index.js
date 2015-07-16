@@ -47,7 +47,7 @@ var new_client = function(api_key, config) {
   });
 
   client.initializeStream = function() {
-    this.seeded = false;
+    this.initialized = false;
 
     if (this.es) {
       this.es.close();
@@ -61,7 +61,7 @@ var new_client = function(api_key, config) {
     this.es.addEventListener('put/features', function(e) {
       if (e.data) {
         _self.features = JSON.parse(e.data);
-        _self.seeded = true;
+        _self.initialized = true;
       }
     });
 
@@ -113,7 +113,7 @@ var new_client = function(api_key, config) {
       cb(new Error("[LaunchDarkly] No user specified in toggle call"), default_val);
     }
 
-    if (this.stream && this.seeded) {
+    if (this.stream && this.initialized) {
       var result = evaluate(this.features[key], user);
       if (result == null) {
           send_flag_event(client, key, user, default_val);
