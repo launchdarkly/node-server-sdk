@@ -17,14 +17,12 @@ var new_client = function(api_key, config) {
   client.base_uri = (config.base_uri || 'https://app.launchdarkly.com').replace(/\/+$/, "");
   client.stream_uri = (config.stream_uri || 'https://stream.launchdarkly.com').replace(/\/+$/, "");
   client.stream = config.stream;
-  client.connect_timeout = config.connect_timeout || 2;
-  client.read_timeout = config.read_timeout || 10;
+  client.timeout = config.timeout || 2;
   client.capacity = config.capacity || 1000;
   client.flush_interval = config.flush_interval || 5;  
   client.api_key = api_key;
   client.queue = [];
   client.offline = false;
-
 
   if (!api_key) {
     throw new Error("You must configure the client with an API key");
@@ -61,6 +59,7 @@ var new_client = function(api_key, config) {
     this.es.addEventListener('put/features', function(e) {
       if (e.data) {
         _self.features = JSON.parse(e.data);
+        delete _self.disconnected;
         _self.initialized = true;
       }
     });
@@ -88,7 +87,10 @@ var new_client = function(api_key, config) {
       if (e && e.status == 401) {
         throw new Error("[LaunchDarkly] Invalid API key");
       }
-      console.log("[LaunchDarkly] Error connecting to stream: %j", e);
+      if (!_self.disconnected) {
+        console.log("[LaunchDarkly] Error connecting to stream: %j", e);
+        _self.disconnected = new Date().getTime();      
+      }
     }    
   }
 
@@ -98,6 +100,18 @@ var new_client = function(api_key, config) {
 
   client.toggle = function(key, user, default_val, fn) {
     var cb = fn || noop;
+
+    var make_request = (function(cb, err_cb) {
+      requestify.request(this.base_uri + '/api/eval/features/' + key, {
+        method: "GET",
+        headers: {
+          'Authorization': 'api_key ' + this.api_key,
+          'User-Agent': 'NodeJSClient/' + VERSION
+        },
+        timeout: this.timeout * 1000
+      })
+      .then(cb, err_cb);
+    }).bind(this);
 
     if (this.offline) {
       cb(null, default_val);
@@ -112,9 +126,21 @@ var new_client = function(api_key, config) {
       send_flag_event(client, key, user, default_val);
       cb(new Error("[LaunchDarkly] No user specified in toggle call"), default_val);
     }
-
+    
     if (this.stream && this.initialized) {
       var result = evaluate(this.features[key], user);
+      var _self = this;
+
+
+      if (this.disconnected && should_fallback_update(this.disconnected)) {
+        make_request(function(response){
+          _self.features[key] = response.getBody();
+        },
+        function(error) {
+          console.log("[LaunchDarkly] Failed to update feature in fallback mode. Flag values may be stale.");
+        });
+      }
+
       if (result == null) {
           send_flag_event(client, key, user, default_val);
           cb(null, default_val);
@@ -124,15 +150,7 @@ var new_client = function(api_key, config) {
       }        
     }
     else {
-      requestify.request(this.base_uri + '/api/eval/features/' + key, {
-        method: "GET",
-        headers: {
-          'Authorization': 'api_key ' + this.api_key,
-          'User-Agent': 'NodeJSClient/' + VERSION
-        },
-        timeout: this.timeout * 1000
-      })
-      .then(function(response) {      
+      make_request(function(response) {      
         var result = evaluate(response.getBody(), user);
         if (result == null) {
           send_flag_event(client, key, user, default_val);
@@ -229,6 +247,12 @@ var new_client = function(api_key, config) {
 
 module.exports = {
   init: new_client
+}
+
+// Try to update in fallback mode if we've been disconnected for longer than two minutes
+function should_fallback_update(disconnect_time) {
+  var now = new Date().getTime();
+  return now - disconnect_time > 120000;
 }
 
 function enqueue(client, event) {
