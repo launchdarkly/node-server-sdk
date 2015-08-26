@@ -67,8 +67,11 @@ var new_client = function(api_key, config) {
     this.es.addEventListener('patch/features', function(e) {
       if (e && e.data) {
         var patch = JSON.parse(e.data);
-        if (patch && patch.path && patch.data) {
-          pointer.set(_self.features, patch.path, patch.data);        
+        if (patch && patch.path && patch.data && patch.data.version) {
+          old = pointer.get(_self.features, patch.path);
+          if (old == null || old.version < patch.data.version) {
+            pointer.set(_self.features, patch.path, patch.data);
+          }
         }
       }
     });
@@ -77,8 +80,11 @@ var new_client = function(api_key, config) {
       if (e && e.data) {
         var data = JSON.parse(e.data);
 
-        if (data && data.path) {
-          pointer.remove(_self.features, data.path);
+        if (data && data.path && data.version) {
+          old = pointer.get(_self.features, data.path);
+          if (old == null || old.version < data.version) {
+            pointer.set(_self.features, data.path, {"deleted": true, "version": data.version})            
+          }
         }
       }
     });
@@ -131,10 +137,12 @@ var new_client = function(api_key, config) {
       var result = evaluate(this.features[key], user);
       var _self = this;
 
-
       if (this.disconnected && should_fallback_update(this.disconnected)) {
         make_request(function(response){
-          _self.features[key] = response.getBody();
+          var feature = response.getBody(), old = _self.features[key];
+          if (typeof feature !== 'undefined' && feature.version > old.version) {
+            _self.features[key] = feature;
+          }
         },
         function(error) {
           console.log("[LaunchDarkly] Failed to update feature in fallback mode. Flag values may be stale.");
@@ -350,7 +358,11 @@ function match_variation(variation, user) {
 }
 
 function evaluate(feature, user) {
-  if (!feature.on) {
+  if (typeof feature === 'undefined') {
+    return null;
+  }
+
+  if (feature.deleted || !feature.on) {
     return null;
   }
 
