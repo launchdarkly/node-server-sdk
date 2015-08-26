@@ -57,7 +57,7 @@ var new_client = function(api_key, config) {
     var _self = this;
 
     this.es.addEventListener('put/features', function(e) {
-      if (e.data) {
+      if (e && e.data) {
         _self.features = JSON.parse(e.data);
         delete _self.disconnected;
         _self.initialized = true;
