@@ -107,6 +107,18 @@ var new_client = function(api_key, config) {
   client.toggle = function(key, user, default_val, fn) {
     var cb = fn || noop;
 
+    var make_request = (function(cb, err_cb) {
+      requestify.request(this.base_uri + '/api/eval/features/' + key, {
+        method: "GET",
+        headers: {
+          'Authorization': 'api_key ' + this.api_key,
+          'User-Agent': 'NodeJSClient/' + VERSION
+        },
+        timeout: this.timeout * 1000
+      })
+      .then(cb, err_cb);
+    }).bind(this);
+
     if (this.offline) {
       cb(null, default_val);
     }
@@ -123,6 +135,19 @@ var new_client = function(api_key, config) {
     
     if (this.stream && this.initialized) {
       var result = evaluate(this.features[key], user);
+      var _self = this;
+
+      if (this.disconnected && should_fallback_update(this.disconnected)) {
+        make_request(function(response){
+          var feature = response.getBody(), old = _self.features[key];
+          if (typeof feature !== 'undefined' && feature.version > old.version) {
+            _self.features[key] = feature;
+          }
+        },
+        function(error) {
+          console.log("[LaunchDarkly] Failed to update feature in fallback mode. Flag values may be stale.");
+        });
+      }
 
       if (result == null) {
           send_flag_event(client, key, user, default_val);
@@ -133,15 +158,7 @@ var new_client = function(api_key, config) {
       }        
     }
     else {
-      requestify.request(this.base_uri + '/api/eval/features/' + key, {
-        method: "GET",
-        headers: {
-          'Authorization': 'api_key ' + this.api_key,
-          'User-Agent': 'NodeJSClient/' + VERSION
-        },
-        timeout: this.timeout * 1000
-      })
-      .then(function(response) {      
+      make_request(function(response) {      
         var result = evaluate(response.getBody(), user);
         if (result == null) {
           send_flag_event(client, key, user, default_val);
@@ -151,7 +168,7 @@ var new_client = function(api_key, config) {
           cb(null, result);
         }
       },
-       function(error) {
+      function(error) {
         cb(error, default_val);
       });
     }
