@@ -325,7 +325,7 @@ function match_target(target, user) {
     if (!user.custom) {
       return false;
     }
-    if (!user.custom[attr]) {
+    if (!user.custom.hasOwnProperty(attr)) {
       return false;
     }
     uValue = user.custom[attr];
