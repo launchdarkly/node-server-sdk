@@ -21,7 +21,6 @@
   },
   "homepage": "https://github.com/launchdarkly/node-client",
   "dependencies": {
-    "eventsource": "^0.1.6",
     "json-pointer": "^0.3.0",
     "node-sha1": "0.0.1",
     "original": "~0.0.8",
