@@ -1,7 +1,7 @@
 var requestify = require('requestify');
 var sha1 = require('node-sha1');
 var util = require('util');
-var EventSource = require('eventsource');
+var EventSource = require('./eventsource');
 var pointer = require('json-pointer');
 var VERSION = "1.1.0";
 
