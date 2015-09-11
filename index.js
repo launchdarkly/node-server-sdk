@@ -51,12 +51,12 @@ var new_client = function(api_key, config) {
       this.es.close();
     }
 
-    this.es = new EventSource(this.stream_uri + "/", {headers: {'Authorization': 'api_key ' + this.api_key}});
+    this.es = new EventSource(this.stream_uri + "/features", {headers: {'Authorization': 'api_key ' + this.api_key}});
     this.features = {};
 
     var _self = this;
 
-    this.es.addEventListener('put/features', function(e) {
+    this.es.addEventListener('put', function(e) {
       if (e && e.data) {
         _self.features = JSON.parse(e.data);
         delete _self.disconnected;
@@ -64,7 +64,7 @@ var new_client = function(api_key, config) {
       }
     });
 
-    this.es.addEventListener('patch/features', function(e) {
+    this.es.addEventListener('patch', function(e) {
       if (e && e.data) {
         var patch = JSON.parse(e.data);
         if (patch && patch.path && patch.data && patch.data.version) {
@@ -76,7 +76,7 @@ var new_client = function(api_key, config) {
       }
     });
 
-    this.es.addEventListener('delete/features', function(e) {
+    this.es.addEventListener('delete', function(e) {
       if (e && e.data) {
         var data = JSON.parse(e.data);
 
