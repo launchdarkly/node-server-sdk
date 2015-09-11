@@ -343,7 +343,8 @@ function match_user(variation, user) {
 }
 
 function match_variation(variation, user) {
-  for (var i = 0; i < variation.targets.length; i++) {
+  var i;
+  for (i = 0; i < variation.targets.length; i++) {
     if (variation.userTarget && variation.targets[i].attribute === 'key') {
       continue;
     }
@@ -356,7 +357,7 @@ function match_variation(variation, user) {
 }
 
 function evaluate(feature, user) {
-  var param;
+  var param, i;
   if (typeof feature === 'undefined') {
     return null;
   }
@@ -371,7 +372,7 @@ function evaluate(feature, user) {
     return null;
   }
 
-  for (var i = 0; i < feature.variations.length; i ++) {
+  for (i = 0; i < feature.variations.length; i ++) {
     if (match_user(feature.variations[i], user)) {
       return feature.variations[i].value;
     }
