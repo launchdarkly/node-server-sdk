@@ -31,15 +31,15 @@ var new_client = function(api_key, config) {
   requestify.cacheTransporter({
     cache: {},
     get: function(url, fn) {
-      fn(null, cache[url]);
+      fn(null, this.cache[url]);
     },
 
     set: function(url, response, fn) {
-      cache[url] = response;
+      this.cache[url] = response;
       fn();
     },
     purge: function(url, fn) {
-      delete cache[url];
+      delete this.cache[url];
       fn();
     }
   });
@@ -69,7 +69,7 @@ var new_client = function(api_key, config) {
         var patch = JSON.parse(e.data);
         if (patch && patch.path && patch.data && patch.data.version) {
           old = pointer.get(_self.features, patch.path);
-          if (old == null || old.version < patch.data.version) {
+          if (old === null || old.version < patch.data.version) {
             pointer.set(_self.features, patch.path, patch.data);
           }
         }
@@ -82,8 +82,8 @@ var new_client = function(api_key, config) {
 
         if (data && data.path && data.version) {
           old = pointer.get(_self.features, data.path);
-          if (old == null || old.version < data.version) {
-            pointer.set(_self.features, data.path, {"deleted": true, "version": data.version})            
+          if (old === null || old.version < data.version) {
+            pointer.set(_self.features, data.path, {"deleted": true, "version": data.version});         
           }
         }
       }
@@ -149,7 +149,7 @@ var new_client = function(api_key, config) {
         });
       }
 
-      if (result == null) {
+      if (result === null) {
           send_flag_event(client, key, user, default_val);
           cb(null, default_val);
       } else {
@@ -160,7 +160,7 @@ var new_client = function(api_key, config) {
     else {
       make_request(function(response) {      
         var result = evaluate(response.getBody(), user);
-        if (result == null) {
+        if (result === null) {
           send_flag_event(client, key, user, default_val);
           cb(null, default_val);
         } else {
@@ -205,7 +205,7 @@ var new_client = function(api_key, config) {
     }
 
     enqueue(client, event);
-  }
+  };
 
   client.identify = function(user) {
     var event = {"key": user.key,
@@ -213,7 +213,7 @@ var new_client = function(api_key, config) {
                  "user": user,
                  "creationDate": new Date().getTime()};
     enqueue(client, event);
-  }
+  };
 
   client.flush = function(fn) {
     var cb = fn || noop;
@@ -240,9 +240,7 @@ var new_client = function(api_key, config) {
     }, function(error) {
       cb(error, null);
     });
-
-
-  }
+  };
 
   if (client.stream) {
     client.initializeStream();
@@ -255,7 +253,7 @@ var new_client = function(api_key, config) {
 
 module.exports = {
   init: new_client
-}
+};
 
 // Try to update in fallback mode if we've been disconnected for longer than two minutes
 function should_fallback_update(disconnect_time) {
@@ -282,7 +280,7 @@ function send_flag_event(client, key, user, value) {
     "user": user,
     "value": value,
     "creationDate": new Date().getTime()
-  }
+  };
 
   enqueue(client, event);
 }
@@ -300,10 +298,10 @@ function param_for_user(feature, user) {
   }
 
   hashKey = util.format("%s.%s.%s", feature.key, feature.salt, idHash);
-  hashVal = parseInt(sha1(hashKey).substring(0,15), 16)
+  hashVal = parseInt(sha1(hashKey).substring(0,15), 16);
 
-  result = hashVal / 0xFFFFFFFFFFFFFFF
-  return result
+  result = hashVal / 0xFFFFFFFFFFFFFFF;
+  return result;
 }
 
 var builtins = ['key', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name', 'anonymous'];
@@ -345,6 +343,7 @@ function match_user(variation, user) {
 }
 
 function match_variation(variation, user) {
+  var i;
   for (i = 0; i < variation.targets.length; i++) {
     if (variation.userTarget && variation.targets[i].attribute === 'key') {
       continue;
@@ -358,6 +357,7 @@ function match_variation(variation, user) {
 }
 
 function evaluate(feature, user) {
+  var param, i;
   if (typeof feature === 'undefined') {
     return null;
   }
@@ -372,20 +372,20 @@ function evaluate(feature, user) {
     return null;
   }
 
-  for (var i = 0; i < feature.variations.length; i ++) {
+  for (i = 0; i < feature.variations.length; i ++) {
     if (match_user(feature.variations[i], user)) {
       return feature.variations[i].value;
     }
   }  
 
-  for (var i = 0; i < feature.variations.length; i ++) {
+  for (i = 0; i < feature.variations.length; i ++) {
     if (match_variation(feature.variations[i], user)) {
       return feature.variations[i].value;
     }
   }
 
   var total = 0.0;   
-  for (var i = 0; i < feature.variations.length; i++) {
+  for (i = 0; i < feature.variations.length; i++) {
     total += feature.variations[i].weight / 100.0
     if (param < total) {
       return feature.variations[i].value;
