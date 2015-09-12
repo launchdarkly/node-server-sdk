@@ -3,7 +3,7 @@ var sha1 = require('node-sha1');
 var util = require('util');
 var EventSource = require('./eventsource');
 var pointer = require('json-pointer');
-var VERSION = "1.1.0";
+var VERSION = "1.2.0";
 
 var noop = function(){};
 
