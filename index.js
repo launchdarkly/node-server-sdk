@@ -3,7 +3,7 @@ var sha1 = require('node-sha1');
 var util = require('util');
 var EventSource = require('./eventsource');
 var pointer = require('json-pointer');
-var VERSION = "1.1.0";
+var VERSION = "1.2.0";
 
 var noop = function(){};
 
@@ -16,7 +16,7 @@ var new_client = function(api_key, config) {
 
   client.base_uri = (config.base_uri || 'https://app.launchdarkly.com').replace(/\/+$/, "");
   client.stream_uri = (config.stream_uri || 'https://stream.launchdarkly.com').replace(/\/+$/, "");
-  client.stream = config.stream;
+  client.stream = (typeof config.stream === 'undefined') ? true : config.stream;
   client.timeout = config.timeout || 2;
   client.capacity = config.capacity || 1000;
   client.flush_interval = config.flush_interval || 5;  
