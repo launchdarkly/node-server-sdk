@@ -175,6 +175,13 @@ var new_client = function(api_key, config) {
 
   }
 
+  client.close = function() {
+    if (this.es) {
+      this.es.close();
+      this.es = null();
+    }
+  }
+
   client.set_offline = function() {
     this.offline = true;
     if (this.es) {
