@@ -94,7 +94,6 @@ var new_client = function(api_key, config) {
         throw new Error("[LaunchDarkly] Invalid API key");
       }
       if (!_self.disconnected) {
-        console.log("[LaunchDarkly] Error connecting to stream: %j", e);
         _self.disconnected = new Date().getTime();      
       }
     }    
