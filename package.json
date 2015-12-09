@@ -24,7 +24,8 @@
     "json-pointer": "^0.3.0",
     "node-sha1": "0.0.1",
     "original": "~0.0.8",
-    "requestify": "~0.1.16"
+    "requestify": "~0.1.16",
+    "global-tunnel": "https://github.com/launchdarkly/global-tunnel/tarball/30cdde93903d9d1e4beac3727cf20e9a8d2e0ccf"
   },
   "engines": {
     "node": ">= 0.8.x"

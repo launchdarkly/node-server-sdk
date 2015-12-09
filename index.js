@@ -3,6 +3,7 @@ var sha1 = require('node-sha1');
 var util = require('util');
 var EventSource = require('./eventsource');
 var pointer = require('json-pointer');
+var global_tunnel = require('global-tunnel');
 var VERSION = "1.4.0";
 
 var noop = function(){};
@@ -23,6 +24,18 @@ var new_client = function(api_key, config) {
   client.api_key = api_key;
   client.queue = [];
   client.offline = false;
+  client.proxy_host = config.proxy_host;
+  client.proxy_port = config.proxy_port;
+  client.proxy_auth = config.proxy_auth;
+
+  // Initialize global tunnel if proxy options are set
+  if (client.proxy_host && client.proxy_port) {
+    global_tunnel.initialize({
+      host: client.proxy_host,
+      port: client.proxy_port,
+      proxyAuth: client.proxy_auth      
+    });
+  }
 
   if (!api_key) {
     throw new Error("You must configure the client with an API key");
@@ -106,15 +119,17 @@ var new_client = function(api_key, config) {
   client.toggle = function(key, user, default_val, fn) {
     var cb = fn || noop;
 
+    var request_params = {
+      method: "GET",
+      headers: {
+        'Authorization': 'api_key ' + this.api_key,
+        'User-Agent': 'NodeJSClient/' + VERSION
+      },
+      timeout: this.timeout * 1000
+    };
+
     var make_request = (function(cb, err_cb) {
-      requestify.request(this.base_uri + '/api/eval/features/' + key, {
-        method: "GET",
-        headers: {
-          'Authorization': 'api_key ' + this.api_key,
-          'User-Agent': 'NodeJSClient/' + VERSION
-        },
-        timeout: this.timeout * 1000
-      })
+      requestify.request(this.base_uri + '/api/eval/features/' + key, request_params)
       .then(cb, err_cb);
     }).bind(this);
 
