@@ -282,12 +282,12 @@ function create_proxy_agent(config) {
   var proxy_fn;
 
   if (config.proxy_scheme === 'https') {
-    if (config.base_uri.startsWith('https')) {
+    if (!config.base_uri || config.base_uri.startsWith('https')) {
       proxy_fn = tunnel.httpsOverHttps;      
     } else {
       proxy_fn = tunnel.httpOverHttps;
     }
-  } else if (config.base_uri.startsWith('https')) {
+  } else if (!config.base_uri || config.base_uri.startsWith('https')) {
     proxy_fn = tunnel.httpsOverHttp;
   } else {
     proxy_fn = tunnel.httpOverHttp;
