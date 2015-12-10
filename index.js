@@ -275,13 +275,13 @@ module.exports = {
   init: new_client
 };
 
-function create_proxy_agent(options) {
-  var host = options.proxy_host
-    , port = options.proxy_port
-    , auth = options.proxy_auth;
+function create_proxy_agent(config) {
+  var host = config.proxy_host
+    , port = config.proxy_port
+    , auth = config.proxy_auth;
   var proxy_fn;
 
-  if (options.proxy_scheme === 'https') {
+  if (config.proxy_scheme === 'https') {
     if (config.base_uri.startsWith('https')) {
       proxy_fn = tunnel.httpsOverHttps;      
     } else {
