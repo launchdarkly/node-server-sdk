@@ -4,7 +4,7 @@ var util = require('util');
 var EventSource = require('./eventsource');
 var pointer = require('json-pointer');
 var global_tunnel = require('global-tunnel');
-var VERSION = "1.4.0";
+var VERSION = "1.5.0";
 
 var noop = function(){};
 
