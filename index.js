@@ -276,31 +276,27 @@ module.exports = {
 };
 
 function create_proxy_agent(config) {
-  var host = config.proxy_host
-    , port = config.proxy_port
-    , auth = config.proxy_auth;
-  var proxy_fn;
+  var options = {
+    proxy: {
+      host: config.proxy_host,
+      port: config.proxy_port,
+      proxyAuth: config.proxy_auth
+    } 
+  };
 
   if (config.proxy_scheme === 'https') {
     if (!config.base_uri || config.base_uri.startsWith('https')) {
-      proxy_fn = tunnel.httpsOverHttps;      
+     return tunnel.httpsOverHttps(options);      
     } else {
-      proxy_fn = tunnel.httpOverHttps;
+      return tunnel.httpOverHttps(options);
     }
   } else if (!config.base_uri || config.base_uri.startsWith('https')) {
-    proxy_fn = tunnel.httpsOverHttp;
+    return tunnel.httpsOverHttp(options);
   } else {
-    proxy_fn = tunnel.httpOverHttp;
+    return tunnel.httpOverHttp(options);
   }
-
-  return proxy_fn({
-    proxy: {
-      host: host,
-      port: port,
-      proxyAuth: auth,
-    }
-  });
 }
+
 
 // Try to update in fallback mode if we've been disconnected for longer than two minutes
 function should_fallback_update(disconnect_time) {
