@@ -24,7 +24,7 @@
     "json-pointer": "^0.3.0",
     "node-sha1": "0.0.1",
     "original": "~0.0.8",
-    "requestify": "https://github.com/launchdarkly/requestify/tarball/f491ba8b5cd66a2e96e1dc0a2b2892babd81b988",
+    "requestify": "https://github.com/launchdarkly/requestify/tarball/d7e23d3f05e55415f50c0970a7e61bea5336f18f",
     "tunnel": "https://github.com/launchdarkly/node-tunnel/tarball/d860e57650cce1ea655d00854c81babe6b47e02c"
   },
   "engines": {
