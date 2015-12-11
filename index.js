@@ -3,7 +3,7 @@ var sha1 = require('node-sha1');
 var util = require('util');
 var EventSource = require('./eventsource');
 var pointer = require('json-pointer');
-var global_tunnel = require('global-tunnel');
+var tunnel = require('tunnel');
 var VERSION = "1.5.0";
 
 var noop = function(){};
@@ -27,14 +27,11 @@ var new_client = function(api_key, config) {
   client.proxy_host = config.proxy_host;
   client.proxy_port = config.proxy_port;
   client.proxy_auth = config.proxy_auth;
+  client.proxy_scheme = config.proxy_scheme;
 
   // Initialize global tunnel if proxy options are set
-  if (client.proxy_host && client.proxy_port) {
-    global_tunnel.initialize({
-      host: client.proxy_host,
-      port: client.proxy_port,
-      proxyAuth: client.proxy_auth      
-    });
+  if (client.proxy_host && client.proxy_port ) {
+    client.proxy_agent = create_proxy_agent(config);
   }
 
   if (!api_key) {
@@ -64,7 +61,7 @@ var new_client = function(api_key, config) {
       this.es.close();
     }
 
-    this.es = new EventSource(this.stream_uri + "/features", {headers: {'Authorization': 'api_key ' + this.api_key}});
+    this.es = new EventSource(this.stream_uri + "/features", {agent: client.proxy_agent, headers: {'Authorization': 'api_key ' + this.api_key}});
     this.features = {};
 
     var _self = this;
@@ -125,7 +122,8 @@ var new_client = function(api_key, config) {
         'Authorization': 'api_key ' + this.api_key,
         'User-Agent': 'NodeJSClient/' + VERSION
       },
-      timeout: this.timeout * 1000
+      timeout: this.timeout * 1000,
+      agent: this.proxy_agent
     };
 
     var make_request = (function(cb, err_cb) {
@@ -254,7 +252,8 @@ var new_client = function(api_key, config) {
         'Content-Type': 'application/json'
       },
       body: worklist,
-      timeout: this.timeout * 1000
+      timeout: this.timeout * 1000,
+      agent: this.proxy_agent
     })
     .then(function(response) {
       cb(null, response);
@@ -275,6 +274,29 @@ var new_client = function(api_key, config) {
 module.exports = {
   init: new_client
 };
+
+function create_proxy_agent(config) {
+  var options = {
+    proxy: {
+      host: config.proxy_host,
+      port: config.proxy_port,
+      proxyAuth: config.proxy_auth
+    } 
+  };
+
+  if (config.proxy_scheme === 'https') {
+    if (!config.base_uri || config.base_uri.startsWith('https')) {
+     return tunnel.httpsOverHttps(options);      
+    } else {
+      return tunnel.httpOverHttps(options);
+    }
+  } else if (!config.base_uri || config.base_uri.startsWith('https')) {
+    return tunnel.httpsOverHttp(options);
+  } else {
+    return tunnel.httpOverHttp(options);
+  }
+}
+
 
 // Try to update in fallback mode if we've been disconnected for longer than two minutes
 function should_fallback_update(disconnect_time) {
