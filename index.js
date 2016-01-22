@@ -54,7 +54,8 @@ var new_client = function(api_key, config) {
     }
   });
 
-  client.initializeStream = function() {
+  client.initializeStream = function(fn) {
+    var cb = fn || noop;
     this.initialized = false;
 
     if (this.es) {
@@ -72,6 +73,7 @@ var new_client = function(api_key, config) {
         delete _self.disconnected;
         _self.initialized = true;
       }
+      cb();
     });
 
     this.es.addEventListener('patch', function(e) {
@@ -185,6 +187,26 @@ var new_client = function(api_key, config) {
       });
     }
 
+  }
+
+  client.all_flags = function(user, fn) {
+    var cb = fn || noop;
+    if (!this.stream) {
+      cb(new Error("[LaunchDarkly] fetching all flags requires streaming mode enabled"));
+    }
+
+    evalFlags = function() {
+      cb(null, Object.keys(this.features).reduce(function(previous, current) {
+        previous[current] = evaluate(this.features[current], user);
+        return previous;
+      }, {}));
+    };
+
+    if (this.stream && !this.initialized) {
+      this.initializeStream(evalFlags);
+    } else {
+      evalFlags();
+    }
   }
 
   client.close = function() {
