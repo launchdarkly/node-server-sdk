@@ -194,9 +194,9 @@ var new_client = function(api_key, config) {
     var _self = this;
 
     eval_flags = function() {
-      cb(null, Object.keys(_self.features).reduce(function(previous, current) {
-        previous[current] = evaluate(_self.features[current], user);
-        return previous;
+      cb(null, Object.keys(_self.features).reduce(function(accum, current) {
+        accum[current] = evaluate(_self.features[current], user);
+        return accum;
       }, {}));
     };   
 
