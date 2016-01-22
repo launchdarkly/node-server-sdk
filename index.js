@@ -191,21 +191,23 @@ var new_client = function(api_key, config) {
 
   client.all_flags = function(user, fn) {
     var cb = fn || noop;
+    var _self = this;
+
+    eval_flags = function() {
+      cb(null, Object.keys(_self.features).reduce(function(previous, current) {
+        previous[current] = evaluate(_self.features[current], user);
+        return previous;
+      }, {}));
+    };   
+
     if (!this.stream) {
       cb(new Error("[LaunchDarkly] fetching all flags requires streaming mode enabled"));
     }
-
-    evalFlags = function() {
-      cb(null, Object.keys(this.features).reduce(function(previous, current) {
-        previous[current] = evaluate(this.features[current], user);
-        return previous;
-      }, {}));
-    };
-
-    if (this.stream && !this.initialized) {
-      this.initializeStream(evalFlags);
-    } else {
-      evalFlags();
+    else if (!this.initialized) {
+      this.initializeStream(eval_flags);
+    } 
+    else {
+      eval_flags();
     }
   }
 
