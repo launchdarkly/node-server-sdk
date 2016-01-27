@@ -198,16 +198,14 @@ var new_client = function(api_key, config) {
     var cb = fn || noop;
     var _self = this;
 
-    eval_flags = function() {
+    if (this.stream && this.initialized) {
       cb(null, Object.keys(_self.features).reduce(function(accum, current) {
         accum[current] = evaluate(_self.features[current], user);
         return accum;
-      }, {}));
-    };   
-
-    if (!this.stream) {
+      }, {}));      
+    } 
+    else {
       var request = make_request(client, '/api/eval/features');
-
       request(function(response) {
         features = response.getBody();
         cb(null, Object.keys(features).reduce(function(accum, current) {
@@ -217,12 +215,6 @@ var new_client = function(api_key, config) {
       }, function(err) {
         cb(err, null);
       });
-    }
-    else if (!this.initialized) {
-      this.initializeStream(eval_flags);
-    } 
-    else {
-      eval_flags();
     }
   }
 
