@@ -135,16 +135,19 @@ var new_client = function(api_key, config) {
 
     if (this.offline) {
       cb(null, default_val);
+      return;
     }
 
     else if (!key) {
       send_flag_event(client, key, user, default_val);
       cb(new Error("[LaunchDarkly] No flag key specified in toggle call"), default_val);
+      return;
     }
 
     else if (!user) {
       send_flag_event(client, key, user, default_val);
       cb(new Error("[LaunchDarkly] No user specified in toggle call"), default_val);
+      return;
     }
     
     if (this.stream && this.initialized) {
@@ -166,9 +169,11 @@ var new_client = function(api_key, config) {
       if (result === null) {
           send_flag_event(client, key, user, default_val);
           cb(null, default_val);
+          return;
       } else {
         send_flag_event(client, key, user, result);
         cb(null, result);
+        return;
       }        
     }
     else {
@@ -177,13 +182,16 @@ var new_client = function(api_key, config) {
         if (result === null) {
           send_flag_event(client, key, user, default_val);
           cb(null, default_val);
+          return;
         } else {
           send_flag_event(client, key, user, result);
           cb(null, result);
+          return;
         }
       },
       function(error) {
         cb(error, default_val);
+        return;
       });
     }
 
@@ -281,8 +289,10 @@ var new_client = function(api_key, config) {
     })
     .then(function(response) {
       cb(null, response);
+      return;
     }, function(error) {
       cb(error, null);
+      return;
     });
   };
 
