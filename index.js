@@ -17,6 +17,7 @@ var new_client = function(api_key, config) {
 
   client.base_uri = (config.base_uri || 'https://app.launchdarkly.com').replace(/\/+$/, "");
   client.stream_uri = (config.stream_uri || 'https://stream.launchdarkly.com').replace(/\/+$/, "");
+  client.events_uri = (config.events_uri || 'https://events.launchdarkly.com').replace(/\/+$/, "");
   client.stream = (typeof config.stream === 'undefined') ? true : config.stream;
   client.timeout = config.timeout || 5;
   client.capacity = config.capacity || 1000;
@@ -252,7 +253,7 @@ var new_client = function(api_key, config) {
     worklist = this.queue.slice(0);
     this.queue = [];
 
-    requestify.request(this.base_uri + '/api/events/bulk', {
+    requestify.request(this.events_uri + '/bulk', {
       method: "POST",
       headers: {
         'Authorization': 'api_key ' + this.api_key,
