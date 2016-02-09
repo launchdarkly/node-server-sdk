@@ -137,13 +137,13 @@ var new_client = function(api_key, config) {
     }
 
     else if (!key) {
-      send_flag_event(client, key, user, default_val);
+      send_flag_event(client, key, user, default_val, default_val);
       cb(new Error("[LaunchDarkly] No flag key specified in toggle call"), default_val);
       return;
     }
 
     else if (!user) {
-      send_flag_event(client, key, user, default_val);
+      send_flag_event(client, key, user, default_val, default_val);
       cb(new Error("[LaunchDarkly] No user specified in toggle call"), default_val);
       return;
     }
@@ -165,11 +165,11 @@ var new_client = function(api_key, config) {
       }
 
       if (result === null) {
-          send_flag_event(client, key, user, default_val);
+          send_flag_event(client, key, user, default_val, default_val);
           cb(null, default_val);
           return;
       } else {
-        send_flag_event(client, key, user, result);
+        send_flag_event(client, key, user, result, default_val);
         cb(null, result);
         return;
       }        
@@ -178,11 +178,11 @@ var new_client = function(api_key, config) {
       make_request(function(response) {      
         var result = evaluate(response.getBody(), user);
         if (result === null) {
-          send_flag_event(client, key, user, default_val);
+          send_flag_event(client, key, user, default_val, default_val);
           cb(null, default_val);
           return;
         } else {
-          send_flag_event(client, key, user, result);
+          send_flag_event(client, key, user, result, default_val);
           cb(null, result);
           return;
         }
@@ -326,12 +326,13 @@ function enqueue(client, event) {
   } 
 }
 
-function send_flag_event(client, key, user, value) {
+function send_flag_event(client, key, user, value, default_val) {
   var event = {
     "kind": "feature",
     "key": key,
     "user": user,
     "value": value,
+    "default": default_val,
     "creationDate": new Date().getTime()
   };
 
