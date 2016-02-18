@@ -17,6 +17,7 @@ var new_client = function(api_key, config) {
 
   client.base_uri = (config.base_uri || 'https://app.launchdarkly.com').replace(/\/+$/, "");
   client.stream_uri = (config.stream_uri || 'https://stream.launchdarkly.com').replace(/\/+$/, "");
+  client.events_uri = (config.events_uri || 'https://events.launchdarkly.com').replace(/\/+$/, "");
   client.stream = (typeof config.stream === 'undefined') ? true : config.stream;
   client.timeout = config.timeout || 5;
   client.capacity = config.capacity || 1000;
@@ -136,13 +137,13 @@ var new_client = function(api_key, config) {
     }
 
     else if (!key) {
-      send_flag_event(client, key, user, default_val);
+      send_flag_event(client, key, user, default_val, default_val);
       cb(new Error("[LaunchDarkly] No flag key specified in toggle call"), default_val);
       return;
     }
 
     else if (!user) {
-      send_flag_event(client, key, user, default_val);
+      send_flag_event(client, key, user, default_val, default_val);
       cb(new Error("[LaunchDarkly] No user specified in toggle call"), default_val);
       return;
     }
@@ -164,11 +165,11 @@ var new_client = function(api_key, config) {
       }
 
       if (result === null) {
-          send_flag_event(client, key, user, default_val);
+          send_flag_event(client, key, user, default_val, default_val);
           cb(null, default_val);
           return;
       } else {
-        send_flag_event(client, key, user, result);
+        send_flag_event(client, key, user, result, default_val);
         cb(null, result);
         return;
       }        
@@ -177,11 +178,11 @@ var new_client = function(api_key, config) {
       request(function(response) {      
         var result = evaluate(response.getBody(), user);
         if (result === null) {
-          send_flag_event(client, key, user, default_val);
+          send_flag_event(client, key, user, default_val, default_val);
           cb(null, default_val);
           return;
         } else {
-          send_flag_event(client, key, user, result);
+          send_flag_event(client, key, user, result, default_val);
           cb(null, result);
           return;
         }
@@ -275,7 +276,7 @@ var new_client = function(api_key, config) {
     worklist = this.queue.slice(0);
     this.queue = [];
 
-    requestify.request(this.base_uri + '/api/events/bulk', {
+    requestify.request(this.events_uri + '/bulk', {
       method: "POST",
       headers: {
         'Authorization': 'api_key ' + this.api_key,
@@ -366,12 +367,13 @@ function enqueue(client, event) {
   } 
 }
 
-function send_flag_event(client, key, user, value) {
+function send_flag_event(client, key, user, value, default_val) {
   var event = {
     "kind": "feature",
     "key": key,
     "user": user,
     "value": value,
+    "default": default_val,
     "creationDate": new Date().getTime()
   };
 
