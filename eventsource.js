@@ -171,6 +171,7 @@ function EventSource(url, eventSourceInitDict) {
 
     req.on('error', onConnectionClosed);
     req.setNoDelay(true);
+    req.setSocketKeepAlive(true);
     req.end();
   }
 
