@@ -4,7 +4,7 @@
   "description": "LaunchDarkly SDK for Node.js",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha"
   },
   "repository": {
     "type": "git",
@@ -29,5 +29,9 @@
   },
   "engines": {
     "node": ">= 0.8.x"
+  },
+  "devDependencies": {
+    "mocha": "^2.4.5",
+    "rewire": "^2.5.1"
   }
 }

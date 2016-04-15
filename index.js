@@ -122,6 +122,7 @@ var new_client = function(api_key, config) {
   }
 
   client.toggle = function(key, user, default_val, fn) {
+    sanitize_user(user);
     var cb = fn || noop;
 
     var request_params = {
@@ -230,6 +231,7 @@ var new_client = function(api_key, config) {
   }
 
   client.track = function(eventName, user, data) {
+    sanitize_user(user);
     var event = {"key": eventName, 
                 "user": user,
                 "kind": "custom", 
@@ -243,6 +245,7 @@ var new_client = function(api_key, config) {
   };
 
   client.identify = function(user) {
+    sanitize_user(user);
     var event = {"key": user.key,
                  "kind": "identify",
                  "user": user,
@@ -462,4 +465,10 @@ function intersect_safe(a, b)
   return a.filter(function(value) {
     return b.indexOf(value) > -1;
   });
+}
+
+function sanitize_user(u) {
+  if (u['key']) {
+    u['key'] = u['key'].toString();
+  }
 }

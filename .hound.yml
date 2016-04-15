@@ -7,11 +7,12 @@ curly: true,
 forin: true,
 immed: true,
 latedef: "nofunc",
-maxlen: 80,
+maxlen: 120,
 newcap: true,
 noarg: true,
 noempty: true,
 nonew: true,
+eqeqeq: true,
 predef: [
 "$",
 "jQuery",
@@ -22,7 +23,8 @@ predef: [
 "it",
 "angular",
 "inject",
-"module"
+"module",
+"require"
 ],
 quotmark: true,
 trailing: true,
