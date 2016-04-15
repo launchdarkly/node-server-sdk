@@ -29,5 +29,9 @@
   },
   "engines": {
     "node": ">= 0.8.x"
+  },
+  "devDependencies": {
+    "mocha": "^2.4.5",
+    "rewire": "^2.5.1"
   }
 }
