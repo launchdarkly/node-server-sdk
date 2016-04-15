@@ -469,6 +469,6 @@ function intersect_safe(a, b)
 
 function sanitize_user(u) {
   if (u['key']) {
-    u['key'] = "" + u['key'];
+    u['key'] = u['key'].toString();
   }
 }

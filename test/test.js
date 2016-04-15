@@ -171,4 +171,10 @@ describe('sanitize_user', function () {
     sanitize_user(u);
     assert.deepStrictEqual(u0, u);
   });
+  it('should not blow up if the key is missing', function () {
+    var u = {firstName: 'alice'};
+    var u0 = {firstName: 'alice'};
+    sanitize_user(u);
+    assert.deepStrictEqual(u0, u);
+  });
 });
