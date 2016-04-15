@@ -11,18 +11,18 @@ describe('match_target', function() {
   it('should match users based on top-level attributes', function () {
     var u = {key: 'foo', firstName: 'alice'};
     var t = {
-              attribute: "firstName",
-              op: "in",
-              values: [ "alice", "bob"]
+              attribute: 'firstName',
+              op: 'in',
+              values: [ 'alice', 'bob']
             }
     assert(match_target(t, u));
   });
   it('should not match users based on non-matching top-level attributes', function () {
     var u = {key: 'foo', firstName: 'clarisse'};
     var t = {
-              attribute: "firstName",
-              op: "in",
-              values: [ "alice", "bob"]
+              attribute: 'firstName',
+              op: 'in',
+              values: [ 'alice', 'bob']
             }
     assert(!match_target(t, u));
   });
@@ -30,13 +30,13 @@ describe('match_target', function() {
     var u = {
               key: 'foo', 
               custom: {
-                favoriteColor: "green"
+                favoriteColor: 'green'
               }
             };
     var t = {
-              attribute: "favoriteColor",
-              op: "in",
-              values: [ "green", "red" ]
+              attribute: 'favoriteColor',
+              op: 'in',
+              values: [ 'green', 'red' ]
             }
     assert(match_target(t, u));
   });
@@ -44,13 +44,13 @@ describe('match_target', function() {
     var u = {
               key: 'foo', 
               custom: {
-                favoriteDog: "labrador"
+                favoriteDog: 'labrador'
               }
             };
     var t = {
-              attribute: "favoriteColor",
-              op: "in",
-              values: [ "green", "red" ]
+              attribute: 'favoriteColor',
+              op: 'in',
+              values: [ 'green', 'red' ]
             }
     assert(!match_target(t, u));
   });
@@ -58,13 +58,13 @@ describe('match_target', function() {
     var u = {
               key: 'foo', 
               custom: {
-                favoriteDog: "labrador"
+                favoriteDog: 'labrador'
               }
             };
     var t = {
-              attribute: "favoriteColor",
-              op: "in",
-              values: [ "green", "red" ]
+              attribute: 'favoriteColor',
+              op: 'in',
+              values: [ 'green', 'red' ]
             }
     assert(!match_target(t, u));
   });
@@ -72,28 +72,28 @@ describe('match_target', function() {
     var u = {
               key: 'foo', 
               custom: {
-                favoriteColor: [ "green", "blue" ]
+                favoriteColor: [ 'green', 'blue' ]
               }
             };
     var t = {
-              attribute: "favoriteColor",
-              op: "in",
-              values: [ "green", "red" ]
-            }
+              attribute: 'favoriteColor',
+              op: 'in',
+              values: [ 'green', 'red' ]
+            };
     assert(match_target(t, u));
   });
   it('should not match users based non-intersecting list custom string attributes', function () {
     var u = {
               key: 'foo', 
               custom: {
-                favoriteColor: [ "purple", "blue" ]
+                favoriteColor: [ 'purple', 'blue' ]
               }
             };
     var t = {
-              attribute: "favoriteColor",
-              op: "in",
-              values: [ "green", "red" ]
-            }
+              attribute: 'favoriteColor',
+              op: 'in',
+              values: [ 'green', 'red' ]
+            };
     assert(!match_target(t, u));
   });
 });
