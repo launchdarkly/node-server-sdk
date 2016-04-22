@@ -55,7 +55,8 @@ var new_client = function(api_key, config) {
     }
   });
 
-  client.initializeStream = function() {
+  client.initializeStream = function(fn) {
+    var cb = fn || noop;
     this.initialized = false;
 
     if (this.es) {
@@ -73,6 +74,7 @@ var new_client = function(api_key, config) {
         delete _self.disconnected;
         _self.initialized = true;
       }
+      cb();
     });
 
     this.es.addEventListener('patch', function(e) {
@@ -135,10 +137,7 @@ var new_client = function(api_key, config) {
       agent: this.proxy_agent
     };
 
-    var make_request = (function(cb, err_cb) {
-      requestify.request(this.base_uri + '/api/eval/features/' + key, request_params)
-      .then(cb, err_cb);
-    }).bind(this);
+    var request = make_request(client, '/api/eval/features/' + key);
 
     if (this.offline) {
       cb(null, default_val);
@@ -162,7 +161,7 @@ var new_client = function(api_key, config) {
       var _self = this;
 
       if (this.disconnected && should_fallback_update(this.disconnected)) {
-        make_request(function(response){
+        request(function(response){
           var feature = response.getBody(), old = _self.features[key];
           if (typeof feature !== 'undefined' && feature.version > old.version) {
             _self.features[key] = feature;
@@ -184,7 +183,7 @@ var new_client = function(api_key, config) {
       }        
     }
     else {
-      make_request(function(response) {      
+      request(function(response) {      
         var result = evaluate(response.getBody(), user);
         if (result === null) {
           send_flag_event(client, key, user, default_val, default_val);
@@ -202,6 +201,34 @@ var new_client = function(api_key, config) {
       });
     }
 
+  }
+
+  client.all_flags = function(user, fn) {
+    var cb = fn || noop;
+    var _self = this;
+
+    if (this.offline) {
+      return cb(null, null);
+    }
+
+    if (this.stream && this.initialized) {
+      cb(null, Object.keys(_self.features).reduce(function(accum, current) {
+        accum[current] = evaluate(_self.features[current], user);
+        return accum;
+      }, {}));      
+    } 
+    else {
+      var request = make_request(client, '/api/eval/features');
+      request(function(response) {
+        features = response.getBody();
+        cb(null, Object.keys(features).reduce(function(accum, current) {
+          accum[current] = evaluate(features[current], user);
+          return accum;
+        }, {}));     
+      }, function(err) {
+        cb(err, null);
+      });
+    }
   }
 
   client.close = function() {
@@ -295,6 +322,23 @@ var new_client = function(api_key, config) {
 module.exports = {
   init: new_client
 };
+
+function make_request(client, path) {
+  var request_params = {
+    method: "GET",
+    headers: {
+      'Authorization': 'api_key ' + client.api_key,
+      'User-Agent': 'NodeJSClient/' + VERSION
+    },
+    timeout: client.timeout * 1000,
+    agent: client.proxy_agent
+  };
+
+  return function(cb, err_cb) {
+    requestify.request(client.base_uri + path, request_params)
+    .then(cb, err_cb);
+  };
+}
 
 function create_proxy_agent(config) {
   var options = {
