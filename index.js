@@ -4,7 +4,7 @@ var util = require('util');
 var EventSource = require('./eventsource');
 var pointer = require('json-pointer');
 var tunnel = require('tunnel');
-var VERSION = "1.5.2";
+var VERSION = "1.6.0";
 
 var noop = function(){};
 
