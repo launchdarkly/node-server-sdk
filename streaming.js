@@ -1,65 +1,91 @@
- 
-// TODO turn this into a StreamProcessor class
- client.initializeStream = function(fn) {
-    var cb = fn || noop;
-    this.initialized = false;
+var EventSource = require('./eventsource');
 
-    if (this.es) {
-      this.es.close();
-    }
+function StreamProcessor(api_key, config, requestor) {
+  var processor = {},
+      store = config.feature_store,
+      es;
 
-    this.es = new EventSource(config.stream_uri + "/features", {agent: config.proxy_agent, headers: {'Authorization': 'api_key ' + this.api_key}});
-    this.features = {};
+  processor.start = function(cb) {
+    // TODO change the URL for v2
+    es = new EventSource(config.stream_uri + "/features", 
+      {
+        agent: config.proxy_agent, 
+        headers: {'Authorization': 'api_key ' + api_key}
+      });
 
-    var _self = this;
 
-    this.es.addEventListener('put', function(e) {
+    es.addEventListener('put', function(e) {
       if (e && e.data) {
-        _self.features = JSON.parse(e.data);
-        delete _self.disconnected;
-        _self.initialized = true;
+        var flags = JSON.parse(e.data);
+        store.init(flags, function() {
+          cb();
+        })     
+      } else {
+        cb(new Error("[LaunchDarkly] Unexpected payload from event stream"));
       }
-      cb();
     });
 
-    this.es.addEventListener('patch', function(e) {
+    es.addEventListener('patch', function(e) {
       if (e && e.data) {
-        try {
-          var patch = JSON.parse(e.data);
-          if (patch && patch.path && patch.data && patch.data.version) {
-            old = pointer.get(_self.features, patch.path);
-            if (old === null || old.version < patch.data.version) {
-              pointer.set(_self.features, patch.path, patch.data);
-            }
+        var flag = JSON.parse(e.data);
+        store.upsert(flag.key, flag);
+      } else {
+        cb(new Error("[LaunchDarkly] Unexpected payload from event stream"));
+      }
+    });
+
+    es.addEventListener('delete', function(e) {
+      if (e && e.data) {
+        var data = JSON.parse(e.data),
+            key = data.path.charAt(0) === '/' ? data.path.substring(1) : data.path, // trim leading '/'
+            version = data.version;
+
+        store.delete(key, version);
+      } else {
+        cb(new Error("[LaunchDarkly] Unexpected payload from event stream"));
+      }
+    });
+
+    es.addEventListener('indirect/put', function(e) {
+      requestor.request_all_flags(true, function (err, flags) {
+        if (err) {
+          cb(err);
+        } else {
+          store.init(flags, function() {
+            cb();
+          })          
+        }
+      })
+    });
+
+    es.addEventListener('indirect/patch', function(e) {
+      if (e && e.data) {
+        var key = data.charAt(0) === '/' ? data.substring(1) : data
+        requestor.request_flag(key, true, function(err, flag) {
+          if (err) {
+            cb(err);
+          } else {
+            store.upsert(key, flag);
           }
-        } catch(e) {}  // do not update a flag that does not exist
+        })
+      } else {
+        cb(new Error("[LaunchDarkly] Unexpected payload from event stream"));
       }
     });
-
-    this.es.addEventListener('delete', function(e) {
-      if (e && e.data) {
-        try {
-          var data = JSON.parse(e.data);
-
-          if (data && data.path && data.version) {
-            old = pointer.get(_self.features, data.path);
-            if (old === null || old.version < data.version) {
-              pointer.set(_self.features, data.path, {
-                "deleted": true,
-                "version": data.version
-              });
-            }
-          }
-        } catch(e) {}  // do not delete a flag that does not exist
-      }
-    });
-
-    this.es.onerror = function(e) {
-      if (e && e.status == 401) {
-        throw new Error("[LaunchDarkly] Invalid API key");
-      }
-      if (!_self.disconnected) {
-        _self.disconnected = new Date().getTime();      
-      }
-    }    
   }
+
+  processor.stop = function() {
+    if (es) {
+      es.close();
+    }
+  }
+
+  processor.close = function() {
+    this.stop();
+  }
+
+
+  return processor;
+}
+
+module.exports = StreamProcessor;

@@ -1,11 +1,11 @@
 var requestify = require('requestify');
 var sha1 = require('node-sha1');
 var util = require('util');
-var EventSource = require('./eventsource');
 var InMemoryFeatureStore = require('./feature_store');
 var Requestor = require('./requestor');
 var EventEmitter = require('events').EventEmitter;
 var PollingProcessor = require('./polling');
+var StreamingProcessor = require('./streaming');
 var pointer = require('json-pointer');
 var tunnel = require('tunnel');
 var winston = require('winston');
@@ -55,8 +55,8 @@ var new_client = function(api_key, config) {
 
   if (!config.use_ldd && !config.offline) {
     if (config.stream) {
-      // TODO set up the stream processor
       config.logger.info("[LaunchDarkly] Initializing stream processor to receive feature flag updates");
+      update_processor = StreamingProcessor(api_key, config, requestor);
     } else {
       config.logger.info("[LaunchDarkly] Initializing polling processor to receive feature flag updates");
       update_processor = PollingProcessor(config, requestor);

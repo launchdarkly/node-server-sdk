@@ -1,4 +1,3 @@
-
 var noop = function(){};
 
 function PollingProcessor(config, requestor) {
