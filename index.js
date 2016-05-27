@@ -2,8 +2,13 @@ var requestify = require('requestify');
 var sha1 = require('node-sha1');
 var util = require('util');
 var EventSource = require('./eventsource');
+var InMemoryFeatureStore = require('./feature_store');
+var Requestor = require('./requestor');
+var EventEmitter = require('events').EventEmitter;
+var PollingProcessor = require('./polling');
 var pointer = require('json-pointer');
 var tunnel = require('tunnel');
+var winston = require('winston');
 var VERSION = "1.6.0";
 
 var noop = function(){};
@@ -11,250 +16,138 @@ var noop = function(){};
 global.setImmediate = global.setImmediate || process.nextTick.bind(process);
 
 var new_client = function(api_key, config) {
-  var client = {};
+  var client = new EventEmitter(),
+      initialized = false;
 
   config = config || {};
-
-  client.base_uri = (config.base_uri || 'https://app.launchdarkly.com').replace(/\/+$/, "");
-  client.stream_uri = (config.stream_uri || 'https://stream.launchdarkly.com').replace(/\/+$/, "");
-  client.events_uri = (config.events_uri || 'https://events.launchdarkly.com').replace(/\/+$/, "");
-  client.stream = (typeof config.stream === 'undefined') ? true : config.stream;
-  client.timeout = config.timeout || 5;
-  client.capacity = config.capacity || 1000;
-  client.flush_interval = config.flush_interval || 5;  
-  client.api_key = api_key;
-  client.queue = [];
-  client.offline = false;
-  client.proxy_host = config.proxy_host;
-  client.proxy_port = config.proxy_port;
-  client.proxy_auth = config.proxy_auth;
-  client.proxy_scheme = config.proxy_scheme;
-
+  config.version = VERSION;
+  
+  config.base_uri = (config.base_uri || 'https://app.launchdarkly.com').replace(/\/+$/, "");
+  config.stream_uri = (config.stream_uri || 'https://stream.launchdarkly.com').replace(/\/+$/, "");
+  config.events_uri = (config.events_uri || 'https://events.launchdarkly.com').replace(/\/+$/, "");
+  config.stream = (typeof config.stream === 'undefined') ? true : config.stream;
+  config.timeout = config.timeout || 5;
+  config.capacity = config.capacity || 1000;
+  config.flush_interval = config.flush_interval || 5;  
+  config.poll_interval = config.poll_interval > 1 ? config.poll_interval : 1;
   // Initialize global tunnel if proxy options are set
-  if (client.proxy_host && client.proxy_port ) {
-    client.proxy_agent = create_proxy_agent(config);
+  if (config.proxy_host && config.proxy_port ) {
+    config.proxy_agent = create_proxy_agent(config);
   }
+  config.logger = (config.logger || 
+    new winston.Logger({
+      level: 'error',
+      transports: [
+        new (winston.transports.Console)(),
+      ]
+    })
+  );
+  config.feature_store = config.feature_store || InMemoryFeatureStore();
+
+  api_key = api_key;
+  queue = [];
 
   if (!api_key) {
     throw new Error("You must configure the client with an API key");
   }
 
-  requestify.cacheTransporter({
-    cache: {},
-    get: function(url, fn) {
-      fn(null, this.cache[url]);
-    },
+  requestor = Requestor(api_key, config);
 
-    set: function(url, response, fn) {
-      this.cache[url] = response;
-      fn();
-    },
-    purge: function(url, fn) {
-      delete this.cache[url];
-      fn();
+  if (!config.use_ldd && !config.offline) {
+    if (config.stream) {
+      // TODO set up the stream processor
+      config.logger.info("[LaunchDarkly] Initializing stream processor to receive feature flag updates");
+    } else {
+      config.logger.info("[LaunchDarkly] Initializing polling processor to receive feature flag updates");
+      update_processor = PollingProcessor(config, requestor);
     }
-  });
-
-  client.initializeStream = function(fn) {
-    var cb = fn || noop;
-    this.initialized = false;
-
-    if (this.es) {
-      this.es.close();
-    }
-
-    this.es = new EventSource(this.stream_uri + "/features", {agent: client.proxy_agent, headers: {'Authorization': 'api_key ' + this.api_key}});
-    this.features = {};
-
-    var _self = this;
-
-    this.es.addEventListener('put', function(e) {
-      if (e && e.data) {
-        _self.features = JSON.parse(e.data);
-        delete _self.disconnected;
-        _self.initialized = true;
+    update_processor.start(function(err) {
+      if (err) {
+        client.emit('error', err);
       }
-      cb();
-    });
-
-    this.es.addEventListener('patch', function(e) {
-      if (e && e.data) {
-        try {
-          var patch = JSON.parse(e.data);
-          if (patch && patch.path && patch.data && patch.data.version) {
-            old = pointer.get(_self.features, patch.path);
-            if (old === null || old.version < patch.data.version) {
-              pointer.set(_self.features, patch.path, patch.data);
-            }
-          }
-        } catch(e) {}  // do not update a flag that does not exist
+      else {
+        initialized = true;
+        client.emit('ready');
       }
     });
-
-    this.es.addEventListener('delete', function(e) {
-      if (e && e.data) {
-        try {
-          var data = JSON.parse(e.data);
-
-          if (data && data.path && data.version) {
-            old = pointer.get(_self.features, data.path);
-            if (old === null || old.version < data.version) {
-              pointer.set(_self.features, data.path, {
-                "deleted": true,
-                "version": data.version
-              });
-            }
-          }
-        } catch(e) {}  // do not delete a flag that does not exist
-      }
-    });
-
-    this.es.onerror = function(e) {
-      if (e && e.status == 401) {
-        throw new Error("[LaunchDarkly] Invalid API key");
-      }
-      if (!_self.disconnected) {
-        _self.disconnected = new Date().getTime();      
-      }
-    }    
-  }
-
-  client.get_flag = function(key, user, default_val, fn) {
-    client.toggle(key, user, default_val, fn);
   }
 
   client.toggle = function(key, user, default_val, fn) {
     sanitize_user(user);
     var cb = fn || noop;
 
-    var request_params = {
-      method: "GET",
-      headers: {
-        'Authorization': 'api_key ' + this.api_key,
-        'User-Agent': 'NodeJSClient/' + VERSION
-      },
-      timeout: this.timeout * 1000,
-      agent: this.proxy_agent
-    };
-
-    var request = make_request(client, '/api/eval/features/' + key);
-
-    if (this.offline) {
+    if (this.is_offline()) {
+      config.logger.info("[LaunchDarkly] toggle called in offline mode. Returning default value.");
       cb(null, default_val);
       return;
     }
 
     else if (!key) {
-      send_flag_event(client, key, user, default_val, default_val);
+      config.logger.error("[LaunchDarkly] No feature flag key specified. Returning default value.");
+      send_flag_event(key, user, default_val, default_val);
       cb(new Error("[LaunchDarkly] No flag key specified in toggle call"), default_val);
       return;
     }
 
     else if (!user) {
-      send_flag_event(client, key, user, default_val, default_val);
+      config.logger.error("[LaunchDarkly] No user specified. Returning default value.");
+      send_flag_event(key, user, default_val, default_val);
       cb(new Error("[LaunchDarkly] No user specified in toggle call"), default_val);
       return;
     }
-    
-    if (this.stream && this.initialized) {
-      var result = evaluate(this.features[key], user);
-      var _self = this;
 
-      if (this.disconnected && should_fallback_update(this.disconnected)) {
-        request(function(response){
-          var feature = response.getBody(), old = _self.features[key];
-          if (typeof feature !== 'undefined' && feature.version > old.version) {
-            _self.features[key] = feature;
-          }
-        },
-        function(error) {
-          console.log("[LaunchDarkly] Failed to update feature in fallback mode. Flag values may be stale.");
-        });
-      }
+    if (!initialized) {
+      config.logger.error("LaunchDarkly client has not finished initializing. Returning default value.");
+      send_flag_event(key, user, default_val, default_val);
+      cb(new Error("[LaunchDarkly] toggle called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?)"), default_val);
+      return; 
+    }
 
+    config.feature_store.get(key, function(flag) {
+      var result = evaluate(flag, user);
       if (result === null) {
-          send_flag_event(client, key, user, default_val, default_val);
-          cb(null, default_val);
-          return;
+        config.logger.debug("[LaunchDarkly] Result value is null in toggle");
+        send_flag_event(key, user, default_val, default_val);
+        cb(null, default_val);
+        return;
       } else {
-        send_flag_event(client, key, user, result, default_val);
+        send_flag_event(key, user, result, default_val);
         cb(null, result);
         return;
-      }        
-    }
-    else {
-      request(function(response) {      
-        var result = evaluate(response.getBody(), user);
-        if (result === null) {
-          send_flag_event(client, key, user, default_val, default_val);
-          cb(null, default_val);
-          return;
-        } else {
-          send_flag_event(client, key, user, result, default_val);
-          cb(null, result);
-          return;
-        }
-      },
-      function(error) {
-        cb(error, default_val);
-        return;
-      });
-    }
-
+      }       
+    });
   }
 
   client.all_flags = function(user, fn) {
     var cb = fn || noop;
-    var _self = this;
 
-    if (this.offline) {
-      return cb(null, null);
+    if (this.is_offline() || !user) {
+      config.logger.info("[LaunchDarkly] all_flags called in offline mode. Returning empty map.");
+
+      cb(null, null);
+      return;
     }
 
-    if (this.stream && this.initialized) {
-      cb(null, Object.keys(_self.features).reduce(function(accum, current) {
-        accum[current] = evaluate(_self.features[current], user);
-        return accum;
-      }, {}));      
-    } 
-    else {
-      var request = make_request(client, '/api/eval/features');
-      request(function(response) {
-        features = response.getBody();
-        cb(null, Object.keys(features).reduce(function(accum, current) {
-          accum[current] = evaluate(features[current], user);
-          return accum;
-        }, {}));     
-      }, function(err) {
-        cb(err, null);
-      });
-    }
+    config.feature_store.all(function(flags) {
+      var result = {};
+      for (var key in flags) {
+        if (flags.hasOwnProperty(key)) {
+          result[key] = evaluate(flags[key], user);
+        }
+      }
+      cb(null, result);
+      return;
+    });
   }
 
   client.close = function() {
-    if (this.es) {
-      this.es.close();
-      this.es = null;
-    }
-  }
-
-  client.set_offline = function() {
-    this.offline = true;
-    if (this.es) {
-      this.es.close();
-      this.es = null;
-    } 
-  }
-
-  client.set_online = function() {
-    this.offline = false;
-    if (this.stream) {
-      this.initializeStream();
+    if (update_processor) {
+      update_processor.close();
     }
   }
 
   client.is_offline = function() {
-    return this.offline;
+    return config.offline;
   }
 
   client.track = function(eventName, user, data) {
@@ -283,23 +176,25 @@ var new_client = function(api_key, config) {
   client.flush = function(fn) {
     var cb = fn || noop;
     var worklist;
-    if (!this.queue.length) {
+    if (!queue.length) {
       return process.nextTick(cb);
     }
 
-    worklist = this.queue.slice(0);
-    this.queue = [];
+    worklist = queue.slice(0);
+    queue = [];
 
-    requestify.request(this.events_uri + '/bulk', {
+    config.logger.debug("Flushing %d events", worklist.length);
+
+    requestify.request(config.events_uri + '/bulk', {
       method: "POST",
       headers: {
-        'Authorization': 'api_key ' + this.api_key,
+        'Authorization': 'api_key ' + api_key,
         'User-Agent': 'NodeJSClient/' + VERSION,
         'Content-Type': 'application/json'
       },
       body: worklist,
-      timeout: this.timeout * 1000,
-      agent: this.proxy_agent
+      timeout: config.timeout * 1000,
+      agent: config.proxy_agent
     })
     .then(function(response) {
       cb(null, response);
@@ -310,10 +205,32 @@ var new_client = function(api_key, config) {
     });
   };
 
-  if (client.stream) {
-    client.initializeStream();
+  function enqueue(event) {
+    if (config.offline) {
+      return;
+    }
+
+    queue.push(event);
+
+    if (queue.length >= config.capacity) {
+      client.flush();
+    } 
   }
 
+  function send_flag_event(key, user, value, default_val) {
+    var event = {
+      "kind": "feature",
+      "key": key,
+      "user": user,
+      "value": value,
+      "default": default_val,
+      "creationDate": new Date().getTime()
+    };
+
+    enqueue(event);
+  }
+
+  // TODO keep the reference and stop flushing after close
   setInterval(client.flush.bind(client), client.flush_interval * 1000).unref();
 
   return client;
@@ -323,22 +240,6 @@ module.exports = {
   init: new_client
 };
 
-function make_request(client, path) {
-  var request_params = {
-    method: "GET",
-    headers: {
-      'Authorization': 'api_key ' + client.api_key,
-      'User-Agent': 'NodeJSClient/' + VERSION
-    },
-    timeout: client.timeout * 1000,
-    agent: client.proxy_agent
-  };
-
-  return function(cb, err_cb) {
-    requestify.request(client.base_uri + path, request_params)
-    .then(cb, err_cb);
-  };
-}
 
 function create_proxy_agent(config) {
   var options = {
@@ -361,39 +262,6 @@ function create_proxy_agent(config) {
     return tunnel.httpOverHttp(options);
   }
 }
-
-
-// Try to update in fallback mode if we've been disconnected for longer than two minutes
-function should_fallback_update(disconnect_time) {
-  var now = new Date().getTime();
-  return now - disconnect_time > 120000;
-}
-
-function enqueue(client, event) {
-  if (client.offline) {
-    return;
-  }
-
-  client.queue.push(event);
-
-  if (client.queue.length >= client.capacity) {
-    client.flush();
-  } 
-}
-
-function send_flag_event(client, key, user, value, default_val) {
-  var event = {
-    "kind": "feature",
-    "key": key,
-    "user": user,
-    "value": value,
-    "default": default_val,
-    "creationDate": new Date().getTime()
-  };
-
-  enqueue(client, event);
-}
-
 
 function param_for_user(feature, user) {
   var idHash, hashKey, hashVal, result;
