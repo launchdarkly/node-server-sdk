@@ -60,7 +60,7 @@ function StreamProcessor(api_key, config, requestor) {
 
     es.addEventListener('indirect/patch', function(e) {
       if (e && e.data) {
-        var key = data.charAt(0) === '/' ? data.substring(1) : data
+        var key = data.charAt(0) === '/' ? data.substring(1) : data;
         requestor.request_flag(key, true, function(err, flag) {
           if (err) {
             cb(err);
