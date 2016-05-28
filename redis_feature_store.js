@@ -1,12 +1,16 @@
 var redis = require('redis'),
-    cache = require('memory-cache');
+    NodeCache = require( "node-cache" );
 
 
 function RedisFeatureStore(redis_opts, cache_ttl) {
-  var client = redis.createClient(redis_opts)
-    , store = {}
-    , features_key = ":features";
+  var client = redis.createClient(redis_opts),
+      store = {},
+      features_key = ":features",
+      cache = new NodeCache({ stdTTL: cache_ttl});
 
+  // Allow driver programs to exit, even if the Redis
+  // socket is active
+  client.unref();
 
   // A helper that performs a get with either the redis client
   // itself, or a multi object from a redis transaction
@@ -59,19 +63,22 @@ function RedisFeatureStore(redis_opts, cache_ttl) {
   }
 
   store.init = function(flags, cb) {
+    var stringified = {};
     var multi = client.multi();
     
     multi.del(features_key);
-    cache.clear();
+    cache.flushAll();
 
     for (var key in flags) {
       if (Object.hasOwnProperty.call(flags,key)) {
-        multi.hset(features_key, key, JSON.stringify(flags[key]));
+        stringified[key] = JSON.stringify(flags[key]);
       }
       if (cache_ttl) {
-        cache.put(key, flags[key], cache_ttl);
+        cache.set(key, flags[key]);
       }
     }
+    
+    multi.hmset(features_key, stringified);
 
     multi.exec(function(err, replies) {
       if (err) {
@@ -99,8 +106,8 @@ function RedisFeatureStore(redis_opts, cache_ttl) {
           multi.exec(function(err, replies) {
             if (err) {
               config.logger.error("[LaunchDarkly] Error deleting feature flag", err);
-            } else {
-              cache.put(key, flag, cache_ttl);
+            } else if (cache_ttl) {            
+              cache.set(key, flag);
             }
             cb();
           })
@@ -125,7 +132,9 @@ function RedisFeatureStore(redis_opts, cache_ttl) {
             if (err) {
               config.logger.error("[LaunchDarkly] Error upserting feature flag", err);
             } else {
-              cache.put(key, flag, cache_ttl);
+              if (cache_ttl) {
+                cache.put(key, flag);
+              }
             }
             cb();
           })
@@ -151,6 +160,7 @@ function RedisFeatureStore(redis_opts, cache_ttl) {
 
   store.close = function() {
     client.quit();
+    cache.close();
   }
 
   return store;
