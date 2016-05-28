@@ -70,6 +70,8 @@ var new_client = function(api_key, config) {
         client.emit('ready');
       }
     });
+  } else {
+    client.emit('ready');
   }
 
   client.toggle = function(key, user, default_val, fn) {

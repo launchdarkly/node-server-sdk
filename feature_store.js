@@ -5,11 +5,28 @@ function InMemoryFeatureStore() {
   var store = {flags:{}};
 
   store.get = function(key, cb) {
-    cb(clone(store.flags[key]));
+    var flag = store.flags[key];
+
+    if (!flag || flag.deleted) {
+      cb(null);
+    } else {
+      cb(clone(store.flags[key]));
+    }
   }
 
   store.all = function(cb) {
-    cb(clone(store.flags));
+    var results = {};
+
+    for (var key in store.flags) {
+      if (store.flags.hasOwnProperty(key)) {
+        var flag = store.flags[key];
+        if (!flag.deleted) {
+          results[key] = clone(flag);          
+        }
+      }
+    }
+
+    cb(results);
   }
 
   store.init = function(flags, cb) {
@@ -38,7 +55,7 @@ function InMemoryFeatureStore() {
     cb();
   }
 
-  store.initialized = function(cb) {
+  store.initialized = function() {
     return store.init_called === true;
   }
 
