@@ -3,9 +3,10 @@ var redis = require('redis'),
 
 
 function RedisFeatureStore(redis_opts, cache_ttl) {
-  client = redis.createClient(redis_opts);
+  var client = redis.createClient(redis_opts)
+    , store = {}
+    , features_key = ":features";
 
-  var features_key = ":features";
 
   // A helper that performs a get with either the redis client
   // itself, or a multi object from a redis transaction
@@ -42,13 +43,13 @@ function RedisFeatureStore(redis_opts, cache_ttl) {
         cb(null);
       } else {
         var results = {}, 
-            flags = JSON.parse(obj);
+            flags = obj;
 
         for (var key in flags) {
-          if (flags.hasOwnProperty(key)) {
-            var flag = flags[key];
+          if (Object.hasOwnProperty.call(flags,key)) {
+            var flag = JSON.parse(flags[key]);
             if (!flag.deleted) {
-              results[key] = clone(flag);          
+              results[key] = flag;          
             }
           }
         }
@@ -64,7 +65,7 @@ function RedisFeatureStore(redis_opts, cache_ttl) {
     cache.clear();
 
     for (var key in flags) {
-      if (flags.hasOwnProperty(key)) {
+      if (Object.hasOwnProperty.call(flags,key)) {
         multi.hset(features_key, key, JSON.stringify(flags[key]));
       }
       if (cache_ttl) {
@@ -148,6 +149,11 @@ function RedisFeatureStore(redis_opts, cache_ttl) {
     });
   }
 
+  store.close = function() {
+    client.quit();
+  }
+
+  return store;
 }
 
 module.exports = RedisFeatureStore

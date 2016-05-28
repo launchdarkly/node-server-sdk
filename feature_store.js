@@ -59,6 +59,10 @@ function InMemoryFeatureStore() {
     return store.init_called === true;
   }
 
+  store.close = function() {
+    // Close on the in-memory store is a no-op
+  }
+
   return store;
 }
 

@@ -133,7 +133,7 @@ var new_client = function(api_key, config) {
     config.feature_store.all(function(flags) {
       var result = {};
       for (var key in flags) {
-        if (flags.hasOwnProperty(key)) {
+        if (Object.hasOwnProperty.call(flags, key)) {
           result[key] = evaluate(flags[key], user);
         }
       }
@@ -146,6 +146,7 @@ var new_client = function(api_key, config) {
     if (update_processor) {
       update_processor.close();
     }
+    config.feature_store.close();
   }
 
   client.is_offline = function() {
