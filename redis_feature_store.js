@@ -18,7 +18,6 @@ function RedisFeatureStore(redis_opts, cache_ttl) {
     var flag = cache.get(key);
 
     if (flag) {
-      config.logger.debug("[LaunchDarkly] Fetched flag from cache");      
       if (flag.deleted) {
         cb(null);
       } else {
