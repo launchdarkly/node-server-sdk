@@ -7,7 +7,9 @@ function RedisFeatureStore(redis_opts, cache_ttl) {
 
   var features_key = ":features";
 
-  store.get = function(key, cb) {
+  // A helper that performs a get with either the redis client
+  // itself, or a multi object from a redis transaction
+  function do_get(mclient, key, cb) {
     var flag = cache.get(key);
 
     if (flag) {
@@ -17,22 +19,26 @@ function RedisFeatureStore(redis_opts, cache_ttl) {
         cb(flag);
       }
     } else {
-      client.hget(features_key, key, function(err, obj) {
+      mclient.hget(features_key, key, function(err, obj) {
         if (err) {
-          config.logger.error("Error fetching flag from redis", err)
+          config.logger.error("[LaunchDarkly] Error fetching flag from redis", err)
           cb(null);
         } else {
           flag = JSON.parse(obj);
           cb(flag.deleted ? null : flag);
         }
       });
-    }
+    }    
+  }
+
+  store.get = function(key, cb) {
+    do_get(client, key, cb);
   }
 
   store.all = function(cb) {
     client.hgetall(features_key, function(err, obj) {
       if (err) {
-        config.logger.error("Error fetching flag from redis", err)
+        config.logger.error("[LaunchDarkly] Error fetching flag from redis", err)
         cb(null);
       } else {
         var results = {}, 
@@ -51,24 +57,95 @@ function RedisFeatureStore(redis_opts, cache_ttl) {
     });
   }
 
-  // TODO
   store.init = function(flags, cb) {
-
-  }
-
-  // TODO
-  store.delete = function(key, version, cb) {
-
-  }
-
-  // TODO
-  store.upsert = function(key, flag, cb) {
-
-  }
-
-  // TODO
-  store.initialized = function(cb) {
+    var multi = client.multi();
     
+    multi.del(features_key);
+    cache.clear();
+
+    for (var key in flags) {
+      if (flags.hasOwnProperty(key)) {
+        multi.hset(features_key, key, JSON.stringify(flags[key]));
+      }
+      if (cache_ttl) {
+        cache.put(key, flags[key], cache_ttl);
+      }
+    }
+
+    multi.exec(function(err, replies) {
+      if (err) {
+        config.logger.error("[LaunchDarkly] Error initializing redis feature store", err);
+      } 
+      cb();
+    });
+  }
+
+  store.delete = function(key, version, cb) {
+    var multi;
+    client.watch(features_key);
+    multi = client.multi();
+
+    // We need to run the get() code in a multi txn
+    do_get(multi, key, function(flag) {
+      if (flag) {
+        if (flag.version >= version) {
+          cb();
+          return;          
+        } else {
+          flag.deleted = true;
+          flag.version = version;
+          multi.hset(features_key, key, JSON.stringify(flag));
+          multi.exec(function(err, replies) {
+            if (err) {
+              config.logger.error("[LaunchDarkly] Error deleting feature flag", err);
+            } else {
+              cache.put(key, flag, cache_ttl);
+            }
+            cb();
+          })
+        }
+      } 
+    });
+  }
+
+  store.upsert = function(key, flag, cb) {
+    var multi;
+    client.watch(features_key);
+    multi = client.multi();
+
+    do_get(multi, key, function(original) {
+      if (original) {
+        if (original.version >= version) {
+          cb();
+          return;          
+        } else {
+          multi.hset(features_key, key, JSON.stringify(flag));
+          multi.exec(function(err, replies) {
+            if (err) {
+              config.logger.error("[LaunchDarkly] Error upserting feature flag", err);
+            } else {
+              cache.put(key, flag, cache_ttl);
+            }
+            cb();
+          })
+        }
+      } 
+    })
+  }
+
+  store.initialized = function(cb) {
+    var init = cache.get('$initialized$');
+
+    if (init) {
+      return true;
+    }    
+
+    client.exists('$initialized$', function(err, obj) {
+      if (!err && obj) {
+        cache.set('$initialized$', true);
+      } 
+      cb(!err && obj);
+    });
   }
 
 }
