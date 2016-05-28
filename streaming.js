@@ -1,11 +1,14 @@
 var EventSource = require('./eventsource');
 
+var noop = function(){};
+
 function StreamProcessor(api_key, config, requestor) {
   var processor = {},
       store = config.feature_store,
       es;
 
-  processor.start = function(cb) {
+  processor.start = function(fn) {
+    var cb = fn || noop;
     // TODO change the URL for v2
     es = new EventSource(config.stream_uri + "/features", 
       {
@@ -30,7 +33,7 @@ function StreamProcessor(api_key, config, requestor) {
         var flag = JSON.parse(e.data);
         store.upsert(flag.key, flag);
       } else {
-        cb(new Error("[LaunchDarkly] Unexpected payload from event stream"));
+        config.logger.error("[LaunchDarkly] Unexpected payload from event stream")
       }
     });
 
@@ -42,7 +45,7 @@ function StreamProcessor(api_key, config, requestor) {
 
         store.delete(key, version);
       } else {
-        cb(new Error("[LaunchDarkly] Unexpected payload from event stream"));
+        config.logger.error("[LaunchDarkly] Unexpected payload from event stream");
       }
     });
 
@@ -63,13 +66,13 @@ function StreamProcessor(api_key, config, requestor) {
         var key = data.charAt(0) === '/' ? data.substring(1) : data;
         requestor.request_flag(key, true, function(err, flag) {
           if (err) {
-            cb(err);
+            config.logger.error("[LaunchDarkly] Unexpected error requesting feature flag");
           } else {
             store.upsert(key, flag);
           }
         })
       } else {
-        cb(new Error("[LaunchDarkly] Unexpected payload from event stream"));
+        config.logger.error("[LaunchDarkly] Unexpected payload from event stream");
       }
     });
   }

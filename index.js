@@ -65,7 +65,7 @@ var new_client = function(api_key, config) {
       if (err) {
         client.emit('error', err);
       }
-      else {
+      else if (!initialized) {
         initialized = true;
         client.emit('ready');
       }
