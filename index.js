@@ -164,7 +164,7 @@ var new_client = function(api_key, config) {
       event.data = data;
     }
 
-    enqueue(client, event);
+    enqueue(event);
   };
 
   client.identify = function(user) {
@@ -173,7 +173,7 @@ var new_client = function(api_key, config) {
                  "kind": "identify",
                  "user": user,
                  "creationDate": new Date().getTime()};
-    enqueue(client, event);
+    enqueue(event);
   };
 
   client.flush = function(fn) {
