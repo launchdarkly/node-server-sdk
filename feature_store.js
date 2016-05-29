@@ -7,12 +7,17 @@ function InMemoryFeatureStore() {
 
   store.get = function(key, cb) {
     cb = cb || noop;
-    var flag = store.flags[key];
 
-    if (!flag || flag.deleted) {
-      cb(null);
+    if (this.flags.hasOwnProperty(key)) {
+      var flag = this.flags[key];
+
+      if (!flag || flag.deleted) {
+        cb(null);
+      } else {
+        cb(clone(flag));
+      }
     } else {
-      cb(clone(store.flags[key]));
+      cb(null);
     }
   }
 
@@ -20,9 +25,9 @@ function InMemoryFeatureStore() {
     cb = cb || noop;
     var results = {};
 
-    for (var key in store.flags) {
-      if (store.flags.hasOwnProperty(key)) {
-        var flag = store.flags[key];
+    for (var key in this.flags) {
+      if (this.flags.hasOwnProperty(key)) {
+        var flag = this.flags[key];
         if (!flag.deleted) {
           results[key] = clone(flag);          
         }
@@ -34,35 +39,47 @@ function InMemoryFeatureStore() {
 
   store.init = function(flags, cb) {
     cb = cb || noop;
-    store.flags = flags;
-    store.init_called = true;
+    this.flags = flags;
+    this.init_called = true;
     cb();
   }
 
   store.delete = function(key, version, cb) {
     cb = cb || noop;
-    var old = store.flags[key];
 
-    if (!old || old.version < version) {
-      old.deleted = true;
-      old.version = version;
-      store.flags[key] = old;
-    } 
+    if (this.flags.hasOwnProperty(key)) {
+      var old = this.flags[key];
+      if (old && old.version < version) {
+        old.deleted = true;
+        old.version = version;
+        this.flags[key] = old;
+      } 
+    } else {
+      this.flags[key] = old;
+    }
+
+
     cb();
   }
 
   store.upsert = function(key, flag, cb) {
     cb = cb || noop;    
-    var old = store.flags[key];
+    var old = this.flags[key];
 
-    if (!old || old.version < flag.version) {
-      store.flags[key] = flag;
+    if (this.flags.hasOwnProperty(key)) {
+      var old = this.flags[key];
+      if (old && old.version < flag.version) {
+        this.flags[key] = flag;
+      }
+    } else {
+      this.flags[key] = flag;
     }
+
     cb();
   }
 
   store.initialized = function() {
-    return store.init_called === true;
+    return this.init_called === true;
   }
 
   store.close = function() {
