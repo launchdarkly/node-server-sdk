@@ -43,7 +43,7 @@ function InMemoryFeatureStore() {
     cb = cb || noop;
     var old = store.flags[key];
 
-    if (old === null || old.version < version) {
+    if (!old || old.version < version) {
       old.deleted = true;
       old.version = version;
       store.flags[key] = old;
@@ -55,7 +55,7 @@ function InMemoryFeatureStore() {
     cb = cb || noop;    
     var old = store.flags[key];
 
-    if (old === null || old.version < flag.version) {
+    if (!old || old.version < flag.version) {
       store.flags[key] = flag;
     }
     cb();
