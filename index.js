@@ -338,7 +338,7 @@ function match_variation(variation, user) {
 
 function evaluate(feature, user) {
   var param, i;
-  if (typeof feature === 'undefined') {
+  if (!feature) {
     return null;
   }
 
