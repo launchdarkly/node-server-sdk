@@ -18,6 +18,7 @@ function StreamProcessor(api_key, config, requestor) {
 
 
     es.addEventListener('put', function(e) {
+      config.logger.debug("[LaunchDarkly] Received put event")      
       if (e && e.data) {
         var flags = JSON.parse(e.data);
         store.init(flags, function() {
@@ -29,16 +30,18 @@ function StreamProcessor(api_key, config, requestor) {
     });
 
     es.addEventListener('patch', function(e) {
+      config.logger.debug("[LaunchDarkly] Received patch event")
       if (e && e.data) {
-        var flag = JSON.parse(e.data);
-        store.upsert(flag.key, flag);
+        var patch = JSON.parse(e.data);
+        store.upsert(patch.data.key, patch.data);
       } else {
         config.logger.error("[LaunchDarkly] Unexpected payload from event stream")
       }
     });
 
     es.addEventListener('delete', function(e) {
-      if (e && e.data) {
+      config.logger.debug("[LaunchDarkly] Received delete event")
+      if (e && e.data) {        
         var data = JSON.parse(e.data),
             key = data.path.charAt(0) === '/' ? data.path.substring(1) : data.path, // trim leading '/'
             version = data.version;
@@ -50,6 +53,7 @@ function StreamProcessor(api_key, config, requestor) {
     });
 
     es.addEventListener('indirect/put', function(e) {
+      config.logger.debug("[LaunchDarkly] Received indirect put event")
       requestor.request_all_flags(true, function (err, flags) {
         if (err) {
           cb(err);
@@ -62,6 +66,7 @@ function StreamProcessor(api_key, config, requestor) {
     });
 
     es.addEventListener('indirect/patch', function(e) {
+      config.logger.debug("[LaunchDarkly] Received indirect patch event")
       if (e && e.data) {
         var key = data.charAt(0) === '/' ? data.substring(1) : data;
         requestor.request_flag(key, true, function(err, flag) {
