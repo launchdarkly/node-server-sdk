@@ -1,10 +1,12 @@
 // An in-memory feature store with an async interface.
 // It's async as other implementations (e.g. the RedisFeatureStore)
 // may be async, and we want to retain interface compatibility.
+var noop = function(){};
 function InMemoryFeatureStore() {
   var store = {flags:{}};
 
   store.get = function(key, cb) {
+    cb = cb || noop;
     var flag = store.flags[key];
 
     if (!flag || flag.deleted) {
@@ -15,6 +17,7 @@ function InMemoryFeatureStore() {
   }
 
   store.all = function(cb) {
+    cb = cb || noop;
     var results = {};
 
     for (var key in store.flags) {
@@ -30,12 +33,14 @@ function InMemoryFeatureStore() {
   }
 
   store.init = function(flags, cb) {
+    cb = cb || noop;
     store.flags = flags;
     store.init_called = true;
     cb();
   }
 
   store.delete = function(key, version, cb) {
+    cb = cb || noop;
     var old = store.flags[key];
 
     if (old === null || old.version < version) {
@@ -47,6 +52,7 @@ function InMemoryFeatureStore() {
   }
 
   store.upsert = function(key, flag, cb) {
+    cb = cb || noop;    
     var old = store.flags[key];
 
     if (old === null || old.version < flag.version) {

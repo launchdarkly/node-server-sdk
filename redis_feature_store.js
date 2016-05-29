@@ -16,6 +16,7 @@ function RedisFeatureStore(redis_opts, cache_ttl) {
   // itself, or a multi object from a redis transaction
   function do_get(mclient, key, cb) {
     var flag = cache.get(key);
+    cb = cb || noop;    
 
     if (flag) {
       if (flag.deleted) {
@@ -41,6 +42,7 @@ function RedisFeatureStore(redis_opts, cache_ttl) {
   }
 
   store.all = function(cb) {
+    cb = cb || noop;    
     client.hgetall(features_key, function(err, obj) {
       if (err) {
         config.logger.error("[LaunchDarkly] Error fetching flag from redis", err)
@@ -65,6 +67,7 @@ function RedisFeatureStore(redis_opts, cache_ttl) {
   store.init = function(flags, cb) {
     var stringified = {};
     var multi = client.multi();
+    cb = cb || noop;    
     
     multi.del(features_key);
     cache.flushAll();
@@ -90,6 +93,7 @@ function RedisFeatureStore(redis_opts, cache_ttl) {
 
   store.delete = function(key, version, cb) {
     var multi;
+    cb = cb || noop;        
     client.watch(features_key);
     multi = client.multi();
 
@@ -116,8 +120,9 @@ function RedisFeatureStore(redis_opts, cache_ttl) {
     });
   }
 
-  store.upsert = function(key, flag, cb) {
+  store.upsert = function(key, flag, cb) {    
     var multi;
+    cb = cb || noop;        
     client.watch(features_key);
     multi = client.multi();
 
@@ -145,6 +150,7 @@ function RedisFeatureStore(redis_opts, cache_ttl) {
 
   store.initialized = function(cb) {
     var init = cache.get('$initialized$');
+    cb = cb || noop;        
 
     if (init) {
       return true;
