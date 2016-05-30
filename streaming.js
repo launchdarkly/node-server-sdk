@@ -9,8 +9,7 @@ function StreamProcessor(api_key, config, requestor) {
 
   processor.start = function(fn) {
     var cb = fn || noop;
-    // TODO change the URL for v2
-    es = new EventSource(config.stream_uri + "/features", 
+    es = new EventSource(config.stream_uri + "/flags", 
       {
         agent: config.proxy_agent, 
         headers: {'Authorization': 'api_key ' + api_key}

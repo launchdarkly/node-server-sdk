@@ -30,9 +30,7 @@ function Requestor(api_key, config) {
   });
 
   function resource_path(latest) {
-    return latest ? '/api/eval/latest-features' : '/api/eval/features';
-   // TODO Update to the following v2 paths: 
-   // return latest ? '/sdk/latest-flags': '/sdk/flags';
+    return latest ? '/sdk/latest-flags': '/sdk/flags';
   }
 
   function make_request(resource) {
