@@ -1,6 +1,46 @@
 var util = require('util');
 var sha1 = require('node-sha1');
 
+var builtins = ['key', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name', 'anonymous'];
+
+function evaluate(feature, user) {
+  var param, i;
+  if (!feature) {
+    return null;
+  }
+
+  if (feature.deleted || !feature.on) {
+    return null;
+  }
+
+  param = param_for_user(feature, user);
+
+  if (!param) {
+    return null;
+  }
+
+  for (i = 0; i < feature.variations.length; i ++) {
+    if (match_user(feature.variations[i], user)) {
+      return feature.variations[i].value;
+    }
+  }  
+
+  for (i = 0; i < feature.variations.length; i ++) {
+    if (match_variation(feature.variations[i], user)) {
+      return feature.variations[i].value;
+    }
+  }
+
+  var total = 0.0;   
+  for (i = 0; i < feature.variations.length; i++) {
+    total += feature.variations[i].weight / 100.0
+    if (param < total) {
+      return feature.variations[i].value;
+    }
+  }
+
+  return null;
+}
 
 function param_for_user(feature, user) {
   var idHash, hashKey, hashVal, result;
@@ -19,8 +59,6 @@ function param_for_user(feature, user) {
   result = hashVal / 0xFFFFFFFFFFFFFFF;
   return result;
 }
-
-var builtins = ['key', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name', 'anonymous'];
 
 function match_target(target, user) {
   var uValue;
@@ -70,45 +108,6 @@ function match_variation(variation, user) {
     }
   }
   return false;
-}
-
-function evaluate(feature, user) {
-  var param, i;
-  if (!feature) {
-    return null;
-  }
-
-  if (feature.deleted || !feature.on) {
-    return null;
-  }
-
-  param = param_for_user(feature, user);
-
-  if (!param) {
-    return null;
-  }
-
-  for (i = 0; i < feature.variations.length; i ++) {
-    if (match_user(feature.variations[i], user)) {
-      return feature.variations[i].value;
-    }
-  }  
-
-  for (i = 0; i < feature.variations.length; i ++) {
-    if (match_variation(feature.variations[i], user)) {
-      return feature.variations[i].value;
-    }
-  }
-
-  var total = 0.0;   
-  for (i = 0; i < feature.variations.length; i++) {
-    total += feature.variations[i].weight / 100.0
-    if (param < total) {
-      return feature.variations[i].value;
-    }
-  }
-
-  return null;
 }
 
 function intersect_safe(a, b)
