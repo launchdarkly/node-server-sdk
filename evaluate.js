@@ -1,3 +1,5 @@
+// TODO remove this file once evaluate_flag is finished-- this will obsolete
+// in v2
 var util = require('util');
 var sha1 = require('node-sha1');
 

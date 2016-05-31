@@ -4,9 +4,10 @@ var Requestor = require('./requestor');
 var EventEmitter = require('events').EventEmitter;
 var PollingProcessor = require('./polling');
 var StreamingProcessor = require('./streaming');
-var evaluate = require('./evaluate');
+var evaluate = require('./evaluate_flag');
 var tunnel = require('tunnel');
 var winston = require('winston');
+var async = require("async");
 var VERSION = "1.6.0";
 
 var noop = function(){};
@@ -104,22 +105,24 @@ var new_client = function(api_key, config) {
     }
 
     config.feature_store.get(key, function(flag) {
-      var result = evaluate(flag, user);
-      if (result === null) {
-        config.logger.debug("[LaunchDarkly] Result value is null in toggle");
-        send_flag_event(key, user, default_val, default_val);
-        cb(null, default_val);
-        return;
-      } else {
-        send_flag_event(key, user, result, default_val);
-        cb(null, result);
-        return;
-      }       
+      evaluate(flag, user, config.feature_store, function(result) {
+        if (result === null) {
+          config.logger.debug("[LaunchDarkly] Result value is null in toggle");
+          send_flag_event(key, user, default_val, default_val);
+          cb(null, default_val);
+          return;
+        } else {
+          send_flag_event(key, user, result, default_val);
+          cb(null, result);
+          return;
+        }               
+      });
     });
   }
 
   client.all_flags = function(user, fn) {
     var cb = fn || noop;
+    var results = {};
 
     if (this.is_offline() || !user) {
       config.logger.info("[LaunchDarkly] all_flags called in offline mode. Returning empty map.");
@@ -129,14 +132,14 @@ var new_client = function(api_key, config) {
     }
 
     config.feature_store.all(function(flags) {
-      var result = {};
-      for (var key in flags) {
-        if (Object.hasOwnProperty.call(flags, key)) {
-          result[key] = evaluate(flags[key], user);
-        }
-      }
-      cb(null, result);
-      return;
+      async.forEachOf(flags, function(value, key, iteratee_cb) {
+        evaluate(flag, user, config.feature_store, function(result) {
+          results[key] = result;
+          iteratee_cb(null);
+        })
+      }, function(err) {
+        cb(err, results);
+      });
     });
   }
 
