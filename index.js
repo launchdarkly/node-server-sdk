@@ -2,6 +2,7 @@ var requestify = require('requestify');
 var sha1 = require('node-sha1');
 var util = require('util');
 var InMemoryFeatureStore = require('./feature_store');
+var RedisFeatureStore = require('/redis_feature_store');
 var Requestor = require('./requestor');
 var EventEmitter = require('events').EventEmitter;
 var PollingProcessor = require('./polling');
@@ -240,7 +241,8 @@ var new_client = function(api_key, config) {
 };
 
 module.exports = {
-  init: new_client
+  init: new_client,
+  RedisFeatureStore: RedisFeatureStore
 };
 
 
