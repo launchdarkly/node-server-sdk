@@ -1,5 +1,6 @@
 var requestify = require('requestify');
 var InMemoryFeatureStore = require('./feature_store');
+var RedisFeatureStore = require('./redis_feature_store');
 var Requestor = require('./requestor');
 var EventEmitter = require('events').EventEmitter;
 var PollingProcessor = require('./polling');
@@ -8,7 +9,7 @@ var evaluate = require('./evaluate_flag');
 var tunnel = require('tunnel');
 var winston = require('winston');
 var async = require("async");
-var VERSION = "1.6.0";
+var VERSION = "2.0.0";
 
 var noop = function(){};
 
@@ -241,7 +242,8 @@ var new_client = function(api_key, config) {
 };
 
 module.exports = {
-  init: new_client
+  init: new_client,
+  RedisFeatureStore: RedisFeatureStore
 };
 
 
