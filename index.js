@@ -45,16 +45,15 @@ var new_client = function(api_key, config) {
   );
   config.feature_store = config.feature_store || InMemoryFeatureStore();
 
-  api_key = api_key;
   queue = [];
 
-  if (!api_key) {
+  if (!api_key && !config.offline) {
     throw new Error("You must configure the client with an API key");
   }
 
-  requestor = Requestor(api_key, config);
-
   if (!config.use_ldd && !config.offline) {
+    requestor = Requestor(api_key, config);
+
     if (config.stream) {
       config.logger.info("[LaunchDarkly] Initializing stream processor to receive feature flag updates");
       update_processor = StreamingProcessor(api_key, config, requestor);
