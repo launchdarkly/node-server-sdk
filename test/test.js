@@ -7,6 +7,20 @@ match_target = ld.__get__('match_target');
 match_user = ld.__get__('match_user');
 sanitize_user = ld.__get__('sanitize_user');
 
+describe('init', function() {
+    it('should throw when called without an api key and options.offline falsy', function() {
+        assert.throws(function(){
+            return ld.init('', {});
+        }, /You must configure the client with an API key/);
+    });
+
+    it('should not throw when called without an api key and options.offline truthy', function() {
+        assert.doesNotThrow(function(){
+            return ld.init('', {offline: true});
+        })
+    });
+});
+
 describe('match_target', function() {
   it('should match users based on top-level attributes', function () {
     var u = {key: 'foo', firstName: 'alice'};
