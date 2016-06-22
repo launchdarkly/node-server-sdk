@@ -13,7 +13,7 @@ function evaluate(flag, user, store, cb) {
     return;
   }
 
-  if (!flag || flag.deleted) {
+  if (!flag) {
     cb(null, null, null);
     return;
   }
@@ -46,9 +46,9 @@ function eval(flag, user, store, events, visited, cb) {
           return;
         }
         store.get(prereq.key, function(f) {
-          // If the flag does not exist in the store, is deleted, or is not on, the prerequisite
+          // If the flag does not exist in the store or is not on, the prerequisite
           // is not satisfied
-          if (!f || f.deleted || !f.on) {
+          if (!f || !f.on) {
             callback(new Error("Unsatisfied prerequisite"), null);
             return;
           }
@@ -68,17 +68,19 @@ function eval(flag, user, store, events, visited, cb) {
       }, 
       function(err, results) {
         var i;
+        // If the error is that prerequisites weren't satisfied, we don't return an error,
+        // because we want to serve the 'offVariation'
         if (err) {
           cb(null, null, events);
           return;
         } 
-        evalRules(flag, user, function(err, variation) {
-          cb(err, variation, events);
+        evalRules(flag, user, function(e, variation) {
+          cb(e, variation, events);
         });
       })
   } else {
-    evalRules(flag, user, function(err, variation) {
-      cb(err, variation, events);
+    evalRules(flag, user, function(e, variation) {
+      cb(e, variation, events);
     });
   }
 }
@@ -91,10 +93,15 @@ function evalRules(flag, user, cb) {
   // Check target matches
   for (i = 0; i < flag.targets.length; i++) {
     target = flag.targets[i];
+
+    if (!target.values) {
+      continue;
+    }
+
     for (j = 0; j < target.values.length; j++) {
       if (user.key === target.values[j]) {
         variation = get_variation(flag, target.variation);
-        cb(null, variation);
+        cb(variation === null ? new Error("Undefined variation") : null, variation);
         return;
       }
     }
@@ -104,18 +111,25 @@ function evalRules(flag, user, cb) {
   for (i = 0; i < flag.rules.length; i++) {
     rule = flag.rules[i];
     if (match_user(rule, user)) {
-      cb(null, variation_for_user(rule, user, flag));
+      variation = variation_for_user(rule, user, flag);
+      cb(variation === null ? new Error("Undefined variation") : null, variation);
       return;
     }
   }
 
   // Check the fallthrough
-  cb(null, variation_for_user(flag.fallthrough, user, flag));
+  variation = variation_for_user(flag.fallthrough, user, flag);
+  cb(variation === null ? new Error("Undefined variation") : null, variation);
 }
 
 function rule_match_user(r, user) {
   var i;
 
+  if (!r.clauses) {
+    return false;
+  }
+
+  // A rule matches if all its clauses match
   for (i = 0; i < r.clauses; i++) {
     if (!clause_match_user(r.clauses[i], user)) {
       return false;
@@ -170,6 +184,8 @@ function match_any(matchFn, value, values) {
   return false;
 }
 
+// Given an index, return the variation value, or null if 
+// the index is invalid
 function get_variation(flag, index) {
   if index >= flag.variations.length {
     return null;
