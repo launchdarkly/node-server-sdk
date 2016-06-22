@@ -268,4 +268,4 @@ function create_flag_event(key, user, value, default_val) {
   };
 }
 
-module.exports = [evaluate, create_flag_event];
+module.exports = {evaluate: evaluate, create_flag_event: create_flag_event};
