@@ -65,7 +65,7 @@ var new_client = function(api_key, config) {
         client.emit('error', err);
       }
       else if (!initialized) {
-        initialized = true;
+        initialized = true;        
         client.emit('ready');
       }
     });
@@ -105,7 +105,7 @@ var new_client = function(api_key, config) {
     }
 
     config.feature_store.get(key, function(flag) {
-      evaluate(flag, user, config.feature_store, function(err, result, events) {
+      evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
         var i;
         if (err) {
           config.logger.error("[LaunchDarkly] Encountered error evaluating feature flag", err)
@@ -147,7 +147,7 @@ var new_client = function(api_key, config) {
     config.feature_store.all(function(flags) {
       async.forEachOf(flags, function(value, key, iteratee_cb) {
         // At the moment, we don't send any events here
-        evaluate(flag, user, config.feature_store, function(err, result, events) {
+        evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
           results[key] = result;
           iteratee_cb(null);
         })
