@@ -8,7 +8,6 @@ var StreamingProcessor = require('./streaming');
 var evaluate = require('./evaluate_flag');
 var tunnel = require('tunnel');
 var winston = require('winston');
-var async = require("async");
 var VERSION = "2.0.0";
 
 var noop = function(){};
@@ -99,14 +98,19 @@ var new_client = function(api_key, config) {
     }
 
     if (!initialized) {
-      config.logger.error("LaunchDarkly client has not finished initializing. Returning default value.");
+      config.logger.error("[LaunchDarkly] client has not finished initializing. Returning default value.");
       send_flag_event(key, user, default_val, default_val);
       cb(new Error("[LaunchDarkly] toggle called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?)"), default_val);
       return; 
     }
 
     config.feature_store.get(key, function(flag) {
-      evaluate(flag, user, config.feature_store, function(result) {
+      evaluate(flag, user, config.feature_store, function(err, result) {
+        if (err) {
+          config.logger.error("[LaunchDarkly] Encountered error evaluating feature flag", err)
+        }
+
+        // TODO send_flag_events should send all the flag events from evaluation
         if (result === null) {
           config.logger.debug("[LaunchDarkly] Result value is null in toggle");
           send_flag_event(key, user, default_val, default_val);
@@ -223,16 +227,7 @@ var new_client = function(api_key, config) {
   }
 
   function send_flag_event(key, user, value, default_val) {
-    var event = {
-      "kind": "feature",
-      "key": key,
-      "user": user,
-      "value": value,
-      "default": default_val,
-      "creationDate": new Date().getTime()
-    };
-
-    enqueue(event);
+    enqueue(evaluate.create_flag_event(key, user, value, default_val));
   }
 
   // TODO keep the reference and stop flushing after close
