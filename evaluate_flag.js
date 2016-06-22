@@ -30,11 +30,11 @@ function evaluate(flag, user, store, cb) {
     return;
   }
 
-  eval(flag, user, store, [], {}, cb);
+  eval_internal(flag, user, store, [], {}, cb);
   return;
 }
 
-function eval(flag, user, store, events, visited, cb) {
+function eval_internal(flag, user, store, events, visited, cb) {
   // Evaluate prerequisites, if any
   visited[flag.key] = true;
   if (flag.prerequisites) {
@@ -52,7 +52,7 @@ function eval(flag, user, store, events, visited, cb) {
             callback(new Error("Unsatisfied prerequisite"), null);
             return;
           }
-          eval(f, user, store, events, visited, function(err, value) {
+          eval_internal(f, user, store, events, visited, function(err, value) {
             // If there was an error, the value is null, the variation index is out of range, 
             // or the value does not match the indexed variation the prerequisite is not satisfied
             var variation = get_variation(f, prereq.variation);
@@ -154,7 +154,7 @@ function clause_match_user(c, user) {
   // The user's value is an array
   if (Array === uValue.constructor) {
     for (i = 0; i < uValue.length; i++) {
-      if match_any(matchFn, uValue[i], c.values) {
+      if (match_any(matchFn, uValue[i], c.values)) {
         return maybe_negate(c, true);
       }
     }
@@ -165,7 +165,7 @@ function clause_match_user(c, user) {
 }
 
 function maybe_negate(c, b) {
-  if c.negate {
+  if (c.negate) {
     return !b;
   } else {
     return b;
@@ -176,7 +176,7 @@ function match_any(matchFn, value, values) {
   var i = 0;
 
   for (i = 0; i < values.length; i++) {
-    if matchFn(value, values[i]) {
+    if (matchFn(value, values[i])) {
       return true;
     }
   }
@@ -187,7 +187,7 @@ function match_any(matchFn, value, values) {
 // Given an index, return the variation value, or null if 
 // the index is invalid
 function get_variation(flag, index) {
-  if index >= flag.variations.length {
+  if (index >= flag.variations.length) {
     return null;
   } else {
     return flag.variations[index];
@@ -214,7 +214,7 @@ function variation_for_user(r, user, flag) {
     for (i = 0; i < r.rollout.variations.length; i++) {
       variation = r.rollout.variations[i];
       sum += variation.weight / 100000.0;
-      if bucket < sum {
+      if (bucket < sum) {
         return get_variation(flag, variation);
       }
     }
@@ -247,7 +247,7 @@ function bucket_user(user, key, attr, salt) {
   }
 
   if (user.secondary) {
-    idHash + = "." + user.secondary;
+    idHash += "." + user.secondary;
   }
 
   hashKey = util.format("%s.%s.%s", key, salt, idHash);
