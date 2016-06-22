@@ -4,8 +4,16 @@ var operators = {
     if (a === b) {
       return true;
     }
-    // TODO continue
+    // TODO continue adding operators
   }
 }
 
-module.exports = operators;
+var operator_none = function(a, b) {
+  return false;
+}
+
+function fn(op) {
+  return operators[op] || operator_none;
+}
+
+module.exports = [operators, fn];
