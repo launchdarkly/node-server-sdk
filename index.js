@@ -105,12 +105,20 @@ var new_client = function(api_key, config) {
     }
 
     config.feature_store.get(key, function(flag) {
-      evaluate(flag, user, config.feature_store, function(err, result) {
+      evaluate(flag, user, config.feature_store, function(err, result, events) {
+        var i;
         if (err) {
           config.logger.error("[LaunchDarkly] Encountered error evaluating feature flag", err)
         }
 
-        // TODO send_flag_events should send all the flag events from evaluation
+        // Send off any events associated with evaluating prerequisites. The events
+        // have already been constructed, so we just have to push them onto the queue.
+        if (events) {
+          for (i = 0; i < events.length; i++) {
+            enqueue(event);
+          }
+        }
+
         if (result === null) {
           config.logger.debug("[LaunchDarkly] Result value is null in toggle");
           send_flag_event(key, user, default_val, default_val);
@@ -138,7 +146,8 @@ var new_client = function(api_key, config) {
 
     config.feature_store.all(function(flags) {
       async.forEachOf(flags, function(value, key, iteratee_cb) {
-        evaluate(flag, user, config.feature_store, function(result) {
+        // At the moment, we don't send any events here
+        evaluate(flag, user, config.feature_store, function(err, result, events) {
           results[key] = result;
           iteratee_cb(null);
         })

@@ -9,25 +9,25 @@ var noop = function(){};
 function evaluate(flag, user, store, cb) {
   cb = cb || noop;
   if (!user || !user.key) {
-    cb(null, null);
+    cb(null, null, null);
     return;
   }
 
   if (!flag || flag.deleted) {
-    cb(null, null);
+    cb(null, null, null);
     return;
   }
 
   if (!flag.on) {
     // Return the off variation if defined and valid
-    if (flag.offVariation && flag.offVariation < flag.variations.length) {
-      cb(null, flag.variations[flag.offVariation]);
-      return
+    if (flag.offVariation) {
+      cb(null, get_variation(flag, flag.offVariation), null);
     }
     // Otherwise, return the default variation
     else {
-      cb(null, null);
+      cb(null, null, null);
     }
+    return;
   }
 
   eval(flag, user, store, [], {}, cb);
@@ -69,13 +69,17 @@ function eval(flag, user, store, events, visited, cb) {
       function(err, results) {
         var i;
         if (err) {
-          cb(null, null);
+          cb(null, null, events);
           return;
         } 
-        evalRules(flag, user, cb);
+        evalRules(flag, user, function(err, variation) {
+          cb(err, variation, events);
+        });
       })
   } else {
-    evalRules(flag, user, cb);
+    evalRules(flag, user, function(err, variation) {
+      cb(err, variation, events);
+    });
   }
 }
 
@@ -246,5 +250,6 @@ function create_flag_event(key, user, value, default_val) {
     "default": default_val,
     "creationDate": new Date().getTime()
   };
+}
 
 module.exports = [evaluate, create_flag_event];
