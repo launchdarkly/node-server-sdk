@@ -28,10 +28,18 @@ var operators = {
     return typeof a === 'number' && a >= b;
   },
   "before": function(a, b) {
-    // TODO
+    if (typeof a === 'string') {
+      return Date.parse(a) < Date.parse(b);
+    } else if (typeof a === 'number') {
+      return a < b;
+    }
   },
   "after": function(a, b) {
-    // TODO
+    if (typeof a === 'string') {
+      return Date.parse(a) > Date.parse(b);
+    } else if (typeof a === 'number') {
+      return a > b;
+    }
   }
 }
 
