@@ -258,7 +258,7 @@ function bucket_user(user, key, attr, salt) {
 }
 
 function create_flag_event(key, user, value, default_val) {
-  var event = {
+  return {
     "kind": "feature",
     "key": key,
     "user": user,
