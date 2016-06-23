@@ -20,7 +20,7 @@ function evaluate(flag, user, store, cb) {
 
   if (!flag.on) {
     // Return the off variation if defined and valid
-    if (flag.offVariation) {
+    if (flag.offVariation != null) {
       cb(null, get_variation(flag, flag.offVariation), null);
     }
     // Otherwise, return the default variation
