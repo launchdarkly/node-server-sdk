@@ -57,7 +57,7 @@ function eval_internal(flag, user, store, events, visited, cb) {
             // If there was an error, the value is null, the variation index is out of range, 
             // or the value does not match the indexed variation the prerequisite is not satisfied
             var variation = get_variation(f, prereq.variation);
-            events.push(create_flag_event(f.key, user, variation, null));
+            events.push(create_flag_event(f.key, user, value, null));
             if (err || value === null || variation === null || value != variation) {
               callback(new Error("Unsatisfied prerequisite"), null)
             } else { 

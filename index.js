@@ -115,7 +115,7 @@ var new_client = function(api_key, config) {
         // have already been constructed, so we just have to push them onto the queue.
         if (events) {
           for (i = 0; i < events.length; i++) {
-            enqueue(event);
+            enqueue(events[i]);
           }
         }
 
