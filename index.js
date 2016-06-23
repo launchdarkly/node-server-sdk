@@ -228,6 +228,7 @@ var new_client = function(api_key, config) {
       return;
     }
 
+    config.logger.debug("Sending flag event", JSON.stringify(event));
     queue.push(event);
 
     if (queue.length >= config.capacity) {
@@ -236,7 +237,8 @@ var new_client = function(api_key, config) {
   }
 
   function send_flag_event(key, user, value, default_val) {
-    enqueue(evaluate.create_flag_event(key, user, value, default_val));
+    var event = evaluate.create_flag_event(key, user, value, default_val);
+    enqueue(event);
   }
 
   // TODO keep the reference and stop flushing after close
