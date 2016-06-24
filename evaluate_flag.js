@@ -31,21 +31,15 @@ function evaluate(flag, user, store, cb) {
     return;
   }
 
-  eval_internal(flag, user, store, [], {}, cb);
+  eval_internal(flag, user, store, [], cb);
   return;
 }
 
-function eval_internal(flag, user, store, events, visited, cb) {
+function eval_internal(flag, user, store, events, cb) {
   // Evaluate prerequisites, if any
-  visited[flag.key] = true;
   if (flag.prerequisites) {
     async.mapSeries(flag.prerequisites, 
       function(prereq, callback) {
-        // Check for cycles
-        if (visited[prereq.key]) {
-          callback(new Error("[LaunchDarkly] Cycle detected in prerequisites when evaluating feature key " + prereq.key), null);
-          return;
-        }
         store.get(prereq.key, function(f) {
           // If the flag does not exist in the store or is not on, the prerequisite
           // is not satisfied
@@ -53,7 +47,7 @@ function eval_internal(flag, user, store, events, visited, cb) {
             callback(new Error("Unsatisfied prerequisite"), null);
             return;
           }
-          eval_internal(f, user, store, events, visited, function(err, value) {
+          eval_internal(f, user, store, events, function(err, value) {
             // If there was an error, the value is null, the variation index is out of range, 
             // or the value does not match the indexed variation the prerequisite is not satisfied
             var variation = get_variation(f, prereq.variation);
