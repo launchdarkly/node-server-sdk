@@ -230,7 +230,7 @@ function user_value(user, attr) {
   if (builtins.indexOf(attr) >= 0) {
     return user[attr];
   } 
-  if (user.custom) {
+  if (user.custom && user.custom.hasOwnProperty(attr)) {
     return user.custom[attr];
   }
   return null;
