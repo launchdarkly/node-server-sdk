@@ -111,7 +111,7 @@ function evalRules(flag, user, cb) {
   // Check rules
   for (i = 0; i < flag.rules.length; i++) {
     rule = flag.rules[i];
-    if (match_user(rule, user)) {
+    if (rule_match_user(rule, user)) {
       variation = variation_for_user(rule, user, flag);
       cb(variation === null ? new Error("Undefined variation") : null, variation);
       return;
