@@ -131,7 +131,7 @@ function rule_match_user(r, user) {
   }
 
   // A rule matches if all its clauses match
-  for (i = 0; i < r.clauses; i++) {
+  for (i = 0; i < r.clauses.length; i++) {
     if (!clause_match_user(r.clauses[i], user)) {
       return false;
     }

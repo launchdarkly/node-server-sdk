@@ -51,4 +51,4 @@ function fn(op) {
   return operators[op] || operator_none;
 }
 
-module.exports = [operators, fn];
+module.exports = {operators: operators, fn: fn};
