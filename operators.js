@@ -28,10 +28,10 @@ var operators = {
     return typeof a === 'number' && a >= b;
   },
   "before": function(a, b) {
-    if (typeof a) === 'string' {
+    if (typeof a === 'string') {
       a = Date.parse(a);
     }
-    if (typeof b) === 'string' {
+    if (typeof b === 'string') {
       b = Date.parse(b);
     }
 
@@ -41,10 +41,10 @@ var operators = {
     return false;
   },
   "after": function(a, b) {
-    if (typeof a) === 'string' {
+    if (typeof a === 'string') {
       a = Date.parse(a);
     }
-    if (typeof b) === 'string' {
+    if (typeof b === 'string') {
       b = Date.parse(b);
     }
 
