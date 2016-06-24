@@ -227,7 +227,7 @@ function variation_for_user(r, user, flag) {
 // Fetch an attribute value from a user object. Automatically
 // navigates into the custom array when necessary
 function user_value(user, attr) {
-  if (builtins.includes(attr)) {
+  if (builtins.indexOf(attr) >= 0) {
     return user[attr];
   } 
   if (user.custom) {
