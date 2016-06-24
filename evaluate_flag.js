@@ -231,12 +231,12 @@ function user_value(user, attr) {
 
 // Compute a percentile for a user
 function bucket_user(user, key, attr, salt) {
-  var uValue
-  var idHash
+  var uValue;
+  var idHash;
 
-  uValue = user_value(user, attr);
+  idHash = user_value(user, attr);
 
-  if (uValue === null) {
+  if (idHash === null) {
     return 0;
   }
 
