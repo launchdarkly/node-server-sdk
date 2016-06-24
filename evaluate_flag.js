@@ -200,7 +200,7 @@ function get_variation(flag, index) {
 function variation_for_user(r, user, flag) {
   var bucketBy;
   var bucket;
-  var sum;
+  var sum = 0;
   var i;
   var variation;
   if (r.variation != null) {
@@ -211,12 +211,11 @@ function variation_for_user(r, user, flag) {
     // we're rolling out by key
     bucketBy = r.rollout.bucketBy != null ? r.rollout.bucketBy : "key";
     bucket = bucket_user(user, flag.key, bucketBy, flag.salt);
-
     for (i = 0; i < r.rollout.variations.length; i++) {
-      variation = r.rollout.variations[i];
-      sum += variation.weight / 100000.0;
+      variate = r.rollout.variations[i];
+      sum += variate.weight / 100000.0;
       if (bucket < sum) {
-        return get_variation(flag, variation);
+        return get_variation(flag, variate.variation);
       }
     }
   }
@@ -243,7 +242,7 @@ function bucket_user(user, key, attr, salt) {
 
   uValue = user_value(user, attr);
 
-  if (!uValue) {
+  if (uValue === null) {
     return 0;
   }
 
