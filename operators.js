@@ -28,18 +28,30 @@ var operators = {
     return typeof a === 'number' && a >= b;
   },
   "before": function(a, b) {
-    if (typeof a === 'string') {
-      return Date.parse(a) < Date.parse(b);
-    } else if (typeof a === 'number') {
+    if (typeof a) === 'string' {
+      a = Date.parse(a);
+    }
+    if (typeof b) === 'string' {
+      b = Date.parse(b);
+    }
+
+    if (typeof a === 'number' && typeof b === 'number') {
       return a < b;
     }
+    return false;
   },
   "after": function(a, b) {
-    if (typeof a === 'string') {
-      return Date.parse(a) > Date.parse(b);
-    } else if (typeof a === 'number') {
+    if (typeof a) === 'string' {
+      a = Date.parse(a);
+    }
+    if (typeof b) === 'string' {
+      b = Date.parse(b);
+    }
+
+    if (typeof a === 'number' && typeof b === 'number') {
       return a > b;
     }
+    return false;
   }
 }
 
