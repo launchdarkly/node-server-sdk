@@ -31,7 +31,25 @@ function evaluate(flag, user, store, cb) {
     return;
   }
 
-  eval_internal(flag, user, store, [], cb);
+  eval_internal(flag, user, store, [], function(err, result, events) {
+    if (err) {
+      cb(err, result, events);
+      return;
+    }
+
+    if (result === null) {
+      // Return the off variation if defined and valid
+      if (flag.offVariation != null) {
+        cb(null, get_variation(flag, flag.offVariation), null);
+      }
+      // Otherwise, return the default variation
+      else {
+        cb(null, null, null);
+      }
+    } else {
+      cb(err, result, events);
+    }
+  });
   return;
 }
 

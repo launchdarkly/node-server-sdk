@@ -277,6 +277,9 @@ function create_proxy_agent(config) {
 
 
 function sanitize_user(u) {
+  if (!u) {
+    return;
+  }
   if (u['key']) {
     u['key'] = u['key'].toString();
   }
