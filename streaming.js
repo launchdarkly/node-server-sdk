@@ -53,7 +53,7 @@ function StreamProcessor(api_key, config, requestor) {
 
     es.addEventListener('indirect/put', function(e) {
       config.logger.debug("[LaunchDarkly] Received indirect put event")
-      requestor.request_all_flags(true, function (err, flags) {
+      requestor.request_all_flags(function (err, flags) {
         if (err) {
           cb(err);
         } else {
@@ -68,7 +68,7 @@ function StreamProcessor(api_key, config, requestor) {
       config.logger.debug("[LaunchDarkly] Received indirect patch event")
       if (e && e.data) {
         var key = data.charAt(0) === '/' ? data.substring(1) : data;
-        requestor.request_flag(key, true, function(err, flag) {
+        requestor.request_flag(key, function(err, flag) {
           if (err) {
             config.logger.error("[LaunchDarkly] Unexpected error requesting feature flag");
           } else {

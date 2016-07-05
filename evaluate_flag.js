@@ -80,7 +80,6 @@ function eval_internal(flag, user, store, events, cb) {
         });
       }, 
       function(err, results) {
-        var i;
         // If the error is that prerequisites weren't satisfied, we don't return an error,
         // because we want to serve the 'offVariation'
         if (err) {
@@ -114,7 +113,7 @@ function evalRules(flag, user, cb) {
     for (j = 0; j < target.values.length; j++) {
       if (user.key === target.values[j]) {
         variation = get_variation(flag, target.variation);
-        cb(variation === null ? new Error("Undefined variation") : null, variation);
+        cb(variation === null ? new Error("Undefined variation for flag " + flag.key) : null, variation);
         return;
       }
     }
@@ -125,14 +124,14 @@ function evalRules(flag, user, cb) {
     rule = flag.rules[i];
     if (rule_match_user(rule, user)) {
       variation = variation_for_user(rule, user, flag);
-      cb(variation === null ? new Error("Undefined variation") : null, variation);
+      cb(variation === null ? new Error("Undefined variation for flag " + flag.key) : null, variation);
       return;
     }
   }
 
   // Check the fallthrough
   variation = variation_for_user(flag.fallthrough, user, flag);
-  cb(variation === null ? new Error("Undefined variation") : null, variation);
+  cb(variation === null ? new Error("Undefined variation for flag " + flag.key) : null, variation);
 }
 
 function rule_match_user(r, user) {
