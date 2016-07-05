@@ -5,10 +5,10 @@ var Requestor = require('./requestor');
 var EventEmitter = require('events').EventEmitter;
 var PollingProcessor = require('./polling');
 var StreamingProcessor = require('./streaming');
-var evaluate = require('./evaluate');
+var evaluate = require('./evaluate_flag');
 var tunnel = require('tunnel');
 var winston = require('winston');
-var VERSION = "1.6.0";
+var VERSION = "2.0.0";
 
 var noop = function(){};
 
@@ -65,7 +65,7 @@ var new_client = function(api_key, config) {
         client.emit('error', err);
       }
       else if (!initialized) {
-        initialized = true;
+        initialized = true;        
         client.emit('ready');
       }
     });
@@ -98,29 +98,44 @@ var new_client = function(api_key, config) {
     }
 
     if (!initialized) {
-      config.logger.error("LaunchDarkly client has not finished initializing. Returning default value.");
+      config.logger.error("[LaunchDarkly] client has not finished initializing. Returning default value.");
       send_flag_event(key, user, default_val, default_val);
       cb(new Error("[LaunchDarkly] toggle called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?)"), default_val);
       return; 
     }
 
     config.feature_store.get(key, function(flag) {
-      var result = evaluate(flag, user);
-      if (result === null) {
-        config.logger.debug("[LaunchDarkly] Result value is null in toggle");
-        send_flag_event(key, user, default_val, default_val);
-        cb(null, default_val);
-        return;
-      } else {
-        send_flag_event(key, user, result, default_val);
-        cb(null, result);
-        return;
-      }       
+      evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
+        var i;
+        if (err) {
+          config.logger.error("[LaunchDarkly] Encountered error evaluating feature flag", err)
+        }
+
+        // Send off any events associated with evaluating prerequisites. The events
+        // have already been constructed, so we just have to push them onto the queue.
+        if (events) {
+          for (i = 0; i < events.length; i++) {
+            enqueue(events[i]);
+          }
+        }
+
+        if (result === null) {
+          config.logger.debug("[LaunchDarkly] Result value is null in toggle");
+          send_flag_event(key, user, default_val, default_val);
+          cb(null, default_val);
+          return;
+        } else {
+          send_flag_event(key, user, result, default_val);
+          cb(null, result);
+          return;
+        }               
+      });
     });
   }
 
   client.all_flags = function(user, fn) {
     var cb = fn || noop;
+    var results = {};
 
     if (this.is_offline() || !user) {
       config.logger.info("[LaunchDarkly] all_flags called in offline mode. Returning empty map.");
@@ -130,14 +145,15 @@ var new_client = function(api_key, config) {
     }
 
     config.feature_store.all(function(flags) {
-      var result = {};
-      for (var key in flags) {
-        if (Object.hasOwnProperty.call(flags, key)) {
-          result[key] = evaluate(flags[key], user);
-        }
-      }
-      cb(null, result);
-      return;
+      async.forEachOf(flags, function(value, key, iteratee_cb) {
+        // At the moment, we don't send any events here
+        evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
+          results[key] = result;
+          iteratee_cb(null);
+        })
+      }, function(err) {
+        cb(err, results);
+      });
     });
   }
 
@@ -212,6 +228,7 @@ var new_client = function(api_key, config) {
       return;
     }
 
+    config.logger.debug("Sending flag event", JSON.stringify(event));
     queue.push(event);
 
     if (queue.length >= config.capacity) {
@@ -220,15 +237,7 @@ var new_client = function(api_key, config) {
   }
 
   function send_flag_event(key, user, value, default_val) {
-    var event = {
-      "kind": "feature",
-      "key": key,
-      "user": user,
-      "value": value,
-      "default": default_val,
-      "creationDate": new Date().getTime()
-    };
-
+    var event = evaluate.create_flag_event(key, user, value, default_val);
     enqueue(event);
   }
 
@@ -268,6 +277,9 @@ function create_proxy_agent(config) {
 
 
 function sanitize_user(u) {
+  if (!u) {
+    return;
+  }
   if (u['key']) {
     u['key'] = u['key'].toString();
   }

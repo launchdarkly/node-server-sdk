@@ -29,12 +29,6 @@ function Requestor(api_key, config) {
     }
   });
 
-  function resource_path(latest) {
-    return latest ? '/api/eval/latest-features' : '/api/eval/features';
-   // TODO Update to the following v2 paths: 
-   // return latest ? '/sdk/latest-flags': '/sdk/flags';
-  }
-
   function make_request(resource) {
     var request_params = {
       method: "GET",
@@ -51,8 +45,8 @@ function Requestor(api_key, config) {
     };
   }
 
-  requestor.request_flag = function(key, latest, cb) {
-    var req = make_request(resource_path(latest) + '/key');
+  requestor.request_flag = function(key, cb) {
+    var req = make_request('/sdk/latest-flags/' + key);
     req(
       function(response) {
         if (response.code !== 200) {
@@ -67,8 +61,8 @@ function Requestor(api_key, config) {
     );
   } 
 
-  requestor.request_all_flags = function(latest, cb) {
-    var req = make_request(resource_path(latest));
+  requestor.request_all_flags = function(cb) {
+    var req = make_request('/sdk/latest-flags');
     req(
       function(response) {
         if (response.code !== 200) {
