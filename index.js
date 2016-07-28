@@ -63,7 +63,14 @@ var new_client = function(api_key, config) {
     }
     update_processor.start(function(err) {
       if (err) {
-        client.emit('error', err);
+        var error;
+        if ((err.status && err.status === 401) || (err.code && err.code === 401)) {
+          error = new Error("Authentication failed. Double check your API key.");
+        } else {
+          error = new Error("Unexpected error:", err.message ? err.message : err);
+        }
+        
+        client.emit('error', error);
       }
       else if (!initialized) {
         initialized = true;
