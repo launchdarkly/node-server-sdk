@@ -10,7 +10,7 @@ var StreamingProcessor = require('./streaming');
 var pointer = require('json-pointer');
 var tunnel = require('tunnel');
 var winston = require('winston');
-var VERSION = "2.0.0";
+var VERSION = "2.0.1";
 
 var noop = function(){};
 
