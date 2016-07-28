@@ -14,7 +14,10 @@ function StreamProcessor(api_key, config, requestor) {
         agent: config.proxy_agent, 
         headers: {'Authorization': 'api_key ' + api_key}
       });
-
+      
+    es.onerror = function(err) {
+      cb(err);
+    };
 
     es.addEventListener('put', function(e) {
       config.logger.debug("[LaunchDarkly] Received put event")      
