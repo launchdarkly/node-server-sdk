@@ -141,7 +141,7 @@ var new_client = function(api_key, config) {
   }
 
   client.toggle = function(key, user, default_val, fn) {
-    config.logger.warn("[LaunchDarkly] toggle is deprecated. Call 'variation' insetad");
+    config.logger.warn("[LaunchDarkly] toggle is deprecated. Call 'variation' instead");
     client.variation(key, user, default_val, fn);
   }
 
