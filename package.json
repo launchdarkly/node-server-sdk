@@ -22,6 +22,7 @@
   "homepage": "https://github.com/launchdarkly/node-client",
   "dependencies": {
     "async": "^2.0.0-rc.5",
+    "crypto": "0.0.3",
     "node-cache": "^3.2.1",
     "node-sha1": "0.0.1",
     "original": "~0.0.8",

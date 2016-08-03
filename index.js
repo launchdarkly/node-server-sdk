@@ -8,6 +8,7 @@ var StreamingProcessor = require('./streaming');
 var evaluate = require('./evaluate_flag');
 var tunnel = require('tunnel');
 var winston = require('winston');
+var crypto = require('crypto');
 var VERSION = "2.0.0";
 
 var noop = function(){};
@@ -73,12 +74,12 @@ var new_client = function(api_key, config) {
     client.emit('ready');
   }
 
-  client.toggle = function(key, user, default_val, fn) {
+  client.variation = function(key, user, default_val, fn) {
     sanitize_user(user);
     var cb = fn || noop;
 
     if (this.is_offline()) {
-      config.logger.info("[LaunchDarkly] toggle called in offline mode. Returning default value.");
+      config.logger.info("[LaunchDarkly] variation called in offline mode. Returning default value.");
       cb(null, default_val);
       return;
     }
@@ -86,21 +87,21 @@ var new_client = function(api_key, config) {
     else if (!key) {
       config.logger.error("[LaunchDarkly] No feature flag key specified. Returning default value.");
       send_flag_event(key, user, default_val, default_val);
-      cb(new Error("[LaunchDarkly] No flag key specified in toggle call"), default_val);
+      cb(new Error("[LaunchDarkly] No flag key specified in variation call"), default_val);
       return;
     }
 
     else if (!user) {
       config.logger.error("[LaunchDarkly] No user specified. Returning default value.");
       send_flag_event(key, user, default_val, default_val);
-      cb(new Error("[LaunchDarkly] No user specified in toggle call"), default_val);
+      cb(new Error("[LaunchDarkly] No user specified in variation call"), default_val);
       return;
     }
 
     if (!initialized) {
       config.logger.error("[LaunchDarkly] client has not finished initializing. Returning default value.");
       send_flag_event(key, user, default_val, default_val);
-      cb(new Error("[LaunchDarkly] toggle called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?)"), default_val);
+      cb(new Error("[LaunchDarkly] variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?)"), default_val);
       return; 
     }
 
@@ -120,7 +121,7 @@ var new_client = function(api_key, config) {
         }
 
         if (result === null) {
-          config.logger.debug("[LaunchDarkly] Result value is null in toggle");
+          config.logger.debug("[LaunchDarkly] Result value is null in variation");
           send_flag_event(key, user, default_val, default_val);
           cb(null, default_val);
           return;
@@ -131,6 +132,11 @@ var new_client = function(api_key, config) {
         }               
       });
     });
+  }
+
+  client.toggle = function(key, user, default_val, fn) {
+    config.logger.warn("[LaunchDarkly] toggle is deprecated. Call 'variation' insetad");
+    client.variation(key, user, default_val, fn);
   }
 
   client.all_flags = function(user, fn) {
@@ -155,6 +161,12 @@ var new_client = function(api_key, config) {
         cb(err, results);
       });
     });
+  }
+
+  client.secure_mode_hash = function(user) {
+    var hmac = crypto.createHmac('sha256', config.api_key);
+    hmac.update(user.key);
+    return hmac.digest('hex');
   }
 
   client.close = function() {
