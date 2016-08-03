@@ -44,16 +44,15 @@ var new_client = function(api_key, config) {
   );
   config.feature_store = config.feature_store || InMemoryFeatureStore();
 
-  api_key = api_key;
   queue = [];
 
-  if (!api_key) {
+  if (!api_key && !config.offline) {
     throw new Error("You must configure the client with an API key");
   }
 
-  requestor = Requestor(api_key, config);
-
   if (!config.use_ldd && !config.offline) {
+    requestor = Requestor(api_key, config);
+
     if (config.stream) {
       config.logger.info("[LaunchDarkly] Initializing stream processor to receive feature flag updates");
       update_processor = StreamingProcessor(api_key, config, requestor);
@@ -63,7 +62,14 @@ var new_client = function(api_key, config) {
     }
     update_processor.start(function(err) {
       if (err) {
-        client.emit('error', err);
+        var error;
+        if ((err.status && err.status === 401) || (err.code && err.code === 401)) {
+          error = new Error("Authentication failed. Double check your API key.");
+        } else {
+          error = new Error("Unexpected error:", err.message ? err.message : err);
+        }
+        
+        client.emit('error', error);
       }
       else if (!initialized) {
         initialized = true;        
