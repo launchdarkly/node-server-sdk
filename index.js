@@ -114,6 +114,7 @@ var new_client = function(sdk_key, config) {
     config.feature_store.get(key, function(flag) {
       evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
         var i;
+        var version = flag ? flag.version : null;
         if (err) {
           config.logger.error("[LaunchDarkly] Encountered error evaluating feature flag", err)
         }
@@ -128,11 +129,11 @@ var new_client = function(sdk_key, config) {
 
         if (result === null) {
           config.logger.debug("[LaunchDarkly] Result value is null in variation");
-          send_flag_event(key, user, default_val, default_val);
+          send_flag_event(key, user, default_val, default_val, version);
           cb(null, default_val);
           return;
         } else {
-          send_flag_event(key, user, result, default_val);
+          send_flag_event(key, user, result, default_val, version);
           cb(null, result);
           return;
         }               
@@ -254,8 +255,8 @@ var new_client = function(sdk_key, config) {
     } 
   }
 
-  function send_flag_event(key, user, value, default_val) {
-    var event = evaluate.create_flag_event(key, user, value, default_val);
+  function send_flag_event(key, user, value, default_val, version) {
+    var event = evaluate.create_flag_event(key, user, value, default_val, version);
     enqueue(event);
   }
 
