@@ -69,7 +69,7 @@ function eval_internal(flag, user, store, events, cb) {
             // If there was an error, the value is null, the variation index is out of range, 
             // or the value does not match the indexed variation the prerequisite is not satisfied
             var variation = get_variation(f, prereq.variation);
-            events.push(create_flag_event(f.key, user, value, null));
+            events.push(create_flag_event(f.key, user, value, null, f.version, flag.key));
             if (err || value === null || variation === null || value != variation) {
               callback(new Error("Unsatisfied prerequisite"), null)
             } else { 
@@ -268,14 +268,16 @@ function bucket_user(user, key, attr, salt) {
   return result;
 }
 
-function create_flag_event(key, user, value, default_val) {
+function create_flag_event(key, user, value, default_val, version, prereqOf) {
   return {
     "kind": "feature",
     "key": key,
     "user": user,
     "value": value,
     "default": default_val,
-    "creationDate": new Date().getTime()
+    "creationDate": new Date().getTime(),
+    "version": version,
+    "prereqOf": prereqOf
   };
 }
 
