@@ -17,7 +17,7 @@ global.setImmediate = global.setImmediate || process.nextTick.bind(process);
 
 var new_client = function(sdk_key, config) {
   var client = new EventEmitter(),
-      initialized = false;
+      init_complete = false;
 
   config = config || {};
   config.version = VERSION;
@@ -71,13 +71,17 @@ var new_client = function(sdk_key, config) {
         
         client.emit('error', error);
       }
-      else if (!initialized) {
-        initialized = true;        
+      else if (!init_complete) {
+        init_complete = true;        
         client.emit('ready');
       }
     });
   } else {
     client.emit('ready');
+  }
+
+  client.initialized = function() {
+    return init_complete;
   }
 
   client.variation = function(key, user, default_val, fn) {
@@ -104,7 +108,7 @@ var new_client = function(sdk_key, config) {
       return;
     }
 
-    if (!initialized) {
+    if (!init_complete) {
       config.logger.error("[LaunchDarkly] client has not finished initializing. Returning default value.");
       send_flag_event(key, user, default_val, default_val);
       cb(new Error("[LaunchDarkly] variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?)"), default_val);
