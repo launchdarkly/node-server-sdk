@@ -15,7 +15,7 @@ var noop = function(){};
 
 global.setImmediate = global.setImmediate || process.nextTick.bind(process);
 
-var new_client = function(api_key, config) {
+var new_client = function(sdk_key, config) {
   var client = new EventEmitter(),
       initialized = false;
 
@@ -46,16 +46,16 @@ var new_client = function(api_key, config) {
 
   queue = [];
 
-  if (!api_key && !config.offline) {
-    throw new Error("You must configure the client with an API key");
+  if (!sdk_key && !config.offline) {
+    throw new Error("You must configure the client with an SDK key");
   }
 
   if (!config.use_ldd && !config.offline) {
-    requestor = Requestor(api_key, config);
+    requestor = Requestor(sdk_key, config);
 
     if (config.stream) {
       config.logger.info("[LaunchDarkly] Initializing stream processor to receive feature flag updates");
-      update_processor = StreamingProcessor(api_key, config, requestor);
+      update_processor = StreamingProcessor(sdk_key, config, requestor);
     } else {
       config.logger.info("[LaunchDarkly] Initializing polling processor to receive feature flag updates");
       update_processor = PollingProcessor(config, requestor);
@@ -64,7 +64,7 @@ var new_client = function(api_key, config) {
       if (err) {
         var error;
         if ((err.status && err.status === 401) || (err.code && err.code === 401)) {
-          error = new Error("Authentication failed. Double check your API key.");
+          error = new Error("Authentication failed. Double check your SDK key.");
         } else {
           error = new Error("Unexpected error:", err.message ? err.message : err);
         }
@@ -114,6 +114,7 @@ var new_client = function(api_key, config) {
     config.feature_store.get(key, function(flag) {
       evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
         var i;
+        var version = flag ? flag.version : null;
         if (err) {
           config.logger.error("[LaunchDarkly] Encountered error evaluating feature flag", err)
         }
@@ -128,11 +129,11 @@ var new_client = function(api_key, config) {
 
         if (result === null) {
           config.logger.debug("[LaunchDarkly] Result value is null in variation");
-          send_flag_event(key, user, default_val, default_val);
+          send_flag_event(key, user, default_val, default_val, version);
           cb(null, default_val);
           return;
         } else {
-          send_flag_event(key, user, result, default_val);
+          send_flag_event(key, user, result, default_val, version);
           cb(null, result);
           return;
         }               
@@ -170,7 +171,7 @@ var new_client = function(api_key, config) {
   }
 
   client.secure_mode_hash = function(user) {
-    var hmac = crypto.createHmac('sha256', config.api_key);
+    var hmac = crypto.createHmac('sha256', config.sdk_key);
     hmac.update(user.key);
     return hmac.digest('hex');
   }
@@ -224,7 +225,7 @@ var new_client = function(api_key, config) {
     requestify.request(config.events_uri + '/bulk', {
       method: "POST",
       headers: {
-        'Authorization': 'api_key ' + api_key,
+        'Authorization': sdk_key,
         'User-Agent': 'NodeJSClient/' + VERSION,
         'Content-Type': 'application/json'
       },
@@ -254,8 +255,8 @@ var new_client = function(api_key, config) {
     } 
   }
 
-  function send_flag_event(key, user, value, default_val) {
-    var event = evaluate.create_flag_event(key, user, value, default_val);
+  function send_flag_event(key, user, value, default_val, version) {
+    var event = evaluate.create_flag_event(key, user, value, default_val, version);
     enqueue(event);
   }
 

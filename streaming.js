@@ -2,7 +2,7 @@ var EventSource = require('./eventsource');
 
 var noop = function(){};
 
-function StreamProcessor(api_key, config, requestor) {
+function StreamProcessor(sdk_key, config, requestor) {
   var processor = {},
       store = config.feature_store,
       es;
@@ -12,7 +12,7 @@ function StreamProcessor(api_key, config, requestor) {
     es = new EventSource(config.stream_uri + "/flags", 
       {
         agent: config.proxy_agent, 
-        headers: {'Authorization': 'api_key ' + api_key}
+        headers: {'Authorization': sdk_key}
       });
       
     es.onerror = function(err) {

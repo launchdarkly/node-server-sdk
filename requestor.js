@@ -7,10 +7,10 @@ var requestify = require('requestify');
  * feature flag representations if streaming is enabled (the stream may contain a pointer to a large representation, 
  * which will be polled by the requestor)
  *
- * @param {String} the API key
+ * @param {String} the SDK key
  * @param {Object} the LaunchDarkly client configuration object
  **/
-function Requestor(api_key, config) {
+function Requestor(sdk_key, config) {
   var requestor = {};
 
   requestify.cacheTransporter({
@@ -33,7 +33,7 @@ function Requestor(api_key, config) {
     var request_params = {
       method: "GET",
       headers: {
-        'Authorization': 'api_key ' +api_key,
+        'Authorization': sdk_key,
         'User-Agent': 'NodeJSClient/' + config.version
       },
       timeout: config.timeout * 1000,
