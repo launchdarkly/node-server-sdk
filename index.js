@@ -9,6 +9,7 @@ var evaluate = require('./evaluate_flag');
 var tunnel = require('tunnel');
 var winston = require('winston');
 var crypto = require('crypto');
+var async = require('async');
 var VERSION = "2.0.0";
 
 var noop = function(){};
