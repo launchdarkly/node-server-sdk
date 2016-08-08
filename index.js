@@ -163,7 +163,7 @@ var new_client = function(sdk_key, config) {
     }
 
     config.feature_store.all(function(flags) {
-      async.forEachOf(flags, function(value, key, iteratee_cb) {
+      async.forEachOf(flags, function(flag, key, iteratee_cb) {
         // At the moment, we don't send any events here
         evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
           results[key] = result;
