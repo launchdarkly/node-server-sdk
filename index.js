@@ -70,7 +70,7 @@ var new_client = function(sdk_key, config) {
           error = new Error("Unexpected error:", err.message ? err.message : err);
         }
         
-        client.emit('error', error);
+        config.logger.error("[LaunchDarkly]", error);
       }
       else if (!init_complete) {
         init_complete = true;        
@@ -312,5 +312,3 @@ function sanitize_user(u) {
     u['key'] = u['key'].toString();
   }
 }
-
-
