@@ -9,7 +9,7 @@ var noop = function(){};
 
 function evaluate(flag, user, store, cb) {
   cb = cb || noop;
-  if (!user || user.key === null) {
+  if (!user || user.key === null || user.key === undefined) {
     cb(null, null, null);
     return;
   }
