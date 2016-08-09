@@ -70,7 +70,7 @@ var new_client = function(api_key, config) {
           error = new Error("Unexpected error:", err.message ? err.message : err);
         }
         
-        client.emit('warn', error);
+        config.logger.error("[LaunchDarkly]", error);
       }
       else if (!initialized) {
         initialized = true;
