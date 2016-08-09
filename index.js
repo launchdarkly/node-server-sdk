@@ -109,6 +109,10 @@ var new_client = function(sdk_key, config) {
       return;
     }
 
+    else if (user.key === "") {
+      config.logger.warn("[LaunchDarkly] User key is blank. Flag evaluation will proceed, but the user will not be stored in LaunchDarkly");
+    }
+
     if (!init_complete) {
       config.logger.error("[LaunchDarkly] client has not finished initializing. Returning default value.");
       send_flag_event(key, user, default_val, default_val);
