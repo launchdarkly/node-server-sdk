@@ -70,7 +70,7 @@ var new_client = function(api_key, config) {
           error = new Error("Unexpected error:", err.message ? err.message : err);
         }
         
-        client.emit('error', error);
+        client.emit('warn', error);
       }
       else if (!initialized) {
         initialized = true;
