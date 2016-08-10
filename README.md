@@ -1,7 +1,6 @@
 LaunchDarkly SDK for Node.js
 ===========================
 
-![Circle CI](https://circleci.com/gh/launchdarkly/node-client.png)
 
 Quick setup
 -----------
