@@ -2,18 +2,17 @@ var EventSource = require('./eventsource');
 
 var noop = function(){};
 
-function StreamProcessor(api_key, config, requestor) {
+function StreamProcessor(sdk_key, config, requestor) {
   var processor = {},
       store = config.feature_store,
       es;
 
   processor.start = function(fn) {
     var cb = fn || noop;
-    // TODO change the URL for v2
-    es = new EventSource(config.stream_uri + "/features", 
+    es = new EventSource(config.stream_uri + "/flags", 
       {
         agent: config.proxy_agent, 
-        headers: {'Authorization': 'api_key ' + api_key}
+        headers: {'Authorization': sdk_key}
       });
       
     es.onerror = function(err) {
@@ -57,7 +56,7 @@ function StreamProcessor(api_key, config, requestor) {
 
     es.addEventListener('indirect/put', function(e) {
       config.logger.debug("[LaunchDarkly] Received indirect put event")
-      requestor.request_all_flags(true, function (err, flags) {
+      requestor.request_all_flags(function (err, flags) {
         if (err) {
           cb(err);
         } else {
@@ -72,7 +71,7 @@ function StreamProcessor(api_key, config, requestor) {
       config.logger.debug("[LaunchDarkly] Received indirect patch event")
       if (e && e.data) {
         var key = data.charAt(0) === '/' ? data.substring(1) : data;
-        requestor.request_flag(key, true, function(err, flag) {
+        requestor.request_flag(key, function(err, flag) {
           if (err) {
             config.logger.error("[LaunchDarkly] Unexpected error requesting feature flag");
           } else {

@@ -15,9 +15,9 @@ Quick setup
         var LaunchDarkly = require('ldclient-node');
 
 
-2. Create a new LDClient with your API key:
+2. Create a new LDClient with your SDK key:
 
-        var ld_client = LaunchDarkly.init("YOUR API KEY")
+        var ld_client = LaunchDarkly.init("YOUR SDK KEY")
 
 Your first feature flag
 -----------------------
