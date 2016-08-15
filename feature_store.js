@@ -28,7 +28,7 @@ function InMemoryFeatureStore() {
     for (var key in this.flags) {
       if (this.flags.hasOwnProperty(key)) {
         var flag = this.flags[key];
-        if (!flag.deleted) {
+        if (flag && !flag.deleted) {
           results[key] = clone(flag);          
         }
       }
