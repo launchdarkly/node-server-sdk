@@ -78,7 +78,9 @@ var new_client = function(sdk_key, config) {
       }
     });
   } else {
-    client.emit('ready');
+    process.nextTick(function() {
+      client.emit('ready');
+    });
   }
 
   client.initialized = function() {
