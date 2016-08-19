@@ -2,6 +2,9 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [3.0.2] - 2016-08-19
+- Fixed a bug in the secure_mode_hash function
+
 ## [3.0.1] - 2016-08-18
 ### Changed
 - The `ready` event now gets properly emitted in offline mode.

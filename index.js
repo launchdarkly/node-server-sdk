@@ -182,7 +182,7 @@ var new_client = function(sdk_key, config) {
   }
 
   client.secure_mode_hash = function(user) {
-    var hmac = crypto.createHmac('sha256', config.sdk_key);
+    var hmac = crypto.createHmac('sha256', sdk_key);
     hmac.update(user.key);
     return hmac.digest('hex');
   }
