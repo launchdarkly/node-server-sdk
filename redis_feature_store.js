@@ -2,10 +2,10 @@ var redis = require('redis'),
     NodeCache = require( "node-cache" );
 
 
-function RedisFeatureStore(redis_opts, cache_ttl) {
+function RedisFeatureStore(redis_opts, cache_ttl, prefix) {
   var client = redis.createClient(redis_opts),
       store = {},
-      features_key = ":features",
+      features_key = prefix ? prefix + ":features" : "launchdarkly:features",
       cache = new NodeCache({ stdTTL: cache_ttl});
 
   // Allow driver programs to exit, even if the Redis
