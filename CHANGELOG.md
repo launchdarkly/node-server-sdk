@@ -2,7 +2,14 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [3.0.3] - 2016-09-09
+### Added
+- The `RedisFeatureStore` now takes an optional prefix parameter
+### Fixed
+- Mark the client initialized immediately in LDD mode
+
 ## [3.0.2] - 2016-08-19
+### Fixed
 - Fixed a bug in the secure_mode_hash function
 
 ## [3.0.1] - 2016-08-18
