@@ -2,6 +2,9 @@ var redis = require('redis'),
     NodeCache = require( "node-cache" );
 
 
+var noop = function(){};
+
+
 function RedisFeatureStore(redis_opts, cache_ttl, prefix) {
   var client = redis.createClient(redis_opts),
       store = {},
@@ -31,7 +34,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix) {
           cb(null);
         } else {
           flag = JSON.parse(obj);
-          cb(flag.deleted ? null : flag);
+          cb( (!flag || flag.deleted) ? null : flag);
         }
       });
     }    
