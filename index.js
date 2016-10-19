@@ -19,7 +19,9 @@ global.setImmediate = global.setImmediate || process.nextTick.bind(process);
 var new_client = function(sdk_key, config) {
   var client = new EventEmitter(),
       init_complete = false,
-      queue = [];
+      queue = [],
+      requestor,
+      update_processor;
 
   config = config || {};
   config.version = VERSION;
@@ -51,8 +53,7 @@ var new_client = function(sdk_key, config) {
   }
 
   if (!config.use_ldd && !config.offline) {
-    var requestor = Requestor(sdk_key, config);
-    var update_processor;
+    requestor = Requestor(sdk_key, config);
 
     if (config.stream) {
       config.logger.info("[LaunchDarkly] Initializing stream processor to receive feature flag updates");
