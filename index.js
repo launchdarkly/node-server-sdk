@@ -10,7 +10,7 @@ var tunnel = require('tunnel');
 var winston = require('winston');
 var crypto = require('crypto');
 var async = require('async');
-var VERSION = "3.0.3";
+var VERSION = "3.0.4";
 
 var noop = function(){};
 
@@ -18,7 +18,10 @@ global.setImmediate = global.setImmediate || process.nextTick.bind(process);
 
 var new_client = function(sdk_key, config) {
   var client = new EventEmitter(),
-      init_complete = false;
+      init_complete = false,
+      queue = [],
+      requestor,
+      update_processor;
 
   config = config || {};
   config.version = VERSION;
@@ -44,8 +47,6 @@ var new_client = function(sdk_key, config) {
     })
   );
   config.feature_store = config.feature_store || InMemoryFeatureStore();
-
-  queue = [];
 
   if (!sdk_key && !config.offline) {
     throw new Error("You must configure the client with an SDK key");
