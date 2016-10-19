@@ -18,7 +18,8 @@ global.setImmediate = global.setImmediate || process.nextTick.bind(process);
 
 var new_client = function(sdk_key, config) {
   var client = new EventEmitter(),
-      init_complete = false;
+      init_complete = false,
+      queue = [];
 
   config = config || {};
   config.version = VERSION;
@@ -45,14 +46,13 @@ var new_client = function(sdk_key, config) {
   );
   config.feature_store = config.feature_store || InMemoryFeatureStore();
 
-  queue = [];
-
   if (!sdk_key && !config.offline) {
     throw new Error("You must configure the client with an SDK key");
   }
 
   if (!config.use_ldd && !config.offline) {
-    requestor = Requestor(sdk_key, config);
+    var requestor = Requestor(sdk_key, config);
+    var update_processor;
 
     if (config.stream) {
       config.logger.info("[LaunchDarkly] Initializing stream processor to receive feature flag updates");
