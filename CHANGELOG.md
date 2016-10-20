@@ -3,6 +3,11 @@
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
 
+
+## [3.0.5] - 2016-10-20
+### Fixed
+- Numerous bug fixes for the Redis feature store
+
 ## [3.0.4] - 2016-10-19
 ### Fixed
 - The event queue is no longer a global property, so multiple clients initialized in one node process now send events to the correct environment 
