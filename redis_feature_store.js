@@ -1,51 +1,69 @@
 var redis = require('redis'),
-    NodeCache = require( "node-cache" );
+    NodeCache = require( "node-cache" ),
+    winston = require('winston');
 
 
-function RedisFeatureStore(redis_opts, cache_ttl, prefix) {
+var noop = function(){};
+
+
+function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
   var client = redis.createClient(redis_opts),
       store = {},
       features_key = prefix ? prefix + ":features" : "launchdarkly:features",
-      cache = new NodeCache({ stdTTL: cache_ttl});
+      cache = cache_ttl ? new NodeCache({ stdTTL: cache_ttl}) : null;
+
+  logger = (logger || 
+    new winston.Logger({
+      level: 'error',
+      transports: [
+        new (winston.transports.Console)(),
+      ]
+    })
+  );
 
   // Allow driver programs to exit, even if the Redis
   // socket is active
   client.unref();
 
-  // A helper that performs a get with either the redis client
-  // itself, or a multi object from a redis transaction
-  function do_get(mclient, key, cb) {
-    var flag = cache.get(key);
-    cb = cb || noop;    
+  // A helper that performs a get with the redis client
+  function do_get(key, cb) {
+    var flag;
+    cb = cb || noop;  
 
-    if (flag) {
-      if (flag.deleted) {
+    if (cache_ttl) { 
+      flag = cache.get(key);
+      if (flag) {
+        cb(flag);
+        return;
+      }
+    }
+
+    client.hget(features_key, key, function(err, obj) {
+      if (err) {
+        logger.error("[LaunchDarkly] Error fetching flag from redis", err);
         cb(null);
       } else {
-        cb(flag);
+        flag = JSON.parse(obj);
+        cb( (!flag || flag.deleted) ? null : flag);
       }
-    } else {
-      mclient.hget(features_key, key, function(err, obj) {
-        if (err) {
-          config.logger.error("[LaunchDarkly] Error fetching flag from redis", err)
-          cb(null);
-        } else {
-          flag = JSON.parse(obj);
-          cb(flag.deleted ? null : flag);
-        }
-      });
-    }    
+    });       
   }
 
   store.get = function(key, cb) {
-    do_get(client, key, cb);
-  }
+    do_get(key, function(flag) {
+      if (flag && !flag.deleted) {
+        cb(flag);
+      } else {
+        cb(null);
+      }
+    });
+  };
 
   store.all = function(cb) {
     cb = cb || noop;    
     client.hgetall(features_key, function(err, obj) {
       if (err) {
-        config.logger.error("[LaunchDarkly] Error fetching flag from redis", err)
+        logger.error("[LaunchDarkly] Error fetching flag from redis", err);
         cb(null);
       } else {
         var results = {}, 
@@ -62,15 +80,18 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix) {
         cb(results);
       }
     });
-  }
+  };
 
   store.init = function(flags, cb) {
     var stringified = {};
     var multi = client.multi();
     cb = cb || noop;    
-    
+
     multi.del(features_key);
-    cache.flushAll();
+    if (cache_ttl) {
+      cache.flushAll();
+    }
+
 
     for (var key in flags) {
       if (Object.hasOwnProperty.call(flags,key)) {
@@ -85,11 +106,11 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix) {
 
     multi.exec(function(err, replies) {
       if (err) {
-        config.logger.error("[LaunchDarkly] Error initializing redis feature store", err);
+        logger.error("[LaunchDarkly] Error initializing redis feature store", err);
       } 
       cb();
     });
-  }
+  };
 
   store.delete = function(key, version, cb) {
     var multi;
@@ -97,8 +118,8 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix) {
     client.watch(features_key);
     multi = client.multi();
 
-    // We need to run the get() code in a multi txn
-    do_get(multi, key, function(flag) {
+
+    do_get(key, function(flag) {
       if (flag) {
         if (flag.version >= version) {
           cb();
@@ -109,67 +130,71 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix) {
           multi.hset(features_key, key, JSON.stringify(flag));
           multi.exec(function(err, replies) {
             if (err) {
-              config.logger.error("[LaunchDarkly] Error deleting feature flag", err);
+              logger.error("[LaunchDarkly] Error deleting feature flag", err);
             } else if (cache_ttl) {            
               cache.set(key, flag);
             }
             cb();
-          })
+          });
         }
       } 
     });
-  }
+  };
 
-  store.upsert = function(key, flag, cb) {    
+  store.upsert = function(key, flag, cb) {   
     var multi;
     cb = cb || noop;        
     client.watch(features_key);
     multi = client.multi();
 
-    do_get(multi, key, function(original) {
-      if (original) {
-        if (original.version >= version) {
-          cb();
-          return;          
+    do_get(key, function(original) {
+      if (original && original.version >= flag.version) {
+        cb();
+        return;          
+      }
+
+      multi.hset(features_key, key, JSON.stringify(flag));
+      multi.exec(function(err, replies) {
+        if (err) {
+          logger.error("[LaunchDarkly] Error upserting feature flag", err);
         } else {
-          multi.hset(features_key, key, JSON.stringify(flag));
-          multi.exec(function(err, replies) {
-            if (err) {
-              config.logger.error("[LaunchDarkly] Error upserting feature flag", err);
-            } else {
-              if (cache_ttl) {
-                cache.put(key, flag);
-              }
-            }
-            cb();
-          })
+          if (cache_ttl) {
+            cache.set(key, flag);
+          }
         }
-      } 
-    })
-  }
+        cb();
+      });
+        
+    });
+  };
 
   store.initialized = function(cb) {
-    var init = cache.get('$initialized$');
+    var init;
     cb = cb || noop;        
 
-    if (init) {
-      return true;
-    }    
+    if (cache_ttl) {
+      init = cache.get('$initialized$');
+      if (init) {
+        return true;
+      }    
+    }
 
     client.exists('$initialized$', function(err, obj) {
-      if (!err && obj) {
+      if (!err && obj && cache_ttl) {
         cache.set('$initialized$', true);
       } 
       cb(!err && obj);
     });
-  }
+  };
 
   store.close = function() {
     client.quit();
-    cache.close();
-  }
+    if (cache_ttl) {
+      cache.close();
+    }
+  };
 
   return store;
 }
 
-module.exports = RedisFeatureStore
+module.exports = RedisFeatureStore;
