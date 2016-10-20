@@ -1,15 +1,25 @@
 var redis = require('redis'),
-    NodeCache = require( "node-cache" );
+    NodeCache = require( "node-cache" ),
+    winston = require('winston');;
 
 
 var noop = function(){};
 
 
-function RedisFeatureStore(redis_opts, cache_ttl, prefix) {
+function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
   var client = redis.createClient(redis_opts),
       store = {},
       features_key = prefix ? prefix + ":features" : "launchdarkly:features",
       cache = new NodeCache({ stdTTL: cache_ttl});
+
+  logger = (logger || 
+    new winston.Logger({
+      level: 'error',
+      transports: [
+        new (winston.transports.Console)(),
+      ]
+    })
+  );
 
   // Allow driver programs to exit, even if the Redis
   // socket is active
@@ -30,7 +40,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix) {
     } else {
       mclient.hget(features_key, key, function(err, obj) {
         if (err) {
-          config.logger.error("[LaunchDarkly] Error fetching flag from redis", err)
+          logger.error("[LaunchDarkly] Error fetching flag from redis", err)
           cb(null);
         } else {
           flag = JSON.parse(obj);
@@ -48,7 +58,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix) {
     cb = cb || noop;    
     client.hgetall(features_key, function(err, obj) {
       if (err) {
-        config.logger.error("[LaunchDarkly] Error fetching flag from redis", err)
+        logger.error("[LaunchDarkly] Error fetching flag from redis", err)
         cb(null);
       } else {
         var results = {}, 
@@ -88,7 +98,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix) {
 
     multi.exec(function(err, replies) {
       if (err) {
-        config.logger.error("[LaunchDarkly] Error initializing redis feature store", err);
+        logger.error("[LaunchDarkly] Error initializing redis feature store", err);
       } 
       cb();
     });
@@ -112,7 +122,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix) {
           multi.hset(features_key, key, JSON.stringify(flag));
           multi.exec(function(err, replies) {
             if (err) {
-              config.logger.error("[LaunchDarkly] Error deleting feature flag", err);
+              logger.error("[LaunchDarkly] Error deleting feature flag", err);
             } else if (cache_ttl) {            
               cache.set(key, flag);
             }
@@ -138,7 +148,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix) {
           multi.hset(features_key, key, JSON.stringify(flag));
           multi.exec(function(err, replies) {
             if (err) {
-              config.logger.error("[LaunchDarkly] Error upserting feature flag", err);
+              logger.error("[LaunchDarkly] Error upserting feature flag", err);
             } else {
               if (cache_ttl) {
                 cache.put(key, flag);
