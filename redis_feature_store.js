@@ -1,6 +1,6 @@
 var redis = require('redis'),
     NodeCache = require( "node-cache" ),
-    winston = require('winston');;
+    winston = require('winston');
 
 
 var noop = function(){};
@@ -9,7 +9,7 @@ var noop = function(){};
 function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
   var client = redis.createClient(redis_opts),
       store = {},
-      features_key = prefix ? prefix + ":features" : "launchdarkly:features"
+      features_key = prefix ? prefix + ":features" : "launchdarkly:features",
       cache = cache_ttl ? new NodeCache({ stdTTL: cache_ttl}) : null;
 
   logger = (logger || 
@@ -34,13 +34,13 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
       flag = cache.get(key);
       if (flag) {
         cb(flag);
-        return
+        return;
       }
     }
 
     client.hget(features_key, key, function(err, obj) {
       if (err) {
-        logger.error("[LaunchDarkly] Error fetching flag from redis", err)
+        logger.error("[LaunchDarkly] Error fetching flag from redis", err);
         cb(null);
       } else {
         flag = JSON.parse(obj);
@@ -57,13 +57,13 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
         cb(null);
       }
     });
-  }
+  };
 
   store.all = function(cb) {
     cb = cb || noop;    
     client.hgetall(features_key, function(err, obj) {
       if (err) {
-        logger.error("[LaunchDarkly] Error fetching flag from redis", err)
+        logger.error("[LaunchDarkly] Error fetching flag from redis", err);
         cb(null);
       } else {
         var results = {}, 
@@ -80,7 +80,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
         cb(results);
       }
     });
-  }
+  };
 
   store.init = function(flags, cb) {
     var stringified = {};
@@ -110,7 +110,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
       } 
       cb();
     });
-  }
+  };
 
   store.delete = function(key, version, cb) {
     var multi;
@@ -135,11 +135,11 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
               cache.set(key, flag);
             }
             cb();
-          })
+          });
         }
       } 
     });
-  }
+  };
 
   store.upsert = function(key, flag, cb) {   
     var multi;
@@ -166,7 +166,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
       });
         
     });
-  }
+  };
 
   store.initialized = function(cb) {
     var init;
@@ -185,16 +185,16 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
       } 
       cb(!err && obj);
     });
-  }
+  };
 
   store.close = function() {
     client.quit();
     if (cache_ttl) {
       cache.close();
     }
-  }
+  };
 
   return store;
 }
 
-module.exports = RedisFeatureStore
+module.exports = RedisFeatureStore;
