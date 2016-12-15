@@ -70,7 +70,7 @@ function StreamProcessor(sdk_key, config, requestor) {
     es.addEventListener('indirect/patch', function(e) {
       config.logger.debug("[LaunchDarkly] Received indirect patch event")
       if (e && e.data) {
-        var key = data.charAt(0) === '/' ? data.substring(1) : data;
+        var key = e.data.charAt(0) === '/' ? e.data.substring(1) : e.data;
         requestor.request_flag(key, function(err, flag) {
           if (err) {
             config.logger.error("[LaunchDarkly] Unexpected error requesting feature flag");
