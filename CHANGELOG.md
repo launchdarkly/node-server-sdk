@@ -3,6 +3,9 @@
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
 
+## [3.0.6] - 2016-12-19
+### Fixed
+- Bug fix for receiving updates to large feature flags
 
 ## [3.0.5] - 2016-10-20
 ### Fixed
