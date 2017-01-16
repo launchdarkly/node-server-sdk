@@ -274,7 +274,7 @@ var new_client = function(sdk_key, config) {
   }
 
   // TODO keep the reference and stop flushing after close
-  setInterval(client.flush.bind(client), client.flush_interval * 1000).unref();
+  setInterval(client.flush.bind(client), config.flush_interval * 1000).unref();
 
   return client;
 };
