@@ -5,7 +5,7 @@ All notable changes to the LaunchDarkly Node.js SDK will be documented in this f
 
 ## [3.0.7] - 2017-01-16
 ### Changed
-- Removed dependency on Sizzle and direct to polyfill for older browser support
+- Fixed a bug in initialization that caused high CPU usage
 
 ## [3.0.6] - 2016-12-19
 ### Fixed
