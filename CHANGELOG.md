@@ -3,6 +3,10 @@
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
 
+## [3.0.7] - 2017-01-16
+### Changed
+- Removed dependency on Sizzle and direct to polyfill for older browser support
+
 ## [3.0.6] - 2016-12-19
 ### Fixed
 - Bug fix for receiving updates to large feature flags

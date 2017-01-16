@@ -1,6 +1,6 @@
 {
   "name": "ldclient-node",
-  "version": "3.0.6",
+  "version": "3.0.7",
   "description": "LaunchDarkly SDK for Node.js",
   "main": "index.js",
   "scripts": {
