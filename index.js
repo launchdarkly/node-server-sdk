@@ -160,6 +160,7 @@ var new_client = function(sdk_key, config) {
   }
 
   client.all_flags = function(user, fn) {
+    sanitize_user(user);
     var cb = fn || noop;
     var results = {};
 
