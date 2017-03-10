@@ -2,6 +2,9 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [3.0.8] - 2017-03-10
+### Changed
+- Fixed a bug where all_flags would not display correct flag result for user
 
 ## [3.0.7] - 2017-01-16
 ### Changed
