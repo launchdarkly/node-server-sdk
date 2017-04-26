@@ -40,7 +40,7 @@ function EventSource(url, eventSourceInitDict) {
     if (connectPending || readyState === EventSource.CLOSED) return;
     connectPending = true;
     readyState = EventSource.CONNECTING;
-    _emit('error', new Event('error'));
+    _emit('error', new Event('error', {message: 'Connection closed, reconnecting'}));
 
     // The url may have been changed by a temporary
     // redirect. If that's the case, revert it now.
