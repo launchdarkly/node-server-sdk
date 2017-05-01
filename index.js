@@ -67,8 +67,10 @@ var new_client = function(sdk_key, config) {
         var error;
         if ((err.status && err.status === 401) || (err.code && err.code === 401)) {
           error = new Error("Authentication failed. Double check your SDK key.");
+        } else if (err.message) {
+          error = "Error: " + err.message;
         } else {
-          error = new Error("Unexpected error:", err.message ? err.message : err);
+          error = new Error("Unexpected error:", err);
         }
         
         config.logger.error("[LaunchDarkly]", error);
