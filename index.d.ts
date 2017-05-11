@@ -13,11 +13,6 @@ declare module 'ldclient-node' {
   export function init(key: string, user: LDUser, options?: LDOptions): LDClient;
 
   /**
-   * The names of events to which users of the client can subscribe.
-   */
-  export type LDEventName = 'ready' | 'change';
-
-  /**
    * The types of values a feature flag can have.
    *
    * Flags can have any JSON-serializable value.
