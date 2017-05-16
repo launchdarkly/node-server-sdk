@@ -10,7 +10,7 @@ declare module 'ldclient-node' {
   /**
    * The LaunchDarkly static global.
    */
-  export function init(key: string, user: LDUser, options?: LDOptions): LDClient;
+  export function init(key: string, options?: LDOptions): LDClient;
 
   /**
    * The types of values a feature flag can have.
