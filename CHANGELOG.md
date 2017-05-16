@@ -4,6 +4,10 @@ All notable changes to the LaunchDarkly Node.js SDK will be documented in this f
 
 ## [3.0.11] - 2017-05-16
 ### Changed
+- Improve compatibility with ts-node parser
+
+## [3.0.11] - 2017-05-16
+### Changed
 - Fix incorrect typescript definition for init()
 
 ## [3.0.10] - 2017-05-16
