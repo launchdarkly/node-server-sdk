@@ -2,7 +2,7 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
-## [3.0.11] - 2017-05-16
+## [3.0.12] - 2017-05-16
 ### Changed
 - Improve compatibility with ts-node parser
 
