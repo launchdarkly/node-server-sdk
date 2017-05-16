@@ -6,7 +6,7 @@
  * Documentation: http://docs.launchdarkly.com/docs/node-sdk-reference
  */
 
-declare module 'ldclient-node' {
+declare module "ldclient-node" {
   /**
    * The LaunchDarkly static global.
    */
@@ -205,7 +205,7 @@ declare module 'ldclient-node' {
      * @param args
      *  A sequence of any javascript variables
      */
-    error: (...args: any[]) => void
+    error: (...args: any[]) => void;
 
     /**
      * The warning logger.
@@ -213,7 +213,7 @@ declare module 'ldclient-node' {
      * @param args
      *  A sequence of any javascript variables
      */
-    warn: (...args: any[]) => void
+    warn: (...args: any[]) => void;
 
     /**
      * The info logger.
@@ -221,7 +221,7 @@ declare module 'ldclient-node' {
      * @param args
      *  A sequence of any javascript variables
      */
-    info: (...args: any[]) => void
+    info: (...args: any[]) => void;
 
     /**
      * The debug logger.
@@ -229,7 +229,7 @@ declare module 'ldclient-node' {
      * @param args
      *  A sequence of any javascript variables
      */
-    debug: (...args: any[]) => void
+    debug: (...args: any[]) => void;
   }
 
   /**
@@ -248,7 +248,7 @@ declare module 'ldclient-node' {
      * @param callback
      *  Will be called with the resulting flag.
      */
-    get: (key: string, callback: (res: LDFlagValue) => void) => void
+    get: (key: string, callback: (res: LDFlagValue) => void) => void;
 
     /**
      * Get all flags.
@@ -256,7 +256,7 @@ declare module 'ldclient-node' {
      * @param callback
      *  Will be called with the resulting flag set.
      */
-    all: (callback: (err: any, res: LDFlagSet) => void) => void
+    all: (callback: (err: any, res: LDFlagSet) => void) => void;
 
     /**
      * Initialize the store.
@@ -267,7 +267,7 @@ declare module 'ldclient-node' {
      * @param callback
      *  Will be called when the store has been initialized.
      */
-    init: (flags: LDFlagSet, callback?: () => void) => void
+    init: (flags: LDFlagSet, callback?: () => void) => void;
 
     /**
      * Delete a key from the store.
@@ -282,7 +282,7 @@ declare module 'ldclient-node' {
      * @param callback
      *  Will be called when the delete operation is complete.
      */
-    delete: (key: string, version: string, callback?: () => void) => void
+    delete: (key: string, version: string, callback?: () => void) => void;
 
     /**
      * Upsert a flag to the store.
@@ -296,7 +296,7 @@ declare module 'ldclient-node' {
      * @param callback
      *  Will be called after the upsert operation is complete.
      */
-    upsert: (key: string, flag: LDFlag, callback?: () => void) => void
+    upsert: (key: string, flag: LDFlag, callback?: () => void) => void;
 
     /**
      * Is the store initialized?
@@ -308,7 +308,7 @@ declare module 'ldclient-node' {
      *  Truthy if the cache is already initialized.
      * 
      */
-    initialized: (callback?: (err) => void) => bool
+    initialized: (callback?: (err) => void) => bool;
 
     /**
      * Close the feature store.
@@ -316,7 +316,7 @@ declare module 'ldclient-node' {
      * @returns
      *  The store instance.
      */
-    close: () => LDFeatureStore
+    close: () => LDFeatureStore;
   }
 
   /**
@@ -423,9 +423,6 @@ declare module 'ldclient-node' {
      * These are flushed periodically (see configuration option: flush_interval)
      * and when the queue size limit (see configuration option: capacity) is reached.
      */
-    flush: (callback:(err: any, res: boolean)  => void) => void;
+    flush: (callback: (err: any, res: boolean) => void) => void;
   }
-  
-
 }
-
