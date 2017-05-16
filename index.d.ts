@@ -296,7 +296,7 @@ declare module "ldclient-node" {
      * @param callback
      *  Will be called after the upsert operation is complete.
      */
-    upsert: (key: string, flag: LDFlag, callback?: () => void) => void;
+    upsert: (key: string, flag: LDFlagValue, callback?: () => void) => void;
 
     /**
      * Is the store initialized?
@@ -308,7 +308,7 @@ declare module "ldclient-node" {
      *  Truthy if the cache is already initialized.
      *
      */
-    initialized: (callback?: (err) => void) => bool;
+    initialized: (callback?: (err) => void) => boolean;
 
     /**
      * Close the feature store.
@@ -349,7 +349,7 @@ declare module "ldclient-node" {
      */
     variation: (key: string, user: LDUser, defaultValue: LDFlagValue, callback?: (err: any, res: LDFlagValue) => void) => void;
 
-    toggle: typeof variation;
+    toggle: (key: string, user: LDUser, defaultValue: LDFlagValue, callback?: (err: any, res: LDFlagValue) => void) => void;
 
     /**
      * Retrieves a flag's value.
