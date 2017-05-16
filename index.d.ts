@@ -27,7 +27,6 @@ declare module 'ldclient-node' {
   };
 
   /**
-  /**
    * LaunchDarkly initialization options.
    */
   export interface LDOptions {
