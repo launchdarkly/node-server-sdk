@@ -21,7 +21,7 @@ function PollingProcessor(config, requestor) {
       sleepFor = Math.max(config.poll_interval * 1000 - elapsed, 0);
       config.logger.debug("Elapsed: %d ms, sleeping for %d ms", elapsed, sleepFor);
       if (err) {
-        config.logger.error("[LaunchDarkly] Error polling for all feature flags: %s", err);
+        config.logger.error("[LaunchDarkly] Error polling for all feature flags", err);
         cb(err);
         // Recursively call poll after the appropriate delay
         setTimeout(poll, sleepFor);
