@@ -308,7 +308,7 @@ declare module "ldclient-node" {
      *  Truthy if the cache is already initialized.
      *
      */
-    initialized: (callback?: (err) => void) => boolean;
+    initialized: (callback?: (err: any) => void) => boolean;
 
     /**
      * Close the feature store.
