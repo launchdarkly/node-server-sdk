@@ -10,7 +10,7 @@ var tunnel = require('tunnel');
 var winston = require('winston');
 var crypto = require('crypto');
 var async = require('async');
-var VERSION = "3.0.8";
+var VERSION = "3.0.14";
 
 var noop = function(){};
 

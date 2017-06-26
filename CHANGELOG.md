@@ -2,6 +2,12 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [3.0.14] - 2017-06-26
+### Fixed
+- Fixed implicit any in typescript definition
+### Changed
+- Improved error logging when polling
+
 ## [3.0.13] - 2017-05-16
 ### Changed
 - Update typescript definitions
