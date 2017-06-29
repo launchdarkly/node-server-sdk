@@ -7,6 +7,8 @@
  */
 
 declare module "ldclient-node" {
+  import { EventEmitter } from 'events';
+  
   /**
    * The LaunchDarkly static global.
    */
@@ -324,7 +326,7 @@ declare module "ldclient-node" {
    *
    * @see http://docs.launchdarkly.com/docs/js-sdk-reference
    */
-  export interface LDClient {
+  export interface LDClient extends EventEmitter {
     /**
      * @returns Whether the client library has completed initialization.
      */
