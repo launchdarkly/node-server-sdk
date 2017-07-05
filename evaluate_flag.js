@@ -157,7 +157,7 @@ function clause_match_user(c, user) {
 
   uValue = user_value(user, c.attribute);
 
-  if (uValue === null) {
+  if (uValue === null || uValue === undefined) {
     return false;
   }
 
