@@ -10,26 +10,21 @@ var tunnel = require('tunnel');
 var winston = require('winston');
 var crypto = require('crypto');
 var async = require('async');
+var errors = require('./errors');
 var VERSION = "3.0.14";
 
 var noop = function(){};
 
 global.setImmediate = global.setImmediate || process.nextTick.bind(process);
 
-/**
- * Emit an error event if the emitter has a registered
- * error handle, or log the error using the
- * configured logger.
- * 
- * @param {EventEmitter} emitter 
- * @param {Error} error 
- */
-function reportError(emitter, logger, error) {
-  if (emitter.listenerCount('error')) {
-    emitter.emit('error', error);
-  } else {
-    logger.error(error);
-  }
+function createErrorReporter(emitter, logger) {
+  return function(error) {
+    if (emitter.listenerCount('error')) {
+      emitter.emit('error', error);
+    } else {
+      logger.error('[LaunchDarkly]', error);
+    }
+  };
 }
 
 var new_client = function(sdk_key, config) {
@@ -64,6 +59,8 @@ var new_client = function(sdk_key, config) {
   );
   config.feature_store = config.feature_store || InMemoryFeatureStore();
 
+  var reportError = createErrorReporter(client, config.logger);
+
   if (!sdk_key && !config.offline) {
     throw new Error("You must configure the client with an SDK key");
   }
@@ -87,7 +84,7 @@ var new_client = function(sdk_key, config) {
           error = err;
         }
         
-        reportError(client, config.logger, error);
+        reportError(error);
       } else if (!init_complete) {
         init_complete = true;        
         client.emit('ready');
@@ -107,6 +104,7 @@ var new_client = function(sdk_key, config) {
   client.variation = function(key, user, default_val, fn) {
     sanitize_user(user);
     var cb = fn || noop;
+    var variationErr;
 
     if (this.is_offline()) {
       config.logger.info("[LaunchDarkly] variation called in offline mode. Returning default value.");
@@ -115,16 +113,18 @@ var new_client = function(sdk_key, config) {
     }
 
     else if (!key) {
-      reportError(client, config.logger, new Error('No feature flag key specified. Returning default value.'));
+      variationErr = new errors.LDClientError('No feature flag key specified. Returning default value.');
+      reportError(variationError);
       send_flag_event(key, user, default_val, default_val);
-      cb(new Error("[LaunchDarkly] No flag key specified in variation call"), default_val);
+      cb(variationErr, default_val);
       return;
     }
 
     else if (!user) {
-      reportError(client, config.logger, new Error('No user specified. Returning default value.'));
+      variationErr = new errors.LDClientError('No user specified. Returning default value.');
+      reportError(variationErr);
       send_flag_event(key, user, default_val, default_val);
-      cb(new Error("[LaunchDarkly] No user specified in variation call"), default_val);
+      cb(variationErr, default_val);
       return;
     }
 
@@ -133,9 +133,10 @@ var new_client = function(sdk_key, config) {
     }
 
     if (!init_complete) {
-      reportError(client, config.logger, new Error('client has not finished initializing. Returning default value.'));
+      variationErr = new errors.LDClientError("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?)");
+      reportError(variationErr);
       send_flag_event(key, user, default_val, default_val);
-      cb(new Error("[LaunchDarkly] variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?)"), default_val);
+      cb(variationErr, default_val);
       return; 
     }
 
@@ -144,7 +145,7 @@ var new_client = function(sdk_key, config) {
         var i;
         var version = flag ? flag.version : null;
         if (err) {
-          reportError(client, config.logger, new Error('Encountered error evaluating feature flag: ' + err.message));
+          reportError(new errors.LDClientError('Encountered error evaluating feature flag: ' + err.message));
         }
 
         // Send off any events associated with evaluating prerequisites. The events

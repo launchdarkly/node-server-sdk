@@ -13,5 +13,5 @@ function createCustomError(name, initialize) {
 }
 
 exports.LDPollingError = createCustomError('LaunchDarklyPollingError');
-
 exports.LDStreamingError = createCustomError('LaunchDarklyStreamingError');
+exports.LDClientError = createCustomError('LaunchDarklyClientError');
