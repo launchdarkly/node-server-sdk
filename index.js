@@ -298,7 +298,8 @@ var new_client = function(sdk_key, config) {
 
 module.exports = {
   init: new_client,
-  RedisFeatureStore: RedisFeatureStore
+  RedisFeatureStore: RedisFeatureStore,
+  errors: errors
 };
 
 
