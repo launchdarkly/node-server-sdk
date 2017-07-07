@@ -16,6 +16,22 @@ var noop = function(){};
 
 global.setImmediate = global.setImmediate || process.nextTick.bind(process);
 
+/**
+ * Emit an error event if the emitter has a registered
+ * error handle, or log the error using the
+ * configured logger.
+ * 
+ * @param {EventEmitter} emitter 
+ * @param {Error} error 
+ */
+function reportError(emitter, logger, error) {
+  if (emitter.listenerCount('error')) {
+    emitter.emit('error', error);
+  } else {
+    logger.error(error);
+  }
+}
+
 var new_client = function(sdk_key, config) {
   var client = new EventEmitter(),
       init_complete = false,
@@ -67,15 +83,12 @@ var new_client = function(sdk_key, config) {
         var error;
         if ((err.status && err.status === 401) || (err.code && err.code === 401)) {
           error = new Error("Authentication failed. Double check your SDK key.");
-        } else if (err.message) {
-          error = "Error: " + err.message;
         } else {
-          error = new Error("Unexpected error:", err);
+          error = err;
         }
         
-        config.logger.error("[LaunchDarkly]", error);
-      }
-      else if (!init_complete) {
+        reportError(client, config.logger, error);
+      } else if (!init_complete) {
         init_complete = true;        
         client.emit('ready');
       }
@@ -102,14 +115,14 @@ var new_client = function(sdk_key, config) {
     }
 
     else if (!key) {
-      config.logger.error("[LaunchDarkly] No feature flag key specified. Returning default value.");
+      reportError(client, config.logger, new Error('No feature flag key specified. Returning default value.'));
       send_flag_event(key, user, default_val, default_val);
       cb(new Error("[LaunchDarkly] No flag key specified in variation call"), default_val);
       return;
     }
 
     else if (!user) {
-      config.logger.error("[LaunchDarkly] No user specified. Returning default value.");
+      reportError(client, config.logger, new Error('No user specified. Returning default value.'));
       send_flag_event(key, user, default_val, default_val);
       cb(new Error("[LaunchDarkly] No user specified in variation call"), default_val);
       return;
@@ -120,7 +133,7 @@ var new_client = function(sdk_key, config) {
     }
 
     if (!init_complete) {
-      config.logger.error("[LaunchDarkly] client has not finished initializing. Returning default value.");
+      reportError(client, config.logger, new Error('client has not finished initializing. Returning default value.'));
       send_flag_event(key, user, default_val, default_val);
       cb(new Error("[LaunchDarkly] variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?)"), default_val);
       return; 
@@ -131,7 +144,7 @@ var new_client = function(sdk_key, config) {
         var i;
         var version = flag ? flag.version : null;
         if (err) {
-          config.logger.error("[LaunchDarkly] Encountered error evaluating feature flag", err)
+          reportError(client, config.logger, new Error('Encountered error evaluating feature flag: ' + err.message));
         }
 
         // Send off any events associated with evaluating prerequisites. The events
