@@ -435,6 +435,6 @@ declare module "ldclient-node" {
      * 
      * @returns a Promise which resolves once flushing is finished
      */
-    flush: (callback: (err: any, res: boolean) => void) => Promise<void>;
+    flush: (callback?: (err: any, res: boolean) => void) => Promise<void>;
   }
 }
