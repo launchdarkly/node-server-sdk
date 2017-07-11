@@ -12,6 +12,13 @@ var crypto = require('crypto');
 var async = require('async');
 var VERSION = "3.0.14";
 
+/**
+ * Returns a promise and invoke an optional callback with the appropriate arguments.
+ * 
+ * @param {Promise<any>} promise 
+ * @param {Function} callback 
+ * @returns Promise<any>
+ */
 function sdkResult(promise, callback) {
   if (callback) {
     return promise.then(
