@@ -19,6 +19,10 @@ global.setImmediate = global.setImmediate || process.nextTick.bind(process);
 
 function createErrorReporter(emitter, logger) {
   return function(error) {
+    if (!error) {
+      return;
+    }
+
     if (emitter.listenerCount('error')) {
       emitter.emit('error', error);
     } else {
@@ -59,7 +63,7 @@ var new_client = function(sdk_key, config) {
   );
   config.feature_store = config.feature_store || InMemoryFeatureStore();
 
-  var reportError = createErrorReporter(client, config.logger);
+  var maybeReportError = createErrorReporter(client, config.logger);
 
   if (!sdk_key && !config.offline) {
     throw new Error("You must configure the client with an SDK key");
@@ -84,7 +88,7 @@ var new_client = function(sdk_key, config) {
           error = err;
         }
         
-        reportError(error);
+        maybeReportError(error);
       } else if (!init_complete) {
         init_complete = true;        
         client.emit('ready');
@@ -114,7 +118,7 @@ var new_client = function(sdk_key, config) {
 
     else if (!key) {
       variationErr = new errors.LDClientError('No feature flag key specified. Returning default value.');
-      reportError(variationError);
+      maybeReportError(variationError);
       send_flag_event(key, user, default_val, default_val);
       cb(variationErr, default_val);
       return;
@@ -122,7 +126,7 @@ var new_client = function(sdk_key, config) {
 
     else if (!user) {
       variationErr = new errors.LDClientError('No user specified. Returning default value.');
-      reportError(variationErr);
+      maybeReportError(variationErr);
       send_flag_event(key, user, default_val, default_val);
       cb(variationErr, default_val);
       return;
@@ -134,7 +138,7 @@ var new_client = function(sdk_key, config) {
 
     if (!init_complete) {
       variationErr = new errors.LDClientError("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?)");
-      reportError(variationErr);
+      maybeReportError(variationErr);
       send_flag_event(key, user, default_val, default_val);
       cb(variationErr, default_val);
       return; 
@@ -144,9 +148,8 @@ var new_client = function(sdk_key, config) {
       evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
         var i;
         var version = flag ? flag.version : null;
-        if (err) {
-          reportError(new errors.LDClientError('Encountered error evaluating feature flag: ' + err.message));
-        }
+
+        maybeReportError(new errors.LDClientError('Encountered error evaluating feature flag: ' + err.message));
 
         // Send off any events associated with evaluating prerequisites. The events
         // have already been constructed, so we just have to push them onto the queue.
