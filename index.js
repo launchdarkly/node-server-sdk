@@ -13,13 +13,19 @@ var async = require('async');
 var VERSION = "3.0.14";
 
 /**
- * Returns a promise and invoke an optional callback with the appropriate arguments.
+ * Wrap a promise to invoke an optional callback upon resolution or rejection.
+ * 
+ * This function assumes the callback follows the Node.js callback type: (err, value) => void
+ * 
+ * If a callback is provided:
+ *   - if the promise is resolved, invoke the callback with (null, value)
+ *   - if the promise is rejected, invoke the callback with (error, null)
  * 
  * @param {Promise<any>} promise 
  * @param {Function} callback 
  * @returns Promise<any>
  */
-function sdkResult(promise, callback) {
+function wrapPromiseCallback(promise, callback) {
   if (callback) {
     return promise.then(
       function(value) {
@@ -118,7 +124,7 @@ var new_client = function(sdk_key, config) {
   };
 
   client.variation = function(key, user, default_val, callback) {
-    return sdkResult(new Promise(function(resolve, reject) {
+    return wrapPromiseCallback(new Promise(function(resolve, reject) {
       sanitize_user(user);
 
       if (this.is_offline()) {
@@ -183,7 +189,7 @@ var new_client = function(sdk_key, config) {
   }
 
   client.all_flags = function(user, callback) {
-    return sdkResult(new Promise(function(resolve, reject) {
+    return wrapPromiseCallback(new Promise(function(resolve, reject) {
       sanitize_user(user);
       var results = {};
 
@@ -247,7 +253,7 @@ var new_client = function(sdk_key, config) {
   };
 
   client.flush = function(callback) {
-    return sdkResult(new Promise(function(resolve, reject) {
+    return wrapPromiseCallback(new Promise(function(resolve, reject) {
       var worklist;
       if (!queue.length) {
         resolve();
