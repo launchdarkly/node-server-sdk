@@ -10,7 +10,7 @@ var tunnel = require('tunnel');
 var winston = require('winston');
 var crypto = require('crypto');
 var async = require('async');
-var VERSION = "3.0.14";
+var package_json = require('./package.json');
 
 var noop = function(){};
 
@@ -24,7 +24,7 @@ var new_client = function(sdk_key, config) {
       update_processor;
 
   config = config || {};
-  config.version = VERSION;
+  config.user_agent = 'NodeJSClient/' + package_json.version;
   
   config.base_uri = (config.base_uri || 'https://app.launchdarkly.com').replace(/\/+$/, "");
   config.stream_uri = (config.stream_uri || 'https://stream.launchdarkly.com').replace(/\/+$/, "");
@@ -242,7 +242,7 @@ var new_client = function(sdk_key, config) {
       method: "POST",
       headers: {
         'Authorization': sdk_key,
-        'User-Agent': 'NodeJSClient/' + VERSION,
+        'User-Agent': config.user_agent,
         'Content-Type': 'application/json'
       },
       body: worklist,
