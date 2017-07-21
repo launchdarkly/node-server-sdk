@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# This script updates the version for the ldclient-node SDK
+# This script publishes a new version of the ldclient-node SDK to NPM. It also updates the version in package.json.
 
 # It takes exactly one argument: the new version.
 # It should be run from the root of this git repo like this:
