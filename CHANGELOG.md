@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [3.0.15] - 2017-07-21
+### Changed
+- More consistent User-Agent header usage
+### Added
+- Release script
+
+
 ## [3.0.14] - 2017-06-26
 ### Fixed
 - Fixed implicit any in typescript definition
