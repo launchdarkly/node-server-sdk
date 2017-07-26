@@ -149,7 +149,7 @@ var new_client = function(sdk_key, config) {
         var i;
         var version = flag ? flag.version : null;
 
-        maybeReportError(new errors.LDClientError('Encountered error evaluating feature flag: ' + (err ? err.message : '')));
+        maybeReportError(new errors.LDClientError('Encountered error evaluating feature flag' + (err ? (': ' + err.message) : '')));
 
         // Send off any events associated with evaluating prerequisites. The events
         // have already been constructed, so we just have to push them onto the queue.
