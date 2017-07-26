@@ -12,7 +12,7 @@ function StreamProcessor(sdk_key, config, requestor) {
     es = new EventSource(config.stream_uri + "/flags", 
       {
         agent: config.proxy_agent, 
-        headers: {'Authorization': sdk_key}
+        headers: {'Authorization': sdk_key,'User-Agent': config.user_agent}
       });
       
     es.onerror = function(err) {

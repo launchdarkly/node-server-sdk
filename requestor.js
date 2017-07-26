@@ -34,7 +34,7 @@ function Requestor(sdk_key, config) {
       method: "GET",
       headers: {
         'Authorization': sdk_key,
-        'User-Agent': 'NodeJSClient/' + config.version
+        'User-Agent': config.user_agent
       },
       timeout: config.timeout * 1000,
       agent: config.proxy_agent
