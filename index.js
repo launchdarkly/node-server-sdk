@@ -10,11 +10,26 @@ var tunnel = require('tunnel');
 var winston = require('winston');
 var crypto = require('crypto');
 var async = require('async');
+var errors = require('./errors');
 var package_json = require('./package.json');
 
 var noop = function(){};
 
 global.setImmediate = global.setImmediate || process.nextTick.bind(process);
+
+function createErrorReporter(emitter, logger) {
+  return function(error) {
+    if (!error) {
+      return;
+    }
+
+    if (emitter.listenerCount('error')) {
+      emitter.emit('error', error);
+    } else {
+      logger.error('[LaunchDarkly]', error);
+    }
+  };
+}
 
 var new_client = function(sdk_key, config) {
   var client = new EventEmitter(),
@@ -48,6 +63,8 @@ var new_client = function(sdk_key, config) {
   );
   config.feature_store = config.feature_store || InMemoryFeatureStore();
 
+  var maybeReportError = createErrorReporter(client, config.logger);
+
   if (!sdk_key && !config.offline) {
     throw new Error("You must configure the client with an SDK key");
   }
@@ -67,15 +84,12 @@ var new_client = function(sdk_key, config) {
         var error;
         if ((err.status && err.status === 401) || (err.code && err.code === 401)) {
           error = new Error("Authentication failed. Double check your SDK key.");
-        } else if (err.message) {
-          error = "Error: " + err.message;
         } else {
-          error = new Error("Unexpected error:", err);
+          error = err;
         }
         
-        config.logger.error("[LaunchDarkly]", error);
-      }
-      else if (!init_complete) {
+        maybeReportError(error);
+      } else if (!init_complete) {
         init_complete = true;        
         client.emit('ready');
       }
@@ -94,6 +108,7 @@ var new_client = function(sdk_key, config) {
   client.variation = function(key, user, default_val, fn) {
     sanitize_user(user);
     var cb = fn || noop;
+    var variationErr;
 
     if (this.is_offline()) {
       config.logger.info("[LaunchDarkly] variation called in offline mode. Returning default value.");
@@ -102,16 +117,18 @@ var new_client = function(sdk_key, config) {
     }
 
     else if (!key) {
-      config.logger.error("[LaunchDarkly] No feature flag key specified. Returning default value.");
+      variationErr = new errors.LDClientError('No feature flag key specified. Returning default value.');
+      maybeReportError(variationError);
       send_flag_event(key, user, default_val, default_val);
-      cb(new Error("[LaunchDarkly] No flag key specified in variation call"), default_val);
+      cb(variationErr, default_val);
       return;
     }
 
     else if (!user) {
-      config.logger.error("[LaunchDarkly] No user specified. Returning default value.");
+      variationErr = new errors.LDClientError('No user specified. Returning default value.');
+      maybeReportError(variationErr);
       send_flag_event(key, user, default_val, default_val);
-      cb(new Error("[LaunchDarkly] No user specified in variation call"), default_val);
+      cb(variationErr, default_val);
       return;
     }
 
@@ -120,9 +137,10 @@ var new_client = function(sdk_key, config) {
     }
 
     if (!init_complete) {
-      config.logger.error("[LaunchDarkly] client has not finished initializing. Returning default value.");
+      variationErr = new errors.LDClientError("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?)");
+      maybeReportError(variationErr);
       send_flag_event(key, user, default_val, default_val);
-      cb(new Error("[LaunchDarkly] variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?)"), default_val);
+      cb(variationErr, default_val);
       return; 
     }
 
@@ -130,8 +148,9 @@ var new_client = function(sdk_key, config) {
       evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
         var i;
         var version = flag ? flag.version : null;
+
         if (err) {
-          config.logger.error("[LaunchDarkly] Encountered error evaluating feature flag", err)
+          maybeReportError(new errors.LDClientError('Encountered error evaluating feature flag:' + (err.message ? (': ' + err.message) : err)));
         }
 
         // Send off any events associated with evaluating prerequisites. The events
@@ -284,7 +303,8 @@ var new_client = function(sdk_key, config) {
 
 module.exports = {
   init: new_client,
-  RedisFeatureStore: RedisFeatureStore
+  RedisFeatureStore: RedisFeatureStore,
+  errors: errors
 };
 
 
