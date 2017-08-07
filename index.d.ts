@@ -9,6 +9,12 @@
 declare module "ldclient-node" {
   import { EventEmitter } from 'events';
   
+  namespace errors {
+    export const LDPollingError: ErrorConstructor;
+    export const LDStreamingError: ErrorConstructor;
+    export const LDClientError: ErrorConstructor;
+  }
+
   /**
    * The LaunchDarkly static global.
    */
