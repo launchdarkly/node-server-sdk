@@ -339,6 +339,11 @@ declare module "ldclient-node" {
     initialized: () => boolean;
 
     /**
+     * @returns a Promise containing the initialization state of the client
+     */
+    waitUntilReady: () => Promise<void>;
+
+    /**
      * Retrieves a flag's value.
      *
      * @param key
@@ -354,21 +359,24 @@ declare module "ldclient-node" {
      *
      * @param callback
      *   The callback to receive the variation result.
+     * 
+     * @returns a Promise containing the flag value
      */
-    variation: (key: string, user: LDUser, defaultValue: LDFlagValue, callback?: (err: any, res: LDFlagValue) => void) => void;
+    variation: (key: string, user: LDUser, defaultValue: LDFlagValue, callback?: (err: any, res: LDFlagValue) => void) => Promise<LDFlagValue>;
 
-    toggle: (key: string, user: LDUser, defaultValue: LDFlagValue, callback?: (err: any, res: LDFlagValue) => void) => void;
+    toggle: (key: string, user: LDUser, defaultValue: LDFlagValue, callback?: (err: any, res: LDFlagValue) => void) => Promise<LDFlagValue>;
 
     /**
-     * Retrieves a flag's value.
+     * Retrieves the set of all flag values for a user.
      *
      * @param key
      *   The key of the flag for which to retrieve the corresponding value.
      * @param user
      * @param callback
      *   The node style callback to receive the variation result.
+     * @returns a Promise containing the set of all flag values for a user
      */
-    all_flags: (user: LDUser, callback?: (err: any, res: LDFlagSet) => void) => void;
+    all_flags: (user: LDUser, callback?: (err: any, res: LDFlagSet) => void) => Promise<LDFlagSet>;
 
     /**
      *
@@ -430,7 +438,9 @@ declare module "ldclient-node" {
      * Internally, the LaunchDarkly SDK keeps an event queue for track and identify calls.
      * These are flushed periodically (see configuration option: flush_interval)
      * and when the queue size limit (see configuration option: capacity) is reached.
+     * 
+     * @returns a Promise which resolves once flushing is finished
      */
-    flush: (callback: (err: any, res: boolean) => void) => void;
+    flush: (callback?: (err: any, res: boolean) => void) => Promise<void>;
   }
 }
