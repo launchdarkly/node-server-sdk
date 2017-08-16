@@ -50,7 +50,7 @@ function Requestor(sdk_key, config) {
     req(
       function(response) {
         if (response.code !== 200) {
-          cb(new Error('[LaunchDarkly] Unexpected status code: ' + response.code), null);
+          cb(new Error('Unexpected status code: ' + response.code), null);
         } else {
           cb(null, response.getBody());
         }
@@ -66,7 +66,7 @@ function Requestor(sdk_key, config) {
     req(
       function(response) {
         if (response.code !== 200) {
-          cb(new Error('[LaunchDarkly] Unexpected status code: ' + response.code), null);
+          cb(new Error('Unexpected status code: ' + response.code), null);
         } else {
           cb(null, response.getBody());
         }
