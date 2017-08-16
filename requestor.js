@@ -72,7 +72,7 @@ function Requestor(sdk_key, config) {
         }
       },
       function(err) {
-        cb(err, null);
+        cb(new Error('Unexpected error: ' + response.code + ' -- ' + response.message), null);
       }
     );
   }
