@@ -100,10 +100,10 @@ var new_client = function(sdk_key, config) {
 
     if (config.stream) {
       config.logger.info("[LaunchDarkly] Initializing stream processor to receive feature flag updates");
-      update_processor = StreamingProcessor(sdk_key, config, requestor, );
+      update_processor = StreamingProcessor(sdk_key, config, requestor);
     } else {
       config.logger.info("[LaunchDarkly] Initializing polling processor to receive feature flag updates");
-      update_processor = PollingProcessor(config, requestor, );
+      update_processor = PollingProcessor(config, requestor);
     }
     update_processor.start(function(err) {
       if (err) {
