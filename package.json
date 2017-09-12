@@ -24,6 +24,7 @@
   "dependencies": {
     "async": "^2.0.0-rc.5",
     "crypto": "0.0.3",
+    "deep-equal": "1.0.1",
     "node-cache": "^3.2.1",
     "node-sha1": "0.0.1",
     "original": "~0.0.8",

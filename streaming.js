@@ -2,7 +2,7 @@ var errors = require('./errors');
 
 var EventSource = require('./eventsource');
 
-function StreamProcessor(sdk_key, config, requestor, updateCallback) {
+function StreamProcessor(sdk_key, config, requestor) {
   var processor = {},
       store = config.feature_store,
       es;
@@ -25,7 +25,6 @@ function StreamProcessor(sdk_key, config, requestor, updateCallback) {
         var flags = JSON.parse(e.data);
         store.init(flags, function() {
           cb();
-          updateCallback();
         })     
       } else {
         cb(new errors.LDStreamingError('[LaunchDarkly] Unexpected payload from event stream'));
@@ -36,7 +35,7 @@ function StreamProcessor(sdk_key, config, requestor, updateCallback) {
       config.logger.debug('[LaunchDarkly] Received patch event');
       if (e && e.data) {
         var patch = JSON.parse(e.data);
-        store.upsert(patch.data.key, patch.data, updateCallback);
+        store.upsert(patch.data.key, patch.data);
       } else {
         cb(new errors.LDStreamingError('[LaunchDarkly] Unexpected payload from event stream'));
       }
@@ -49,7 +48,7 @@ function StreamProcessor(sdk_key, config, requestor, updateCallback) {
             key = data.path.charAt(0) === '/' ? data.path.substring(1) : data.path, // trim leading '/'
             version = data.version;
 
-        store.delete(key, version, updateCallback);
+        store.delete(key, version);
       } else {
         cb(new errors.LDStreamingError('[LaunchDarkly] Unexpected payload from event stream'));
       }
@@ -63,7 +62,6 @@ function StreamProcessor(sdk_key, config, requestor, updateCallback) {
         } else {
           store.init(flags, function() {
             cb();
-            updateCallback();
           })          
         }
       })
@@ -77,7 +75,7 @@ function StreamProcessor(sdk_key, config, requestor, updateCallback) {
           if (err) {
             cb(new errors.LDStreamingError('[LaunchDarkly] Unexpected error requesting feature flag'));
           } else {
-            store.upsert(key, flag, updateCallback);
+            store.upsert(key, flag);
           }
         })
       } else {

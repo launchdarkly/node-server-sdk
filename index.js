@@ -87,7 +87,7 @@ var new_client = function(sdk_key, config) {
       ]
     })
   );
-  config.feature_store = config.feature_store || InMemoryFeatureStore();
+  config.feature_store = config.feature_store || InMemoryFeatureStore(client);
 
   var maybeReportError = createErrorReporter(client, config.logger);
 
