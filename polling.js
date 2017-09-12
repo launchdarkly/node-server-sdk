@@ -1,6 +1,6 @@
 var errors = require('./errors');
 
-function PollingProcessor(config, requestor) {
+function PollingProcessor(config, requestor, updateCallback) {
   var processor = {},
       store = config.feature_store,
       stopped = false;
@@ -27,6 +27,7 @@ function PollingProcessor(config, requestor) {
       } else {
         store.init(flags, function() {
           cb();
+          updateCallback();
           // Recursively call poll after the appropriate delay
           setTimeout(function() { poll(cb); }, sleepFor);
         });

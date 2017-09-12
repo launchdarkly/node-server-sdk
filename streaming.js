@@ -2,7 +2,7 @@ var errors = require('./errors');
 
 var EventSource = require('./eventsource');
 
-function StreamProcessor(sdk_key, config, requestor) {
+function StreamProcessor(sdk_key, config, requestor, updateCallback) {
   var processor = {},
       store = config.feature_store,
       es;
@@ -25,6 +25,7 @@ function StreamProcessor(sdk_key, config, requestor) {
         var flags = JSON.parse(e.data);
         store.init(flags, function() {
           cb();
+          updateCallback();
         })     
       } else {
         cb(new errors.LDStreamingError('[LaunchDarkly] Unexpected payload from event stream'));
@@ -35,7 +36,7 @@ function StreamProcessor(sdk_key, config, requestor) {
       config.logger.debug('[LaunchDarkly] Received patch event');
       if (e && e.data) {
         var patch = JSON.parse(e.data);
-        store.upsert(patch.data.key, patch.data);
+        store.upsert(patch.data.key, patch.data, updateCallback);
       } else {
         cb(new errors.LDStreamingError('[LaunchDarkly] Unexpected payload from event stream'));
       }
@@ -48,7 +49,7 @@ function StreamProcessor(sdk_key, config, requestor) {
             key = data.path.charAt(0) === '/' ? data.path.substring(1) : data.path, // trim leading '/'
             version = data.version;
 
-        store.delete(key, version);
+        store.delete(key, version, updateCallback);
       } else {
         cb(new errors.LDStreamingError('[LaunchDarkly] Unexpected payload from event stream'));
       }
@@ -62,6 +63,7 @@ function StreamProcessor(sdk_key, config, requestor) {
         } else {
           store.init(flags, function() {
             cb();
+            updateCallback();
           })          
         }
       })
@@ -75,7 +77,7 @@ function StreamProcessor(sdk_key, config, requestor) {
           if (err) {
             cb(new errors.LDStreamingError('[LaunchDarkly] Unexpected error requesting feature flag'));
           } else {
-            store.upsert(key, flag);
+            store.upsert(key, flag, updateCallback);
           }
         })
       } else {

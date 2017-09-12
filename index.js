@@ -100,10 +100,10 @@ var new_client = function(sdk_key, config) {
 
     if (config.stream) {
       config.logger.info("[LaunchDarkly] Initializing stream processor to receive feature flag updates");
-      update_processor = StreamingProcessor(sdk_key, config, requestor);
+      update_processor = StreamingProcessor(sdk_key, config, requestor, update_callback);
     } else {
       config.logger.info("[LaunchDarkly] Initializing polling processor to receive feature flag updates");
-      update_processor = PollingProcessor(config, requestor);
+      update_processor = PollingProcessor(config, requestor, update_callback);
     }
     update_processor.start(function(err) {
       if (err) {
@@ -314,6 +314,10 @@ var new_client = function(sdk_key, config) {
   function send_flag_event(key, user, value, default_val, version) {
     var event = evaluate.create_flag_event(key, user, value, default_val, version);
     enqueue(event);
+  }
+
+  function update_callback() {
+    client.emit("update");
   }
 
   // TODO keep the reference and stop flushing after close
