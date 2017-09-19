@@ -50,7 +50,7 @@ function createErrorReporter(emitter, logger) {
     if (emitter.listenerCount('error')) {
       emitter.emit('error', error);
     } else {
-      logger.error('[LaunchDarkly]', error);
+      logger.error(error);
     }
   };
 }
@@ -81,9 +81,13 @@ var new_client = function(sdk_key, config) {
   }
   config.logger = (config.logger || 
     new winston.Logger({
-      level: 'error',
+      level: 'debug',
       transports: [
-        new (winston.transports.Console)(),
+        new (winston.transports.Console)(({
+          formatter: function(options) {
+            return '[LaunchDarkly] ' + (options.message ? options.message : '');
+          }
+        })),
       ]
     })
   );
@@ -99,10 +103,10 @@ var new_client = function(sdk_key, config) {
     requestor = Requestor(sdk_key, config);
 
     if (config.stream) {
-      config.logger.info("[LaunchDarkly] Initializing stream processor to receive feature flag updates");
+      config.logger.info("Initializing stream processor to receive feature flag updates");
       update_processor = StreamingProcessor(sdk_key, config, requestor);
     } else {
-      config.logger.info("[LaunchDarkly] Initializing polling processor to receive feature flag updates");
+      config.logger.info("Initializing polling processor to receive feature flag updates");
       update_processor = PollingProcessor(config, requestor);
     }
     update_processor.start(function(err) {
@@ -143,7 +147,7 @@ var new_client = function(sdk_key, config) {
       var variationErr;
 
       if (this.is_offline()) {
-        config.logger.info("[LaunchDarkly] variation called in offline mode. Returning default value.");
+        config.logger.info("Variation called in offline mode. Returning default value.");
         return resolve(default_val);
       }
 
@@ -162,7 +166,7 @@ var new_client = function(sdk_key, config) {
       }
 
       else if (user.key === "") {
-        config.logger.warn("[LaunchDarkly] User key is blank. Flag evaluation will proceed, but the user will not be stored in LaunchDarkly");
+        config.logger.warn("User key is blank. Flag evaluation will proceed, but the user will not be stored in LaunchDarkly");
       }
 
       if (!init_complete) {
@@ -190,7 +194,7 @@ var new_client = function(sdk_key, config) {
           }
 
           if (result === null) {
-            config.logger.debug("[LaunchDarkly] Result value is null in variation");
+            config.logger.debug("Result value is null in variation");
             send_flag_event(key, user, default_val, default_val, version);
             return resolve(default_val);
           } else {
@@ -203,7 +207,7 @@ var new_client = function(sdk_key, config) {
   }
 
   client.toggle = function(key, user, default_val, callback) {
-    config.logger.warn("[LaunchDarkly] toggle is deprecated. Call 'variation' instead");
+    config.logger.warn("toggle() is deprecated. Call 'variation' instead");
     return client.variation(key, user, default_val, callback);
   }
 
@@ -213,7 +217,7 @@ var new_client = function(sdk_key, config) {
       var results = {};
 
       if (this.is_offline() || !user) {
-        config.logger.info("[LaunchDarkly] all_flags called in offline mode. Returning empty map.");
+        config.logger.info("all_flags() called in offline mode. Returning empty map.");
         return resolve({});
       }
 
