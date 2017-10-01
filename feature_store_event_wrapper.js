@@ -1,0 +1,52 @@
+function FeatureStoreEventWrapper(featureStore, emitter) {
+  function differ(key, oldValue, newValue) {
+    if(newValue.version < oldValue.version) return;
+    emitter.emit("update", newValue);
+    emitter.emit(`update:${key}`, oldValue, newValue);
+  }
+
+  return {
+    get: featureStore.get,
+    all: featureStore.all,
+    initialized: featureStore.initialized,
+    close: featureStore.close,
+
+    init: function(newFlags, callback) {
+      featureStore.all(function(oldFlags){
+        featureStore.init(newFlags, function(){
+          var allFlags = newFlags.concat(oldFlags);
+          var handledFlags = {};
+
+          for (var key in allFlags) {
+            if(handledFlags[key]) continue;
+            differ(key, oldFlags[key], flags[key]);
+            handledFlags[key] = true;
+            ;
+          }
+
+          callback && callback.apply(null, arguments);
+        });
+      });      
+    },
+
+    delete: function(key, version, callback) {
+      featureStore.get(function(oldFlag) {
+        featureStore.delete(key, version, function() {
+          differ(key, oldFlag, {});
+          callback && callback.apply(null, arguments);
+        });
+      });
+    },
+
+    upsert: function(key, flag, callback) {
+      featureStore.get(function(oldFlag) {
+        featureStore.upsert(key, newFlag, function() {
+          differ(key, oldFlag, newFlag);
+          callback && callback.apply(null, arguments);
+        });
+      });
+    }
+  }
+}
+
+module.exports = FeatureStoreEventWrapper;

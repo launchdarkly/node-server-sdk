@@ -1,4 +1,5 @@
 var requestify = require('requestify');
+var FeatureStoreEventWrapper = require('./feature_store_event_wrapper');
 var InMemoryFeatureStore = require('./feature_store');
 var RedisFeatureStore = require('./redis_feature_store');
 var Requestor = require('./requestor');
@@ -87,7 +88,9 @@ var new_client = function(sdk_key, config) {
       ]
     })
   );
-  config.feature_store = config.feature_store || InMemoryFeatureStore(client);
+
+  var featureStore = config.feature_store || InMemoryFeatureStore();
+  config.feature_store = FeatureStoreEventWrapper(featureStore, client);
 
   var maybeReportError = createErrorReporter(client, config.logger);
 
