@@ -1,8 +1,10 @@
 function FeatureStoreEventWrapper(featureStore, emitter) {
   function differ(key, oldValue, newValue) {
-    if(newValue.version < oldValue.version) return;
-    emitter.emit("update", newValue);
-    emitter.emit(`update:${key}`, oldValue, newValue);
+    if(newValue && oldValue && newValue.version < oldValue.version) return;
+    setTimeout(function(){
+      emitter.emit("update", newValue);
+      emitter.emit(`update:${key}`, oldValue, newValue);
+    }, 0);
   }
 
   return {
@@ -14,12 +16,13 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
     init: function(newFlags, callback) {
       featureStore.all(function(oldFlags){
         featureStore.init(newFlags, function(){
-          var allFlags = newFlags.concat(oldFlags);
+          var allFlags = {};
+          Object.assign(allFlags, oldFlags, newFlags);
           var handledFlags = {};
 
           for (var key in allFlags) {
             if(handledFlags[key]) continue;
-            differ(key, oldFlags[key], flags[key]);
+            differ(key, oldFlags[key], allFlags[key]);
             handledFlags[key] = true;
             ;
           }
