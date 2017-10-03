@@ -74,6 +74,7 @@ var new_client = function(sdk_key, config) {
         }
         
         config.logger.error("[LaunchDarkly]", error);
+        client.emit('connectError') // Allow error handling
       }
       else if (!init_complete) {
         init_complete = true;        
