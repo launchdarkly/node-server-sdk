@@ -24,7 +24,6 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
             if(handledFlags[key]) continue;
             differ(key, oldFlags[key], allFlags[key]);
             handledFlags[key] = true;
-            ;
           }
 
           callback && callback.apply(null, arguments);
