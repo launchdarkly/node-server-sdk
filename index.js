@@ -4,6 +4,7 @@ var InMemoryFeatureStore = require('./feature_store');
 var RedisFeatureStore = require('./redis_feature_store');
 var Requestor = require('./requestor');
 var EventEmitter = require('events').EventEmitter;
+var EventSerializer = require('./event_serializer');
 var PollingProcessor = require('./polling');
 var StreamingProcessor = require('./streaming');
 var evaluate = require('./evaluate_flag');
@@ -92,10 +93,13 @@ var new_client = function(sdk_key, config) {
       ]
     })
   );
+  config.private_attr_names = config.private_attr_names || [];
 
   var featureStore = config.feature_store || InMemoryFeatureStore();
   config.feature_store = FeatureStoreEventWrapper(featureStore, client);
 
+  var eventSerializer = EventSerializer(config);
+  
   var maybeReportError = createErrorReporter(client, config.logger);
 
   if (!sdk_key && !config.offline) {
@@ -285,7 +289,7 @@ var new_client = function(sdk_key, config) {
         resolve();
       }
 
-      worklist = queue.slice(0);
+      worklist = eventSerializer.serializeEvents(queue.slice(0));
       queue = [];
 
       config.logger.debug("Flushing %d events", worklist.length);
