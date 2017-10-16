@@ -14,8 +14,8 @@ function EventSerializer(config) {
   }
 
   function serialize_event(event) {
-    return Object.entries(event).map(function(p) {
-        return [p[0], (p[0] == 'user') ? filter_user(p[1]) : p[1]];
+    return Object.keys(event).map(function(key) {
+        return [key, (key == 'user') ? filter_user(event[key]) : event[key]];
       }).reduce(function(acc, p) {
         acc[p[0]] = p[1];
         return acc;
