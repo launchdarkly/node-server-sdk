@@ -15,7 +15,7 @@ function EventSerializer(config) {
 
   function serialize_event(event) {
     return Object.keys(event).map(function(key) {
-        return [key, (key == 'user') ? filter_user(event[key]) : event[key]];
+        return [key, (key === 'user') ? filter_user(event[key]) : event[key]];
       }).reduce(function(acc, p) {
         acc[p[0]] = p[1];
         return acc;
@@ -25,7 +25,7 @@ function EventSerializer(config) {
   function filter_user(user) {
     var allPrivateAttrs = {};
     var userPrivateAttrs = user.privateAttrs || [];
-    var ignoreAttrs = { 'key': true, 'custom': true, 'privateAttrs': true };
+    var ignoreAttrs = { key: true, custom: true, privateAttrs: true };
     var isPrivateAttr = function(name) {
       return !ignoreAttrs[name] && (
         allAttrsPrivate || userPrivateAttrs.indexOf(name) !== -1 ||
