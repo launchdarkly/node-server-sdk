@@ -32,7 +32,7 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
     },
 
     delete: function(key, version, callback) {
-      featureStore.get(function(oldFlag) {
+      featureStore.get(key, function(oldFlag) {
         featureStore.delete(key, version, function() {
           differ(key, oldFlag, {});
           callback && callback.apply(null, arguments);
@@ -40,8 +40,8 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
       });
     },
 
-    upsert: function(key, flag, callback) {
-      featureStore.get(function(oldFlag) {
+    upsert: function(key, newFlag, callback) {
+      featureStore.get(key, function(oldFlag) {
         featureStore.upsert(key, newFlag, function() {
           differ(key, oldFlag, newFlag);
           callback && callback.apply(null, arguments);
