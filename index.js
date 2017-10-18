@@ -1,4 +1,4 @@
-var requestify = require('requestify');
+var request = require('request');
 var FeatureStoreEventWrapper = require('./feature_store_event_wrapper');
 var InMemoryFeatureStore = require('./feature_store');
 var RedisFeatureStore = require('./redis_feature_store');
@@ -290,18 +290,19 @@ var new_client = function(sdk_key, config) {
 
       config.logger.debug("Flushing %d events", worklist.length);
 
-      requestify.request(config.events_uri + '/bulk', {
+      request({
         method: "POST",
+        url: config.events_uri + '/bulk',
         headers: {
           'Authorization': sdk_key,
-          'User-Agent': config.user_agent,
-          'Content-Type': 'application/json'
+          'User-Agent': config.user_agent
         },
+        json: true,
         body: worklist,
         timeout: config.timeout * 1000,
         agent: config.proxy_agent
-      })
-      .then(resolve, reject);
+      }).on('response', resolve)
+        .on('error', reject);
     }.bind(this)), callback);
   };
 
