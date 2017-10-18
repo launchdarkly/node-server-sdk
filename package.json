@@ -28,7 +28,8 @@
     "node-sha1": "0.0.1",
     "original": "~0.0.8",
     "redis": "^2.6.0-2",
-    "request": "2.83.0",
+    "request": "^2.83.0",
+    "request-etag": "^2.0.3",
     "tunnel": "https://github.com/launchdarkly/node-tunnel/tarball/d860e57650cce1ea655d00854c81babe6b47e02c",
     "winston": "^2.2.0"
   },
