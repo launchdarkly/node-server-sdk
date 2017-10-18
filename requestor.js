@@ -47,8 +47,8 @@ function Requestor(sdk_key, config) {
     var req = make_request('/sdk/latest-flags/' + key);
     req(
       function(response, body) {
-        if (response.code !== 200 && response.code != 304) {
-          cb(new Error('Unexpected status code: ' + response.code), null);
+        if (response.statusCode !== 200 && response.statusCode != 304) {
+          cb(new Error('Unexpected status code: ' + response.statusCode), null);
         } else {
           cb(null, body);
         }
@@ -63,14 +63,14 @@ function Requestor(sdk_key, config) {
     var req = make_request('/sdk/latest-flags');
     req(
       function(response, body) {
-        if (response.code !== 200 && response.code != 304) {
-          cb(new Error('Unexpected status code: ' + response.code), null);
+        if (response.statusCode !== 200 && response.statusCode != 304) {
+          cb(new Error('Unexpected status code: ' + response.statusCode), null);
         } else {
           cb(null, body);
         }
       },
       function(err) {
-        cb(new Error('Unexpected error: ' + response.code + ' -- ' + response.message), null);
+        cb(new Error('Unexpected error: ' + response.statusCode + ' -- ' + response.message), null);
       }
     );
   }
