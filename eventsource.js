@@ -105,11 +105,21 @@ function EventSource(url, eventSourceInitDict) {
       }
 
       if (res.statusCode !== 200) {
-        _emit('error', new Event('error', {status: res.statusCode}));
-        // reconnect after an error
-        backoffDelay = Math.min(backoffDelay * 2, 15000);
-        setTimeout(connect, backoffDelay);
-        return
+        _emit('error', new Event('error', {
+          message: 'Streaming connection returned status code: ' + res.statusCode,
+          status: res.statusCode
+        }));
+        // reconnect after an error, unless it's a 401
+        if (res.statusCode === 401) {
+          readyState === EventSource.CLOSED;
+          _emit('error', new Event('error', {
+            message: 'Received 401 error, no further streaming connection will be made since SDK key is invalid'
+        }));
+        } else {
+          backoffDelay = Math.min(backoffDelay * 2, 15000);
+          setTimeout(connect, backoffDelay);
+        }
+        return;
       }
 
       readyState = EventSource.OPEN;

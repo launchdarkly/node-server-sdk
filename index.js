@@ -51,7 +51,7 @@ function createErrorReporter(emitter, logger) {
     if (emitter.listenerCount('error')) {
       emitter.emit('error', error);
     } else {
-      logger.error(error);
+      logger.error(error.message);
     }
   };
 }
@@ -63,7 +63,8 @@ var new_client = function(sdk_key, config) {
       init_complete = false,
       queue = [],
       requestor,
-      update_processor;
+      update_processor,
+      event_queue_shutdown = false;
 
   config = config || {};
   config.user_agent = 'NodeJSClient/' + package_json.version;
@@ -281,8 +282,9 @@ var new_client = function(sdk_key, config) {
   client.flush = function(callback) {
     return wrapPromiseCallback(new Promise(function(resolve, reject) {
       var worklist;
-      if (!queue.length) {
+      if (event_queue_shutdown || !queue.length) {
         resolve();
+        return;
       }
 
       worklist = queue.slice(0);
@@ -301,13 +303,23 @@ var new_client = function(sdk_key, config) {
         body: worklist,
         timeout: config.timeout * 1000,
         agent: config.proxy_agent
-      }).on('response', resolve)
-        .on('error', reject);
+      }).on('response', function(resp, body) {
+        if (resp.statusCode > 204) {
+          var err = new Error("Unexpected status code " + resp.statusCode + "; events may not have been processed");
+          maybeReportError(err);
+          if (resp.statusCode === 401) {
+            var err = new Error("Received 401 error, no further events will be posted since SDK key is invalid");
+            maybeReportError(err);
+            event_queue_shutdown = true;
+          }
+        }
+        resolve(resp, body);
+      }).on('error', reject);
     }.bind(this)), callback);
   };
 
   function enqueue(event) {
-    if (config.offline) {
+    if (config.offline || event_queue_shutdown) {
       return;
     }
 

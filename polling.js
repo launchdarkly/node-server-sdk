@@ -22,8 +22,12 @@ function PollingProcessor(config, requestor) {
       config.logger.debug("Elapsed: %d ms, sleeping for %d ms", elapsed, sleepFor);
       if (err) {
         cb(new errors.LDPollingError('Failed to fetch all feature flags: ' + (err.message || JSON.stringify(err))));
-        // Recursively call poll after the appropriate delay
-        setTimeout(function() { poll(cb); }, sleepFor);
+        if (err.status === 401) {
+          config.logger.error('Received 401 error, no further polling requests will be made since SDK key is invalid');
+        } else {
+          // Recursively call poll after the appropriate delay
+          setTimeout(function() { poll(cb); }, sleepFor);
+        }
       } else {
         store.init(flags, function() {
           cb();
