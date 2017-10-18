@@ -14,7 +14,11 @@ function Requestor(sdk_key, config) {
   var requestor = {};
 
   var cacheConfig = {
-    max: 100
+    max: 100,
+    // LRUCache passes each cached item through the "length" function to determine how many units it should
+    // count for toward "max".  We want our cache limit to be based on the number of responses, not their
+    // size; that is in fact the default behavior of LRUCache, but request-etag overrides it unless we do this:
+    length: function() { return 1; }
   };
   var requestWithETagCaching = new ETagRequest(cacheConfig);
 
