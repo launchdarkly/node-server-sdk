@@ -47,7 +47,7 @@ function Requestor(sdk_key, config) {
     var req = make_request('/sdk/latest-flags/' + key);
     req(
       function(response, body) {
-        if (response.code !== 200) {
+        if (response.code !== 200 && response.code != 304) {
           cb(new Error('Unexpected status code: ' + response.code), null);
         } else {
           cb(null, body);
@@ -63,7 +63,7 @@ function Requestor(sdk_key, config) {
     var req = make_request('/sdk/latest-flags');
     req(
       function(response, body) {
-        if (response.code !== 200) {
+        if (response.code !== 200 && response.code != 304) {
           cb(new Error('Unexpected status code: ' + response.code), null);
         } else {
           cb(null, body);
