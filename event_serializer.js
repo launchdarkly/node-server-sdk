@@ -6,8 +6,10 @@
  **/
 function EventSerializer(config) {
   var serializer = {};
-  var allAttrsPrivate = config.all_attrs_private;
-  var privateAttrNames = config.private_attr_names || [];
+  var allAttributesPrivate = config.all_attributes_private;
+  var privateAttributeNames = config.private_attribute_names || [];
+  var ignoreAttrs = { key: true, custom: true, privateAttributeNames: true };
+  var stripAttrs = { privateAttributeNames: true };
 
   serializer.serialize_events = function(events) {
     return events.map(serialize_event);
@@ -24,20 +26,22 @@ function EventSerializer(config) {
 
   function filter_user(user) {
     var allPrivateAttrs = {};
-    var userPrivateAttrs = user.privateAttrs || [];
-    var ignoreAttrs = { key: true, custom: true, privateAttrs: true };
+    var userPrivateAttrs = user.privateAttributeNames || [];
+    
     var isPrivateAttr = function(name) {
       return !ignoreAttrs[name] && (
-        allAttrsPrivate || userPrivateAttrs.indexOf(name) !== -1 ||
-        privateAttrNames.indexOf(name) !== -1);
+        allAttributesPrivate || userPrivateAttrs.indexOf(name) !== -1 ||
+        privateAttributeNames.indexOf(name) !== -1);
     }
     var filterAttrs = function(props) {
       return Object.keys(props).reduce(function(acc, name) {
-        if (isPrivateAttr(name)) {
-          // add to hidden list
-          acc[1][name] = true;
-        } else {
-          acc[0][name] = props[name];
+        if (!stripAttrs[name]) {
+          if (isPrivateAttr(name)) {
+            // add to hidden list
+            acc[1][name] = true;
+          } else {
+            acc[0][name] = props[name];
+          }
         }
         return acc;
       }, [{}, {}]);

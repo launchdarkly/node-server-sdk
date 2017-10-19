@@ -14,7 +14,7 @@ describe('event_serializer', function() {
     'key': 'abc',
     'firstName': 'Sue',
     'custom': { 'bizzle': 'def', 'dizzle': 'ghi' },
-    'privateAttrs': [ 'dizzle', 'unused' ]
+    'privateAttributeNames': [ 'dizzle', 'unused' ]
   };
 
   // expected results from serializing user
@@ -57,13 +57,13 @@ describe('event_serializer', function() {
   });
 
   it('hides all except key if all_attrs_private is true', function() {
-    var es = EventSerializer({ all_attrs_private: true});
+    var es = EventSerializer({ all_attributes_private: true});
     var event = make_event(user);
     assert.deepEqual(es.serialize_events([event]), [make_event(user_with_all_attrs_hidden)]);
   });
 
   it('hides some attributes if private_attr_names is set', function() {
-    var es = EventSerializer({ private_attr_names: [ 'firstName', 'bizzle' ]});
+    var es = EventSerializer({ private_attribute_names: [ 'firstName', 'bizzle' ]});
     var event = make_event(user);
     assert.deepEqual(es.serialize_events([event]), [make_event(user_with_some_attrs_hidden)]);
   });
@@ -75,7 +75,7 @@ describe('event_serializer', function() {
   });
 
   it('looks at both per-user privateAttrs and global config', function() {
-    var es = EventSerializer({ private_attr_names: [ 'firstName', 'bizzle' ]});
+    var es = EventSerializer({ private_attribute_names: [ 'firstName', 'bizzle' ]});
     var event = make_event(user_specifying_own_private_attr);
     assert.deepEqual(es.serialize_events([event]), [make_event(user_with_all_attrs_hidden)]);
   });
