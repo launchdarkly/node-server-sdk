@@ -111,7 +111,7 @@ function EventSource(url, eventSourceInitDict) {
         }));
         // reconnect after an error, unless it's a 401
         if (res.statusCode === 401) {
-          readyState === EventSource.CLOSED;
+          readyState == EventSource.CLOSED;
           _emit('error', new Event('error', {
             message: 'Received 401 error, no further streaming connection will be made since SDK key is invalid'
         }));
