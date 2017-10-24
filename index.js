@@ -28,18 +28,18 @@ var package_json = require('./package.json');
  * @returns Promise<any>
  */
 function wrapPromiseCallback(promise, callback) {
-  if (callback) {
-    return promise.then(
-      function(value) {
+  return promise.then(
+    function(value) {
+      if (callback) {
         setTimeout(function() { callback(null, value); }, 0);
-      },
-      function(error) {
+      }
+    },
+    function(error) {
+      if (callback) {
         setTimeout(function() { callback(error, null); }, 0);
       }
-    );
-  }
-
-  return promise;
+    }
+  );
 }
 
 function createErrorReporter(emitter, logger) {
@@ -312,13 +312,15 @@ var new_client = function(sdk_key, config) {
           var err = new errors.LDUnexpectedResponseError("Unexpected status code " + resp.statusCode + "; events may not have been processed",
             resp.statusCode);
           maybeReportError(err);
+          reject(err);
           if (resp.statusCode === 401) {
             var err1 = new errors.LDInvalidSDKKeyError("Received 401 error, no further events will be posted since SDK key is invalid");
             maybeReportError(err1);
             event_queue_shutdown = true;
           }
+        } else {
+          resolve(resp, body);
         }
-        resolve(resp, body);
       }).on('error', reject);
     }.bind(this)), callback);
   };
