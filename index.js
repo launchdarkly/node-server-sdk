@@ -282,7 +282,11 @@ var new_client = function(sdk_key, config) {
   client.flush = function(callback) {
     return wrapPromiseCallback(new Promise(function(resolve, reject) {
       var worklist;
-      if (event_queue_shutdown || !queue.length) {
+      if (event_queue_shutdown) {
+        var err = new errors.LDInvalidSDKKeyError("Events cannot be posted because SDK key is invalid");
+        reject(err);
+        return;
+      } else if (!queue.length) {
         resolve();
         return;
       }
@@ -305,11 +309,12 @@ var new_client = function(sdk_key, config) {
         agent: config.proxy_agent
       }).on('response', function(resp, body) {
         if (resp.statusCode > 204) {
-          var err = new Error("Unexpected status code " + resp.statusCode + "; events may not have been processed");
+          var err = new errors.LDUnexpectedResponseError("Unexpected status code " + resp.statusCode + "; events may not have been processed",
+            resp.statusCode);
           maybeReportError(err);
           if (resp.statusCode === 401) {
-            var err = new Error("Received 401 error, no further events will be posted since SDK key is invalid");
-            maybeReportError(err);
+            var err1 = new errors.LDInvalidSDKKeyError("Received 401 error, no further events will be posted since SDK key is invalid");
+            maybeReportError(err1);
             event_queue_shutdown = true;
           }
         }
