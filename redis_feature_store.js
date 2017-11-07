@@ -40,7 +40,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
 
     client.hget(features_key, key, function(err, obj) {
       if (err) {
-        logger.error("[LaunchDarkly] Error fetching flag from redis", err);
+        logger.error("Error fetching flag from redis", err);
         cb(null);
       } else {
         flag = JSON.parse(obj);
@@ -63,7 +63,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
     cb = cb || noop;
     client.hgetall(features_key, function(err, obj) {
       if (err) {
-        logger.error("[LaunchDarkly] Error fetching flag from redis", err);
+        logger.error("Error fetching flag from redis", err);
         cb(null);
       } else {
         var results = {},
@@ -106,8 +106,8 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
 
     multi.exec(function(err, replies) {
       if (err) {
-        logger.error("[LaunchDarkly] Error initializing redis feature store", err);
-      }
+        logger.error("Error initializing redis feature store", err);
+      } 
       cb();
     });
   };
@@ -130,8 +130,8 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
           multi.hset(features_key, key, JSON.stringify(flag));
           multi.exec(function(err, replies) {
             if (err) {
-              logger.error("[LaunchDarkly] Error deleting feature flag", err);
-            } else if (cache_ttl) {
+              logger.error("Error deleting feature flag", err);
+            } else if (cache_ttl) {            
               cache.set(key, flag);
             }
             cb();
@@ -156,7 +156,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
       multi.hset(features_key, key, JSON.stringify(flag));
       multi.exec(function(err, replies) {
         if (err) {
-          logger.error("[LaunchDarkly] Error upserting feature flag", err);
+          logger.error("Error upserting feature flag", err);
         } else {
           if (cache_ttl) {
             cache.set(key, flag);

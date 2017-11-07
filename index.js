@@ -1,4 +1,5 @@
-var requestify = require('requestify');
+var request = require('request');
+var FeatureStoreEventWrapper = require('./feature_store_event_wrapper');
 var InMemoryFeatureStore = require('./feature_store');
 var RedisFeatureStore = require('./redis_feature_store');
 var Requestor = require('./requestor');
@@ -13,9 +14,33 @@ var async = require('async');
 var errors = require('./errors');
 var package_json = require('./package.json');
 
-var noop = function(){};
+/**
+ * Wrap a promise to invoke an optional callback upon resolution or rejection.
+ * 
+ * This function assumes the callback follows the Node.js callback type: (err, value) => void
+ * 
+ * If a callback is provided:
+ *   - if the promise is resolved, invoke the callback with (null, value)
+ *   - if the promise is rejected, invoke the callback with (error, null)
+ * 
+ * @param {Promise<any>} promise 
+ * @param {Function} callback 
+ * @returns Promise<any>
+ */
+function wrapPromiseCallback(promise, callback) {
+  if (callback) {
+    return promise.then(
+      function(value) {
+        setTimeout(function() { callback(null, value); }, 0);
+      },
+      function(error) {
+        setTimeout(function() { callback(error, null); }, 0);
+      }
+    );
+  }
 
-global.setImmediate = global.setImmediate || process.nextTick.bind(process);
+  return promise;
+}
 
 function createErrorReporter(emitter, logger) {
   return function(error) {
@@ -26,10 +51,12 @@ function createErrorReporter(emitter, logger) {
     if (emitter.listenerCount('error')) {
       emitter.emit('error', error);
     } else {
-      logger.error('[LaunchDarkly]', error);
+      logger.error(error);
     }
   };
 }
+
+global.setImmediate = global.setImmediate || process.nextTick.bind(process);
 
 var new_client = function(sdk_key, config) {
   var client = new EventEmitter(),
@@ -57,11 +84,17 @@ var new_client = function(sdk_key, config) {
     new winston.Logger({
       level: 'info',
       transports: [
-        new (winston.transports.Console)(),
+        new (winston.transports.Console)(({
+          formatter: function(options) {
+            return '[LaunchDarkly] ' + (options.message ? options.message : '');
+          }
+        })),
       ]
     })
   );
-  config.feature_store = config.feature_store || InMemoryFeatureStore();
+
+  var featureStore = config.feature_store || InMemoryFeatureStore();
+  config.feature_store = FeatureStoreEventWrapper(featureStore, client);
 
   var maybeReportError = createErrorReporter(client, config.logger);
 
@@ -73,10 +106,10 @@ var new_client = function(sdk_key, config) {
     requestor = Requestor(sdk_key, config);
 
     if (config.stream) {
-      config.logger.info("[LaunchDarkly] Initializing stream processor to receive feature flag updates");
+      config.logger.info("Initializing stream processor to receive feature flag updates");
       update_processor = StreamingProcessor(sdk_key, config, requestor);
     } else {
-      config.logger.info("[LaunchDarkly] Initializing polling processor to receive feature flag updates");
+      config.logger.info("Initializing polling processor to receive feature flag updates");
       update_processor = PollingProcessor(config, requestor);
     }
     update_processor.start(function(err) {
@@ -105,104 +138,104 @@ var new_client = function(sdk_key, config) {
     return init_complete;
   }
 
-  client.variation = function(key, user, default_val, fn) {
-    sanitize_user(user);
-    var cb = fn || noop;
-    var variationErr;
-
-    if (this.is_offline()) {
-      config.logger.info("[LaunchDarkly] variation called in offline mode. Returning default value.");
-      cb(null, default_val);
-      return;
-    }
-
-    else if (!key) {
-      variationErr = new errors.LDClientError('No feature flag key specified. Returning default value.');
-      maybeReportError(variationError);
-      send_flag_event(key, user, default_val, default_val);
-      cb(variationErr, default_val);
-      return;
-    }
-
-    else if (!user) {
-      variationErr = new errors.LDClientError('No user specified. Returning default value.');
-      maybeReportError(variationErr);
-      send_flag_event(key, user, default_val, default_val);
-      cb(variationErr, default_val);
-      return;
-    }
-
-    else if (user.key === "") {
-      config.logger.warn("[LaunchDarkly] User key is blank. Flag evaluation will proceed, but the user will not be stored in LaunchDarkly");
-    }
-
-    if (!init_complete) {
-      variationErr = new errors.LDClientError("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?)");
-      maybeReportError(variationErr);
-      send_flag_event(key, user, default_val, default_val);
-      cb(variationErr, default_val);
-      return;
-    }
-
-    config.feature_store.get(key, function(flag) {
-      evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
-        var i;
-        var version = flag ? flag.version : null;
-
-        if (err) {
-          maybeReportError(new errors.LDClientError('Encountered error evaluating feature flag:' + (err.message ? (': ' + err.message) : err)));
-        }
-
-        // Send off any events associated with evaluating prerequisites. The events
-        // have already been constructed, so we just have to push them onto the queue.
-        if (events) {
-          for (i = 0; i < events.length; i++) {
-            enqueue(events[i]);
-          }
-        }
-
-        if (result === null) {
-          config.logger.debug("[LaunchDarkly] Result value is null in variation");
-          send_flag_event(key, user, default_val, default_val, version);
-          cb(null, default_val);
-          return;
-        } else {
-          send_flag_event(key, user, result, default_val, version);
-          cb(null, result);
-          return;
-        }
-      });
+  client.waitUntilReady = function() {
+    return new Promise(function(resolve) {
+      client.once('ready', resolve);
     });
-  }
+  };
 
-  client.toggle = function(key, user, default_val, fn) {
-    config.logger.warn("[LaunchDarkly] toggle is deprecated. Call 'variation' instead");
-    client.variation(key, user, default_val, fn);
-  }
+  client.variation = function(key, user, default_val, callback) {
+    return wrapPromiseCallback(new Promise(function(resolve, reject) {
+      sanitize_user(user);
+      var variationErr;
 
-  client.all_flags = function(user, fn) {
-    sanitize_user(user);
-    var cb = fn || noop;
-    var results = {};
+      if (this.is_offline()) {
+        config.logger.info("Variation called in offline mode. Returning default value.");
+        return resolve(default_val);
+      }
 
-    if (this.is_offline() || !user) {
-      config.logger.info("[LaunchDarkly] all_flags called in offline mode. Returning empty map.");
+      else if (!key) {
+        variationErr = new errors.LDClientError('No feature flag key specified. Returning default value.');
+        maybeReportError(variationError);
+        send_flag_event(key, user, default_val, default_val);
+        return resolve(default_val);
+      }
 
-      cb(null, null);
-      return;
-    }
+      else if (!user) {
+        variationErr = new errors.LDClientError('No user specified. Returning default value.');
+        maybeReportError(variationErr);
+        send_flag_event(key, user, default_val, default_val);
+        return resolve(default_val);
+      }
+      
+      else if (user.key === "") {
+        config.logger.warn("User key is blank. Flag evaluation will proceed, but the user will not be stored in LaunchDarkly");
+      }
 
-    config.feature_store.all(function(flags) {
-      async.forEachOf(flags, function(flag, key, iteratee_cb) {
-        // At the moment, we don't send any events here
+      if (!init_complete) {
+        variationErr = new errors.LDClientError("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?)");
+        maybeReportError(variationErr);
+        send_flag_event(key, user, default_val, default_val);
+        return resolve(default_val);
+      }
+
+      config.feature_store.get(key, function(flag) {
         evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
-          results[key] = result;
-          iteratee_cb(null);
-        })
-      }, function(err) {
-        cb(err, results);
+          var i;
+          var version = flag ? flag.version : null;
+
+          if (err) {
+            maybeReportError(new errors.LDClientError('Encountered error evaluating feature flag:' + (err.message ? (': ' + err.message) : err)));
+          }
+
+          // Send off any events associated with evaluating prerequisites. The events
+          // have already been constructed, so we just have to push them onto the queue.
+          if (events) {
+            for (i = 0; i < events.length; i++) {
+              enqueue(events[i]);
+            }
+          }
+
+          if (result === null) {
+            config.logger.debug("Result value is null in variation");
+            send_flag_event(key, user, default_val, default_val, version);
+            return resolve(default_val);
+          } else {
+            send_flag_event(key, user, result, default_val, version);
+            return resolve(result);
+          }               
+        });
       });
-    });
+    }.bind(this)), callback);
+  }
+
+  client.toggle = function(key, user, default_val, callback) {
+    config.logger.warn("toggle() is deprecated. Call 'variation' instead");
+    return client.variation(key, user, default_val, callback);
+  }
+
+  client.all_flags = function(user, callback) {
+    return wrapPromiseCallback(new Promise(function(resolve, reject) {
+      sanitize_user(user);
+      var results = {};
+
+      if (this.is_offline() || !user) {
+        config.logger.info("all_flags() called in offline mode. Returning empty map.");
+        return resolve({});
+      }
+
+      config.feature_store.all(function(flags) {
+        async.forEachOf(flags, function(flag, key, iteratee_cb) {
+          // At the moment, we don't send any events here
+          evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
+            results[key] = result;
+            iteratee_cb(null);
+          })
+        }, function(err) {
+          return err ? reject(err) : resolve(results);
+        });
+      });
+    }.bind(this)), callback);
   }
 
   client.secure_mode_hash = function(user) {
@@ -245,36 +278,32 @@ var new_client = function(sdk_key, config) {
     enqueue(event);
   };
 
-  client.flush = function(fn) {
-    var cb = fn || noop;
-    var worklist;
-    if (!queue.length) {
-      return process.nextTick(cb);
-    }
+  client.flush = function(callback) {
+    return wrapPromiseCallback(new Promise(function(resolve, reject) {
+      var worklist;
+      if (!queue.length) {
+        resolve();
+      }
 
-    worklist = queue.slice(0);
-    queue = [];
+      worklist = queue.slice(0);
+      queue = [];
 
-    config.logger.debug("Flushing %d events", worklist.length);
+      config.logger.debug("Flushing %d events", worklist.length);
 
-    requestify.request(config.events_uri + '/bulk', {
-      method: "POST",
-      headers: {
-        'Authorization': sdk_key,
-        'User-Agent': config.user_agent,
-        'Content-Type': 'application/json'
-      },
-      body: worklist,
-      timeout: config.timeout * 1000,
-      agent: config.proxy_agent
-    })
-    .then(function(response) {
-      cb(null, response);
-      return;
-    }, function(error) {
-      cb(error, null);
-      return;
-    });
+      request({
+        method: "POST",
+        url: config.events_uri + '/bulk',
+        headers: {
+          'Authorization': sdk_key,
+          'User-Agent': config.user_agent
+        },
+        json: true,
+        body: worklist,
+        timeout: config.timeout * 1000,
+        agent: config.proxy_agent
+      }).on('response', resolve)
+        .on('error', reject);
+    }.bind(this)), callback);
   };
 
   function enqueue(event) {
