@@ -289,7 +289,7 @@ var new_client = function(sdk_key, config) {
         resolve();
       }
 
-      worklist = eventSerializer.serializeEvents(queue.slice(0));
+      worklist = eventSerializer.serialize_events(queue.slice(0));
       queue = [];
 
       config.logger.debug("Flushing %d events", worklist.length);
