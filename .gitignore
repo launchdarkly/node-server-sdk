@@ -1,2 +1,7 @@
 node_modules/
 npm-debug.log
+
+# If you've generated this file locally, you're using npm but you should be using yarn
+package-lock.json
+
+yarn-error.log
