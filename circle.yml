@@ -1,9 +1,3 @@
 machine:
   node:
     version: 5.7.0
-dependencies:
-  override:
-    - yarn
-test:
-  override:
-    - yarn test
