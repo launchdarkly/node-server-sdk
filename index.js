@@ -65,7 +65,7 @@ var new_client = function(sdk_key, config) {
       requestor,
       update_processor;
 
-  config = config || {};
+  config = Object.assign({}, config || {});
   config.user_agent = 'NodeJSClient/' + package_json.version;
   
   config.base_uri = (config.base_uri || 'https://app.launchdarkly.com').replace(/\/+$/, "");
