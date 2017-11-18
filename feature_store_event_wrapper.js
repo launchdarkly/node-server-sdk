@@ -8,10 +8,10 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
   }
 
   return {
-    get: featureStore.get,
-    all: featureStore.all,
+    get: featureStore.get.bind(featureStore),
+    all: featureStore.all.bind(featureStore),
     initialized: featureStore.initialized,
-    close: featureStore.close,
+    close: featureStore.close.bind(featureStore),
 
     init: function(newFlags, callback) {
       featureStore.all(function(oldFlags){
