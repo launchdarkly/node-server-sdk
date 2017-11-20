@@ -25,7 +25,7 @@ function PollingProcessor(config, requestor) {
         // Recursively call poll after the appropriate delay
         setTimeout(function() { poll(cb); }, sleepFor);
       } else {
-        store.init(flags, function() {
+        store.init(JSON.parse(flags), function() {
           cb();
           // Recursively call poll after the appropriate delay
           setTimeout(function() { poll(cb); }, sleepFor);
