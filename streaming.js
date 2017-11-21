@@ -60,6 +60,7 @@ function StreamProcessor(sdk_key, config, requestor) {
         if (err) {
           cb(err);
         } else {
+          console.log('!!! indirect/put flag response type', typeof flags);
           store.init(flags, function() {
             cb();
           })          
@@ -75,6 +76,7 @@ function StreamProcessor(sdk_key, config, requestor) {
           if (err) {
             cb(new errors.LDStreamingError('Unexpected error requesting feature flag'));
           } else {
+            console.log('!!! indirect/patch flag response type', typeof flag);
             store.upsert(key, flag);
           }
         })
