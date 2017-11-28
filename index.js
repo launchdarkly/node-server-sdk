@@ -110,6 +110,7 @@ var new_client = function(sdk_key, config) {
       update_processor = StreamingProcessor(sdk_key, config, requestor);
     } else {
       config.logger.info("Initializing polling processor to receive feature flag updates");
+      config.logger.warn("You should only disable the streaming API if instructed to do so by LaunchDarkly support");
       update_processor = PollingProcessor(config, requestor);
     }
     update_processor.start(function(err) {
