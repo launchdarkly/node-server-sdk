@@ -75,7 +75,7 @@ var new_client = function(sdk_key, config) {
   config.timeout = config.timeout || 5;
   config.capacity = config.capacity || 1000;
   config.flush_interval = config.flush_interval || 5;  
-  config.poll_interval = config.poll_interval > 1 ? config.poll_interval : 1;
+  config.poll_interval = config.poll_interval > 30 ? config.poll_interval : 30;
   // Initialize global tunnel if proxy options are set
   if (config.proxy_host && config.proxy_port ) {
     config.proxy_agent = create_proxy_agent(config);
