@@ -173,10 +173,14 @@ var new_client = function(sdk_key, config) {
       }
 
       if (!init_complete) {
-        variationErr = new errors.LDClientError("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?)");
-        maybeReportError(variationErr);
-        send_flag_event(key, user, default_val, default_val);
-        return resolve(default_val);
+        if (config.feature_store.initialized()) {
+          config.logger.warn("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using last known values from feature store")
+        } else {
+          variationErr = new errors.LDClientError("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using default value");
+          maybeReportError(variationErr);
+          send_flag_event(key, user, default_val, default_val);
+          return resolve(default_val);
+        }
       }
 
       config.feature_store.get(key, function(flag) {
