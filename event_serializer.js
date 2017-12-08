@@ -8,7 +8,7 @@ function EventSerializer(config) {
   var serializer = {};
   var allAttributesPrivate = config.all_attributes_private;
   var privateAttributeNames = config.private_attribute_names || [];
-  var ignoreAttrs = { key: true, custom: true };
+  var ignoreAttrs = { key: true, custom: true, anonymous: true };
   var allowedTopLevelAttrs = { key: true, secondary: true, ip: true, country: true, email: true,
         firstName: true, lastName: true, avatar: true, name: true, anonymous: true, custom: true };
 
