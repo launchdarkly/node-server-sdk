@@ -7,7 +7,7 @@ All notable changes to the LaunchDarkly Node.js SDK will be documented in this f
 - Asynchronous SDK methods now return a `Promise`; the SDK now supports both the Node.js error callback interface and the `Promise` interface. (https://github.com/launchdarkly/node-client/issues/58)
 - The SDK now emits an `error` event. If no `error` event handler exists, errors will be logged using the configured logger. (https://github.com/launchdarkly/node-client/issues/55)
 - The SDK now returns context-specific error objects to make it easier to handle errors from consumer code. (https://github.com/launchdarkly/node-client/issues/56)
-- A new `update` event is available on the client to be notified whenever the SDK received feature flag updates from LaunchDarkly.
+- A new `update` event is available on the client to be notified whenever the SDK receives feature flag updates from LaunchDarkly.
 ### Fixed
 - Callbacks to asynchronous methods are now always called asynchronously (to avoid [zalgo](http://blog.izs.me/post/59142742143/designing-apis-for-asynchrony)) (https://github.com/launchdarkly/node-client/issues/69)
 
