@@ -60,7 +60,7 @@ function StreamProcessor(sdk_key, config, requestor) {
         if (err) {
           cb(err);
         } else {
-          store.init(flags, function() {
+          store.init(JSON.parse(flags), function() {
             cb();
           })          
         }
@@ -75,7 +75,7 @@ function StreamProcessor(sdk_key, config, requestor) {
           if (err) {
             cb(new errors.LDStreamingError('Unexpected error requesting feature flag'));
           } else {
-            store.upsert(key, flag);
+            store.upsert(key, JSON.parse(flag));
           }
         })
       } else {

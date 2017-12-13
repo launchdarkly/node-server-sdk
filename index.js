@@ -1,4 +1,4 @@
-var requestify = require('requestify');
+var request = require('request');
 var FeatureStoreEventWrapper = require('./feature_store_event_wrapper');
 var InMemoryFeatureStore = require('./feature_store');
 var RedisFeatureStore = require('./redis_feature_store');
@@ -28,18 +28,18 @@ var package_json = require('./package.json');
  * @returns Promise<any>
  */
 function wrapPromiseCallback(promise, callback) {
-  if (callback) {
-    return promise.then(
-      function(value) {
+  return promise.then(
+    function(value) {
+      if (callback) {
         setTimeout(function() { callback(null, value); }, 0);
-      },
-      function(error) {
+      }
+    },
+    function(error) {
+      if (callback) {
         setTimeout(function() { callback(error, null); }, 0);
       }
-    );
-  }
-
-  return promise;
+    }
+  );
 }
 
 function createErrorReporter(emitter, logger) {
@@ -51,7 +51,7 @@ function createErrorReporter(emitter, logger) {
     if (emitter.listenerCount('error')) {
       emitter.emit('error', error);
     } else {
-      logger.error(error);
+      logger.error(error.message);
     }
   };
 }
@@ -63,11 +63,12 @@ var new_client = function(sdk_key, config) {
       init_complete = false,
       queue = [],
       requestor,
-      update_processor;
+      update_processor,
+      event_queue_shutdown = false;
 
-  config = config || {};
+  config = Object.assign({}, config || {});
   config.user_agent = 'NodeJSClient/' + package_json.version;
-  
+
   config.base_uri = (config.base_uri || 'https://app.launchdarkly.com').replace(/\/+$/, "");
   config.stream_uri = (config.stream_uri || 'https://stream.launchdarkly.com').replace(/\/+$/, "");
   config.events_uri = (config.events_uri || 'https://events.launchdarkly.com').replace(/\/+$/, "");
@@ -75,15 +76,15 @@ var new_client = function(sdk_key, config) {
   config.send_events = (typeof config.send_events === 'undefined') ? true : config.send_events;
   config.timeout = config.timeout || 5;
   config.capacity = config.capacity || 1000;
-  config.flush_interval = config.flush_interval || 5;  
+  config.flush_interval = config.flush_interval || 5;
   config.poll_interval = config.poll_interval > 1 ? config.poll_interval : 1;
   // Initialize global tunnel if proxy options are set
   if (config.proxy_host && config.proxy_port ) {
     config.proxy_agent = create_proxy_agent(config);
   }
-  config.logger = (config.logger || 
+  config.logger = (config.logger ||
     new winston.Logger({
-      level: 'debug',
+      level: 'info',
       transports: [
         new (winston.transports.Console)(({
           formatter: function(options) {
@@ -121,10 +122,10 @@ var new_client = function(sdk_key, config) {
         } else {
           error = err;
         }
-        
+
         maybeReportError(error);
       } else if (!init_complete) {
-        init_complete = true;        
+        init_complete = true;
         client.emit('ready');
       }
     });
@@ -168,7 +169,7 @@ var new_client = function(sdk_key, config) {
         send_flag_event(key, user, default_val, default_val);
         return resolve(default_val);
       }
-
+      
       else if (user.key === "") {
         config.logger.warn("User key is blank. Flag evaluation will proceed, but the user will not be stored in LaunchDarkly");
       }
@@ -258,9 +259,9 @@ var new_client = function(sdk_key, config) {
 
   client.track = function(eventName, user, data) {
     sanitize_user(user);
-    var event = {"key": eventName, 
+    var event = {"key": eventName,
                 "user": user,
-                "kind": "custom", 
+                "kind": "custom",
                 "creationDate": new Date().getTime()};
 
     if (data) {
@@ -282,8 +283,13 @@ var new_client = function(sdk_key, config) {
   client.flush = function(callback) {
     return wrapPromiseCallback(new Promise(function(resolve, reject) {
       var worklist;
-      if (!queue.length) {
+      if (event_queue_shutdown) {
+        var err = new errors.LDInvalidSDKKeyError("Events cannot be posted because SDK key is invalid");
+        reject(err);
+        return;
+      } else if (!queue.length) {
         resolve();
+        return;
       }
 
       worklist = queue.slice(0);
@@ -291,23 +297,37 @@ var new_client = function(sdk_key, config) {
 
       config.logger.debug("Flushing %d events", worklist.length);
 
-      requestify.request(config.events_uri + '/bulk', {
+      request({
         method: "POST",
+        url: config.events_uri + '/bulk',
         headers: {
           'Authorization': sdk_key,
-          'User-Agent': config.user_agent,
-          'Content-Type': 'application/json'
+          'User-Agent': config.user_agent
         },
+        json: true,
         body: worklist,
         timeout: config.timeout * 1000,
         agent: config.proxy_agent
-      })
-      .then(resolve, reject);
+      }).on('response', function(resp, body) {
+        if (resp.statusCode > 204) {
+          var err = new errors.LDUnexpectedResponseError("Unexpected status code " + resp.statusCode + "; events may not have been processed",
+            resp.statusCode);
+          maybeReportError(err);
+          reject(err);
+          if (resp.statusCode === 401) {
+            var err1 = new errors.LDInvalidSDKKeyError("Received 401 error, no further events will be posted since SDK key is invalid");
+            maybeReportError(err1);
+            event_queue_shutdown = true;
+          }
+        } else {
+          resolve(resp, body);
+        }
+      }).on('error', reject);
     }.bind(this)), callback);
   };
 
   function enqueue(event) {
-    if (config.offline || !config.send_events) {
+    if (config.offline || !config.send_events || event_queue_shutdown) {
       return;
     }
 
@@ -316,7 +336,7 @@ var new_client = function(sdk_key, config) {
 
     if (queue.length >= config.capacity) {
       client.flush();
-    } 
+    }
   }
 
   function send_flag_event(key, user, value, default_val, version) {
@@ -343,12 +363,12 @@ function create_proxy_agent(config) {
       host: config.proxy_host,
       port: config.proxy_port,
       proxyAuth: config.proxy_auth
-    } 
+    }
   };
 
   if (config.proxy_scheme === 'https') {
     if (!config.base_uri || config.base_uri.startsWith('https')) {
-     return tunnel.httpsOverHttps(options);      
+     return tunnel.httpsOverHttps(options);
     } else {
       return tunnel.httpOverHttps(options);
     }
