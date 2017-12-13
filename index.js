@@ -73,6 +73,7 @@ var new_client = function(sdk_key, config) {
   config.stream_uri = (config.stream_uri || 'https://stream.launchdarkly.com').replace(/\/+$/, "");
   config.events_uri = (config.events_uri || 'https://events.launchdarkly.com').replace(/\/+$/, "");
   config.stream = (typeof config.stream === 'undefined') ? true : config.stream;
+  config.send_events = (typeof config.send_events === 'undefined') ? true : config.send_events;
   config.timeout = config.timeout || 5;
   config.capacity = config.capacity || 1000;
   config.flush_interval = config.flush_interval || 5;
@@ -326,7 +327,7 @@ var new_client = function(sdk_key, config) {
   };
 
   function enqueue(event) {
-    if (config.offline || event_queue_shutdown) {
+    if (config.offline || !config.send_events || event_queue_shutdown) {
       return;
     }
 
