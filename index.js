@@ -28,18 +28,18 @@ var package_json = require('./package.json');
  * @returns Promise<any>
  */
 function wrapPromiseCallback(promise, callback) {
-  if (callback) {
-    return promise.then(
-      function(value) {
+  return promise.then(
+    function(value) {
+      if (callback) {
         setTimeout(function() { callback(null, value); }, 0);
-      },
-      function(error) {
+      }
+    },
+    function(error) {
+      if (callback) {
         setTimeout(function() { callback(error, null); }, 0);
       }
-    );
-  }
-
-  return promise;
+    }
+  );
 }
 
 function createErrorReporter(emitter, logger) {
@@ -51,7 +51,7 @@ function createErrorReporter(emitter, logger) {
     if (emitter.listenerCount('error')) {
       emitter.emit('error', error);
     } else {
-      logger.error(error);
+      logger.error(error.message);
     }
   };
 }
@@ -63,7 +63,8 @@ var new_client = function(sdk_key, config) {
       init_complete = false,
       queue = [],
       requestor,
-      update_processor;
+      update_processor,
+      event_queue_shutdown = false;
 
   config = Object.assign({}, config || {});
   config.user_agent = 'NodeJSClient/' + package_json.version;
@@ -281,8 +282,13 @@ var new_client = function(sdk_key, config) {
   client.flush = function(callback) {
     return wrapPromiseCallback(new Promise(function(resolve, reject) {
       var worklist;
-      if (!queue.length) {
+      if (event_queue_shutdown) {
+        var err = new errors.LDInvalidSDKKeyError("Events cannot be posted because SDK key is invalid");
+        reject(err);
+        return;
+      } else if (!queue.length) {
         resolve();
+        return;
       }
 
       worklist = queue.slice(0);
@@ -301,13 +307,26 @@ var new_client = function(sdk_key, config) {
         body: worklist,
         timeout: config.timeout * 1000,
         agent: config.proxy_agent
-      }).on('response', resolve)
-        .on('error', reject);
+      }).on('response', function(resp, body) {
+        if (resp.statusCode > 204) {
+          var err = new errors.LDUnexpectedResponseError("Unexpected status code " + resp.statusCode + "; events may not have been processed",
+            resp.statusCode);
+          maybeReportError(err);
+          reject(err);
+          if (resp.statusCode === 401) {
+            var err1 = new errors.LDInvalidSDKKeyError("Received 401 error, no further events will be posted since SDK key is invalid");
+            maybeReportError(err1);
+            event_queue_shutdown = true;
+          }
+        } else {
+          resolve(resp, body);
+        }
+      }).on('error', reject);
     }.bind(this)), callback);
   };
 
   function enqueue(event) {
-    if (config.offline) {
+    if (config.offline || event_queue_shutdown) {
       return;
     }
 

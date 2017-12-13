@@ -47,35 +47,37 @@ function Requestor(sdk_key, config) {
     };
   }
 
+  function process_response(cb) {
+    return function(response, body) {
+      if (response.statusCode !== 200 && response.statusCode != 304) {
+        var err = new Error('Unexpected status code: ' + response.statusCode);
+        err.status = response.statusCode;
+        cb(err, null);
+      } else {
+        cb(null, body);
+      }
+    };
+  }
+
+  function process_error_response(cb) {
+    return function(err) {
+      cb(err, null);
+    }
+  }
+
   requestor.request_flag = function(key, cb) {
     var req = make_request('/sdk/latest-flags/' + key);
     req(
-      function(response, body) {
-        if (response.statusCode !== 200 && response.statusCode != 304) {
-          cb(new Error('Unexpected status code: ' + response.statusCode), null);
-        } else {
-          cb(null, body);
-        }
-      },
-      function(err) {
-        cb(err, null);
-      }
+      process_response(cb),
+      process_error_response(cb)
     );
   } 
 
   requestor.request_all_flags = function(cb) {
     var req = make_request('/sdk/latest-flags');
     req(
-      function(response, body) {
-        if (response.statusCode !== 200 && response.statusCode != 304) {
-          cb(new Error('Unexpected status code: ' + response.statusCode), null);
-        } else {
-          cb(null, body);
-        }
-      },
-      function(err) {
-        cb(new Error('Unexpected error: ' + response.statusCode + ' -- ' + response.message), null);
-      }
+      process_response(cb),
+      process_error_response(cb)
     );
   }
 
