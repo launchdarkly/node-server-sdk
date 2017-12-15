@@ -129,6 +129,10 @@ declare module "ldclient-node" {
      */
     use_ldd?: boolean;
 
+    /**
+     * Whether to send events back to LaunchDarkly
+    */
+    send_events?: boolean;
   }
 
   /**

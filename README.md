@@ -1,6 +1,7 @@
 LaunchDarkly SDK for Node.js
 ===========================
 
+[![Circle CI](https://circleci.com/gh/launchdarkly/node-client/tree/master.svg?style=svg)](https://circleci.com/gh/launchdarkly/node-client/tree/master)
 
 Quick setup
 -----------
@@ -23,14 +24,13 @@ Your first feature flag
 
 1. Create a new feature flag on your [dashboard](https://app.launchdarkly.com)
 2. In your application code, use the feature's key to check whether the flag is on for each user:
-        
+
         ld_client.once('ready', function() {
-          ld_client.toggle("your.flag.key", {"key" : "user@test.com"}, false, function(err, show_feature) {
+          ld_client.variation("your.flag.key", {"key" : "user@test.com"}, false, function(err, show_feature) {
             if (show_feature) {
                 # application code to show the feature
-            }
-            else {
-                # the code to run if the feature is off 
+            } else {
+                # the code to run if the feature is off
             }
           });
         });
