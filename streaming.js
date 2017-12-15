@@ -16,7 +16,7 @@ function StreamProcessor(sdk_key, config, requestor) {
       });
       
     es.onerror = function(err) {
-      cb(new errors.LDStreamingError(err.message));
+      cb(new errors.LDStreamingError(err.message, err.code));
     };
 
     es.addEventListener('put', function(e) {
