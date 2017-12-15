@@ -3,6 +3,10 @@
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres 
 to [Semantic Versioning](http://semver.org).
 
+## [3.2.1] - 2017-12-13
+### Fixed
+- Only emit stream 401 errors once
+
 ## [3.2.0] - 2017-12-13
 ### Added
 - New `send_events` option to control whether the SDK should send events back to LaunchDarkly or not. Defaults to `true`.
