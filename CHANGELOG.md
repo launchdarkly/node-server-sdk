@@ -1,6 +1,28 @@
 # Change log
 
-All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
+All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres 
+to [Semantic Versioning](http://semver.org).
+
+## [3.2.1] - 2017-12-13
+### Fixed
+- Only emit stream 401 errors once
+
+## [3.2.0] - 2017-12-13
+### Added
+- New `send_events` option to control whether the SDK should send events back to LaunchDarkly or not. Defaults to `true`.
+### Changed
+- If the SDK gets a 401 from LaunchDarkly it will stop retrying to connect since there is no way for the
+SDK key to become valid again.
+
+## [3.1.0] - 2017-12-12
+### Changed
+- Asynchronous SDK methods now return a `Promise`; the SDK now supports both the Node.js error callback interface and the `Promise` interface. (https://github.com/launchdarkly/node-client/issues/58)
+- The SDK now emits an `error` event. If no `error` event handler exists, errors will be logged using the configured logger. (https://github.com/launchdarkly/node-client/issues/55)
+- The SDK now returns context-specific error objects to make it easier to handle errors from consumer code. (https://github.com/launchdarkly/node-client/issues/56)
+- A new `update` event is available on the client to be notified whenever the SDK receives feature flag updates from LaunchDarkly.
+### Fixed
+- Callbacks to asynchronous methods are now always called asynchronously (to avoid [zalgo](http://blog.izs.me/post/59142742143/designing-apis-for-asynchrony)) (https://github.com/launchdarkly/node-client/issues/69)
+
 
 ## [3.0.15] - 2017-07-21
 ### Changed

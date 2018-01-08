@@ -22,7 +22,7 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
 
           for (var key in allFlags) {
             if(handledFlags[key]) continue;
-            differ(key, oldFlags[key], allFlags[key]);
+            differ(key, oldFlags[key], newFlags[key]);
             handledFlags[key] = true;
           }
 

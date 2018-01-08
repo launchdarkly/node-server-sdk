@@ -14,7 +14,11 @@ function Requestor(sdk_key, config) {
   var requestor = {};
 
   var cacheConfig = {
-    max: 100
+    max: 100,
+    // LRUCache passes each cached item through the "length" function to determine how many units it should
+    // count for toward "max".  We want our cache limit to be based on the number of responses, not their
+    // size; that is in fact the default behavior of LRUCache, but request-etag overrides it unless we do this:
+    length: function() { return 1; }
   };
   var requestWithETagCaching = new ETagRequest(cacheConfig);
 
@@ -43,35 +47,37 @@ function Requestor(sdk_key, config) {
     };
   }
 
+  function process_response(cb) {
+    return function(response, body) {
+      if (response.statusCode !== 200 && response.statusCode != 304) {
+        var err = new Error('Unexpected status code: ' + response.statusCode);
+        err.status = response.statusCode;
+        cb(err, null);
+      } else {
+        cb(null, body);
+      }
+    };
+  }
+
+  function process_error_response(cb) {
+    return function(err) {
+      cb(err, null);
+    }
+  }
+
   requestor.request_flag = function(key, cb) {
     var req = make_request('/sdk/latest-flags/' + key);
     req(
-      function(response, body) {
-        if (response.code !== 200) {
-          cb(new Error('Unexpected status code: ' + response.code), null);
-        } else {
-          cb(null, body);
-        }
-      },
-      function(err) {
-        cb(err, null);
-      }
+      process_response(cb),
+      process_error_response(cb)
     );
   } 
 
   requestor.request_all_flags = function(cb) {
     var req = make_request('/sdk/latest-flags');
     req(
-      function(response, body) {
-        if (response.code !== 200) {
-          cb(new Error('Unexpected status code: ' + response.code), null);
-        } else {
-          cb(null, body);
-        }
-      },
-      function(err) {
-        cb(new Error('Unexpected error: ' + response.code + ' -- ' + response.message), null);
-      }
+      process_response(cb),
+      process_error_response(cb)
     );
   }
 

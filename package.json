@@ -1,10 +1,10 @@
 {
   "name": "ldclient-node",
-  "version": "3.0.15",
+  "version": "3.2.1",
   "description": "LaunchDarkly SDK for Node.js",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "jest"
   },
   "types": "./index.d.ts",
   "repository": {
@@ -37,7 +37,13 @@
     "node": ">= 0.8.x"
   },
   "devDependencies": {
-    "mocha": "^2.4.5",
-    "rewire": "^2.5.1"
+    "jest": "21.2.1"
+  },
+  "jest": {
+    "rootDir": "test",
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/*-test.js"
+    ]
   }
 }

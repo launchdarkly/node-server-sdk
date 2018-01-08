@@ -1,7 +1,8 @@
 function createCustomError(name) {
-  function CustomError(message) {
+  function CustomError(message, code) {
     Error.captureStackTrace && Error.captureStackTrace(this, this.constructor);
     this.message = message;
+    this.code = code;
   }
 
   CustomError.prototype = new Error();
@@ -13,4 +14,6 @@ function createCustomError(name) {
 
 exports.LDPollingError = createCustomError('LaunchDarklyPollingError');
 exports.LDStreamingError = createCustomError('LaunchDarklyStreamingError');
+exports.LDUnexpectedResponseError = createCustomError('LaunchDarklyUnexpectedResponseError');
+exports.LDInvalidSDKKeyError = createCustomError('LaunchDarklyInvalidSDKKeyError');
 exports.LDClientError = createCustomError('LaunchDarklyClientError');
