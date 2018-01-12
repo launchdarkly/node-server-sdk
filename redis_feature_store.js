@@ -10,7 +10,9 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
   var client = redis.createClient(redis_opts),
       store = {},
       features_key = prefix ? prefix + ":features" : "launchdarkly:features",
-      cache = cache_ttl ? new NodeCache({ stdTTL: cache_ttl}) : null;
+      cache = cache_ttl ? new NodeCache({ stdTTL: cache_ttl}) : null,
+      inited = false,
+      checked_init = false;
 
   logger = (logger ||
     new winston.Logger({
@@ -107,7 +109,9 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
     multi.exec(function(err, replies) {
       if (err) {
         logger.error("Error initializing redis feature store", err);
-      } 
+      } else {
+        inited = true;
+      }
       cb();
     });
   };
@@ -169,22 +173,25 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
   };
 
   store.initialized = function(cb) {
-    var init;
     cb = cb || noop;
-
-    if (cache_ttl) {
-      init = cache.get('$initialized$');
-      if (init) {
-        return true;
-      }
+    if (inited) {
+      // Once we've determined that we're initialized, we can never become uninitialized again
+      cb(true);
     }
-
-    client.exists('$initialized$', function(err, obj) {
-      if (!err && obj && cache_ttl) {
-        cache.set('$initialized$', true);
-      }
-      cb(!err && obj);
-    });
+    else if (checked_init) {
+      // We don't want to hit Redis for this question more than once; if we've already checked there
+      // and it wasn't populated, we'll continue to say we're uninited until init() has been called
+      cb(false);
+    }
+    else {
+      client.exists(features_key, function(err, obj) {
+        if (!err && obj) {
+          inited = true;
+        } 
+        checked_init = true;
+        cb(inited);
+      });
+    }
   };
 
   store.close = function() {
