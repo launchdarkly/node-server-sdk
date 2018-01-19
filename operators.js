@@ -11,11 +11,16 @@ function semVerOperator(fn) {
 function parseSemVer(input) {
   var ret = semver.parse(input);
   if (!ret) {
-    input = addZeroVersionComponent(input);
-    ret = semver.parse(input);
-    if (!ret) {
-      input = addZeroVersionComponent(input);
-      ret = semver.parse(input);
+    var versionNumericComponents = new RegExp("^\\d+(\\.\\d+)?(\\.\\d+)?").exec(input);
+    if (versionNumericComponents) {
+      var transformed = versionNumericComponents[0];
+      for (var i = 1; i < versionNumericComponents.length; i++) {
+        if (versionNumericComponents[i] == undefined) {
+          transformed = transformed + ".0";
+        }
+      }
+      transformed = transformed + input.substring(versionNumericComponents[0].length);
+      ret = semver.parse(transformed);
     }
   }
   return ret;
@@ -23,11 +28,11 @@ function parseSemVer(input) {
 
 function addZeroVersionComponent(input) {
   // allows for loose versions like "2" or "2.0-rc1"
-  var matches = new RegExp("^([0-9.]*)(.*)").exec(input);
+  var matches = new RegExp("^\\d+(\\.\\d+)?(\\.\\d+)?").exec(input);
   if (!matches) {
     return input + ".0";
   }
-  return matches[1] + ".0" + matches[2];
+  return matches[1] + ".0" + input.substring(matches[0].length);
 }
 
 var operators = {
