@@ -26,15 +26,6 @@ function parseSemVer(input) {
   return ret;
 }
 
-function addZeroVersionComponent(input) {
-  // allows for loose versions like "2" or "2.0-rc1"
-  var matches = new RegExp("^\\d+(\\.\\d+)?(\\.\\d+)?").exec(input);
-  if (!matches) {
-    return input + ".0";
-  }
-  return matches[1] + ".0" + input.substring(matches[0].length);
-}
-
 var operators = {
   "in": function(a, b) {
     return a === b;
