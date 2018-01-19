@@ -3,6 +3,10 @@
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres 
 to [Semantic Versioning](http://semver.org).
 
+## [3.3.0] - 2018-01-19
+### Added
+- Support for [private user attributes](https://docs.launchdarkly.com/docs/private-user-attributes).
+
 ## [3.2.1] - 2017-12-13
 ### Fixed
 - Only emit stream 401 errors once
