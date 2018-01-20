@@ -1,6 +1,6 @@
 var ETagRequest = require('request-etag');
 /**
- * Creates a new Requestor object, which handles remote requests to fetch feature flags for LaunchDarkly.
+ * Creates a new Requestor object, which handles remote requests to fetch feature flags or segments for LaunchDarkly.
  * This is never called synchronously when requesting a feature flag for a user (e.g. via the toggle) call.
  * 
  * It will be called once per second in polling mode (i.e. when streaming is disabled), or for extremely large
@@ -75,6 +75,30 @@ function Requestor(sdk_key, config) {
 
   requestor.request_all_flags = function(cb) {
     var req = make_request('/sdk/latest-flags');
+    req(
+      process_response(cb),
+      process_error_response(cb)
+    );
+  }
+
+  requestor.request_segment = function(key, cb) {
+    var req = make_request('/sdk/latest-segments/' + key);
+    req(
+      process_response(cb),
+      process_error_response(cb)
+    );
+  } 
+
+  requestor.request_all_segments = function(cb) {
+    var req = make_request('/sdk/latest-segments');
+    req(
+      process_response(cb),
+      process_error_response(cb)
+    );
+  }
+
+  requestor.request_all_data = function(cb) {
+    var req = make_request('/sdk/latest-all');
     req(
       process_response(cb),
       process_error_response(cb)
