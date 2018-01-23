@@ -14,34 +14,7 @@ var crypto = require('crypto');
 var async = require('async');
 var errors = require('./errors');
 var package_json = require('./package.json');
-
-/**
- * Wrap a promise to invoke an optional callback upon resolution or rejection.
- * 
- * This function assumes the callback follows the Node.js callback type: (err, value) => void
- * 
- * If a callback is provided:
- *   - if the promise is resolved, invoke the callback with (null, value)
- *   - if the promise is rejected, invoke the callback with (error, null)
- * 
- * @param {Promise<any>} promise 
- * @param {Function} callback 
- * @returns Promise<any>
- */
-function wrapPromiseCallback(promise, callback) {
-  return promise.then(
-    function(value) {
-      if (callback) {
-        setTimeout(function() { callback(null, value); }, 0);
-      }
-    },
-    function(error) {
-      if (callback) {
-        setTimeout(function() { callback(error, null); }, 0);
-      }
-    }
-  );
-}
+var wrapPromiseCallback = require('./utils/wrapPromiseCallback');
 
 function createErrorReporter(emitter, logger) {
   return function(error) {

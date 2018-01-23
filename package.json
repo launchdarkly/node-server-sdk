@@ -40,7 +40,7 @@
     "jest": "21.2.1"
   },
   "jest": {
-    "rootDir": "test",
+    "rootDir": ".",
     "testEnvironment": "node",
     "testMatch": [
       "**/*-test.js"
