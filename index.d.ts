@@ -268,7 +268,7 @@ declare module "ldclient-node" {
      * @param callback
      *  Will be called with the resulting flag set.
      */
-    all: (callback: (err: any, res: LDFlagSet) => void) => void;
+    all: (callback: (res: LDFlagSet) => void) => void;
 
     /**
      * Initialize the store.
