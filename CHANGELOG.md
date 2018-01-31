@@ -5,7 +5,7 @@ to [Semantic Versioning](http://semver.org).
 
 ## [3.3.2] - 2018-01-31
 ### Fixed
-- The TypeScript definition for the `all` method of `LDFeatureStore` is now correct
+- The TypeScript definition for the `all` method of `LDFeatureStore` is now correct — [#77](https://github.com/launchdarkly/node-client/issues/77)
 
 ## [3.3.1] - 2018-01-23
 ### Fixed
