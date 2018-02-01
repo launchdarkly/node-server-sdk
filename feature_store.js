@@ -8,7 +8,7 @@ function InMemoryFeatureStore() {
   store.get = function(kind, key, cb) {
     cb = cb || noop;
     var items = this.allData[kind] || {};
-    if items.hasOwnProperty(key) {
+    if (Object.hasOwnProperty.call(items, key)) {
       var item = items[key];
 
       if (!item || item.deleted) {
@@ -27,7 +27,7 @@ function InMemoryFeatureStore() {
     var items = this.allData[kind] || {};
 
     for (var key in items) {
-      if (items.hasOwnProperty(key)) {
+      if (Object.hasOwnProperty.call(items, key)) {
         var item = items[key];
         if (item && !item.deleted) {
           results[key] = clone(item);          
@@ -53,7 +53,7 @@ function InMemoryFeatureStore() {
       this.allData[kind] = items;
     }
     var deletedItem = { version: version, deleted: true };
-    if (items.hasOwnProperty(key)) {
+    if (Object.hasOwnProperty.call(items, key)) {
       var old = items[key];
       if (!old || old.version < version) {
         items[key] = deletedItem;
@@ -75,7 +75,7 @@ function InMemoryFeatureStore() {
       this.allData[kind] = items;
     }
 
-    if (items.hasOwnProperty(key)) {
+    if (Object.hasOwnProperty.call(items, key)) {
       var old = items[key];
       if (old && old.version < item.version) {
         items[key] = item;
