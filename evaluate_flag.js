@@ -1,8 +1,8 @@
 var operators = require('./operators');
+var dataKind = require('./versioned_data_kind');
 var util = require('util');
 var sha1 = require('node-sha1');
 var async = require('async');
-var dataKind = require('versioned_data_kind');
 
 var builtins = ['key', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name', 'anonymous'];
 

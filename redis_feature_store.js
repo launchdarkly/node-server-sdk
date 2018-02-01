@@ -1,7 +1,7 @@
 var redis = require('redis'),
     NodeCache = require( "node-cache" ),
     winston = require('winston'),
-    dataKind = require('versioned_data_kind');
+    dataKind = require('./versioned_data_kind');
 
 
 var noop = function(){};

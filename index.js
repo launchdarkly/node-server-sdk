@@ -15,7 +15,7 @@ var async = require('async');
 var errors = require('./errors');
 var package_json = require('./package.json');
 var wrapPromiseCallback = require('./utils/wrapPromiseCallback');
-var dataKind = require('versioned_data_kind');
+var dataKind = require('./versioned_data_kind');
 
 function createErrorReporter(emitter, logger) {
   return function(error) {
