@@ -1,9 +1,7 @@
 var request = require('request');
 var FeatureStoreEventWrapper = require('./feature_store_event_wrapper');
 var InMemoryFeatureStore = require('./feature_store');
-var InMemorySegmentStore = require('./segment_store');
 var RedisFeatureStore = require('./redis_feature_store');
-var RedisSegmentStore = require('./redis_segment_store');
 var Requestor = require('./requestor');
 var EventEmitter = require('events').EventEmitter;
 var EventSerializer = require('./event_serializer');
@@ -17,6 +15,7 @@ var async = require('async');
 var errors = require('./errors');
 var package_json = require('./package.json');
 var wrapPromiseCallback = require('./utils/wrapPromiseCallback');
+var dataKind = require('versioned_data_kind');
 
 function createErrorReporter(emitter, logger) {
   return function(error) {
@@ -74,8 +73,6 @@ var new_client = function(sdk_key, config) {
 
   var featureStore = config.feature_store || InMemoryFeatureStore();
   config.feature_store = FeatureStoreEventWrapper(featureStore, client);
-
-  var segmentStore = config.segment_store || InMemorySegmentStore();
 
   var eventSerializer = EventSerializer(config);
   
@@ -167,8 +164,8 @@ var new_client = function(sdk_key, config) {
         }
       }
 
-      config.feature_store.get(key, function(flag) {
-        evaluate.evaluate(flag, user, config.feature_store, config.segment_store, function(err, result, events) {
+      config.feature_store.get(dataKind.features, key, function(flag) {
+        evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
           var i;
           var version = flag ? flag.version : null;
 
@@ -212,10 +209,10 @@ var new_client = function(sdk_key, config) {
         return resolve({});
       }
 
-      config.feature_store.all(function(flags) {
+      config.feature_store.all(dataKind.features, function(flags) {
         async.forEachOf(flags, function(flag, key, iteratee_cb) {
           // At the moment, we don't send any events here
-          evaluate.evaluate(flag, user, config.feature_store, config.segment_store, function(err, result, events) {
+          evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
             results[key] = result;
             iteratee_cb(null);
           })
@@ -339,7 +336,6 @@ var new_client = function(sdk_key, config) {
 module.exports = {
   init: new_client,
   RedisFeatureStore: RedisFeatureStore,
-  RedisSegmentStore: RedisSegmentStore,
   errors: errors
 };
 

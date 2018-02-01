@@ -2,12 +2,13 @@ var operators = require('./operators');
 var util = require('util');
 var sha1 = require('node-sha1');
 var async = require('async');
+var dataKind = require('versioned_data_kind');
 
 var builtins = ['key', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name', 'anonymous'];
 
 var noop = function(){};
 
-function evaluate(flag, user, featureStore, segmentStore, cb) {
+function evaluate(flag, user, featureStore, cb) {
   cb = cb || noop;
   if (!user || user.key === null || user.key === undefined) {
     cb(null, null, null);
@@ -31,7 +32,7 @@ function evaluate(flag, user, featureStore, segmentStore, cb) {
     return;
   }
 
-  eval_internal(flag, user, featureStore, segmentStore, [], function(err, result, events) {
+  eval_internal(flag, user, featureStore, [], function(err, result, events) {
     if (err) {
       cb(err, result, events);
       return;
@@ -53,19 +54,19 @@ function evaluate(flag, user, featureStore, segmentStore, cb) {
   return;
 }
 
-function eval_internal(flag, user, featureStore, segmentStore, events, cb) {
+function eval_internal(flag, user, featureStore, events, cb) {
   // Evaluate prerequisites, if any
   if (flag.prerequisites) {
     async.mapSeries(flag.prerequisites, 
       function(prereq, callback) {
-        featureStore.get(prereq.key, function(f) {
+        featureStore.get(dataKind.features, prereq.key, function(f) {
           // If the flag does not exist in the store or is not on, the prerequisite
           // is not satisfied
           if (!f || !f.on) {
             callback(new Error("Unsatisfied prerequisite"), null);
             return;
           }
-          eval_internal(f, user, featureStore, segmentStore, events, function(err, value) {
+          eval_internal(f, user, featureStore, events, function(err, value) {
             // If there was an error, the value is null, the variation index is out of range, 
             // or the value does not match the indexed variation the prerequisite is not satisfied
             var variation = get_variation(f, prereq.variation);
@@ -86,18 +87,18 @@ function eval_internal(flag, user, featureStore, segmentStore, events, cb) {
           cb(null, null, events);
           return;
         } 
-        evalRules(flag, user, segmentStore, function(e, variation) {
+        evalRules(flag, user, featureStore, function(e, variation) {
           cb(e, variation, events);
         });
       })
   } else {
-    evalRules(flag, user, segmentStore, function(e, variation) {
+    evalRules(flag, user, featureStore, function(e, variation) {
       cb(e, variation, events);
     });
   }
 }
 
-function evalRules(flag, user, segmentStore, cb) {
+function evalRules(flag, user, featureStore, cb) {
   var i, j;
   var target;
   var variation;
@@ -121,7 +122,7 @@ function evalRules(flag, user, segmentStore, cb) {
 
   async.mapSeries(flag.rules,
     function(rule, callback) {
-      rule_match_user(rule, user, segmentStore, function(matched) {
+      rule_match_user(rule, user, featureStore, function(matched) {
         callback(matched ? rule : null, null);
       });
     },
@@ -141,7 +142,7 @@ function evalRules(flag, user, segmentStore, cb) {
   );
 }
 
-function rule_match_user(r, user, segmentStore, cb) {
+function rule_match_user(r, user, featureStore, cb) {
   var i;
 
   if (!r.clauses) {
@@ -151,7 +152,7 @@ function rule_match_user(r, user, segmentStore, cb) {
   // A rule matches if all its clauses match
   async.mapSeries(r.clauses,
     function(clause, callback) {
-      clause_match_user(clause, user, segmentStore, function(matched) {
+      clause_match_user(clause, user, featureStore, function(matched) {
         // on the first clause that does *not* match, we raise an "error" to stop the loop
         callback(matched ? null : clause, null);
       });
@@ -162,11 +163,11 @@ function rule_match_user(r, user, segmentStore, cb) {
   );
 }
 
-function clause_match_user(c, user, segmentStore, cb) {
+function clause_match_user(c, user, featureStore, cb) {
   if (c.op == 'segmentMatch') {
     async.mapSeries(r.values,
       function(value, callback) {
-        segmentStore.get(value, function(segment) {
+        featureStore.get(dataKind.segments, value, function(segment) {
           if (segment && segment_match_user(segment, user)) {
             // on the first segment that matches, we raise an "error" to stop the loop
             callback(segment, null);
