@@ -40,7 +40,7 @@ function InMemoryFeatureStore() {
 
   store.init = function(allData, cb) {
     cb = cb || noop;
-    this.items = allData;
+    this.allData = allData;
     this.init_called = true;
     cb();
   }

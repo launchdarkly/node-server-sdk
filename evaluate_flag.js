@@ -165,7 +165,7 @@ function rule_match_user(r, user, featureStore, cb) {
 
 function clause_match_user(c, user, featureStore, cb) {
   if (c.op == 'segmentMatch') {
-    async.mapSeries(r.values,
+    async.mapSeries(c.values,
       function(value, callback) {
         featureStore.get(dataKind.segments, value, function(segment) {
           if (segment && segment_match_user(segment, user)) {
@@ -218,7 +218,7 @@ function segment_match_user(segment, user) {
       return true;
     }
     if ((segment.excluded || []).indexOf(user.key) >= 0) {
-      return true;
+      return false;
     }
     for (var i = 0; i < (segment.rules || []).length; i++) {
       if (segment_rule_match_user(segment.rules[i], user, segment.key, segment.salt)) {
@@ -237,7 +237,7 @@ function segment_rule_match_user(rule, user, segmentKey, salt) {
   }
 
   // If the weight is absent, this rule matches
-  if (!rule.weight) {
+  if (rule.weight === undefined || rule.weight === null) {
     return true;
   }
 
