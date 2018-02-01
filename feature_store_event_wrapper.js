@@ -1,3 +1,5 @@
+var dataKind = require('./versioned_data_kind');
+
 function FeatureStoreEventWrapper(featureStore, emitter) {
   function differ(key, oldValue, newValue) {
     if(newValue && oldValue && newValue.version < oldValue.version) return;
@@ -13,10 +15,11 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
     initialized: featureStore.initialized.bind(featureStore),
     close: featureStore.close.bind(featureStore),
 
-    init: function(newFlags, callback) {
-      featureStore.all(function(oldFlags){
-        featureStore.init(newFlags, function(){
+    init: function(newData, callback) {
+      featureStore.all(dataKind, function(oldFlags){
+        featureStore.init(newData, function(){
           var allFlags = {};
+          var newFlags = newData[dataKind.features] || {};
           Object.assign(allFlags, oldFlags, newFlags);
           var handledFlags = {};
 
@@ -31,19 +34,23 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
       });      
     },
 
-    delete: function(key, version, callback) {
-      featureStore.get(key, function(oldFlag) {
-        featureStore.delete(key, version, function() {
-          differ(key, oldFlag, {});
+    delete: function(kind, key, version, callback) {
+      featureStore.get(kind, key, function(oldFlag) {
+        featureStore.delete(kind, key, version, function() {
+          if (kind === dataKind.features) {
+            differ(key, oldFlag, {});
+          }
           callback && callback.apply(null, arguments);
         });
       });
     },
 
-    upsert: function(key, newFlag, callback) {
-      featureStore.get(key, function(oldFlag) {
-        featureStore.upsert(key, newFlag, function() {
-          differ(key, oldFlag, newFlag);
+    upsert: function(kind, newFlag, callback) {
+      featureStore.get(newFlag.key, function(oldFlag) {
+        featureStore.upsert(kind, key, newFlag, function() {
+          if (kind === dataKind.features) {
+            differ(key, oldFlag, newFlag);
+          }
           callback && callback.apply(null, arguments);
         });
       });

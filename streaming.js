@@ -1,6 +1,7 @@
 var errors = require('./errors');
 
 var EventSource = require('./eventsource');
+var dataKind = require('./versioned_data_kind');
 
 function StreamProcessor(sdk_key, config, requestor) {
   var processor = {},
@@ -28,9 +29,11 @@ function StreamProcessor(sdk_key, config, requestor) {
       if (e && e.data) {
         var all = JSON.parse(e.data);
         var initData = {};
-        initData[dataKind.features] = all.flags;
-        initData[dataKind.segments] = all.segments;
-        featureStore.init(initData, cb);
+        initData[dataKind.features] = all.data.flags;
+        initData[dataKind.segments] = all.data.segments;
+        featureStore.init(initData, function() {
+          cb();
+        });
       } else {
         cb(new errors.LDStreamingError('Unexpected payload from event stream'));
       }
@@ -82,7 +85,9 @@ function StreamProcessor(sdk_key, config, requestor) {
           var initData = {};
           initData[dataKind.features] = all.flags;
           initData[dataKind.segments] = all.segments;
-          featureStore.init(initData, cb);
+          featureStore.init(initData, function() {
+            cb();
+          });
         }
       })
     });
