@@ -1,4 +1,5 @@
 var errors = require('./errors');
+var dataKind = require('./versioned_data_kind');
 
 function PollingProcessor(config, requestor) {
   var processor = {},
@@ -30,12 +31,13 @@ function PollingProcessor(config, requestor) {
           setTimeout(function() { poll(cb); }, sleepFor);
         }
       } else {
-        featureStore.init(JSON.parse(allData.flags), function() {
-          segmentStore.init(JSON.parse(allData.segments), function() {
-            cb();
-            // Recursively call poll after the appropriate delay
-            setTimeout(function() { poll(cb); }, sleepFor);
-          });
+        var initData = {};
+        initData[dataKind.features] = allData.flags;
+        initData[dataKind.segments] = allData.segments;
+        featureStore.init(initData, function() {
+          cb();
+          // Recursively call poll after the appropriate delay
+          setTimeout(function() { poll(cb); }, sleepFor);
         });
       }
     });

@@ -73,14 +73,6 @@ function Requestor(sdk_key, config) {
     );
   } 
 
-  requestor.request_all_flags = function(cb) {
-    var req = make_request('/sdk/latest-flags');
-    req(
-      process_response(cb),
-      process_error_response(cb)
-    );
-  }
-
   requestor.request_segment = function(key, cb) {
     var req = make_request('/sdk/latest-segments/' + key);
     req(
@@ -88,14 +80,6 @@ function Requestor(sdk_key, config) {
       process_error_response(cb)
     );
   } 
-
-  requestor.request_all_segments = function(cb) {
-    var req = make_request('/sdk/latest-segments');
-    req(
-      process_response(cb),
-      process_error_response(cb)
-    );
-  }
 
   requestor.request_all_data = function(cb) {
     var req = make_request('/sdk/latest-all');

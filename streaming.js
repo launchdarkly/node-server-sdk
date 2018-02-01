@@ -5,19 +5,10 @@ var EventSource = require('./eventsource');
 function StreamProcessor(sdk_key, config, requestor) {
   var processor = {},
       featureStore = config.feature_store,
-      segmentStore = config.segment_store,
       es;
 
-  function getFlagKeyFromPath(path) {
-    return getKeyFromPath(path, '/flags/');
-  }
-
-  function getSegmentKeyFromPath(path) {
-    return getKeyFromPath(path, '/segments/');
-  }
-
-  function getKeyFromPath(path, prefix) {
-    return path.startsWith(prefix) ? path.substring(prefix.length) : null;
+  function getKeyFromPath(kind, path) {
+    return path.startsWith(kind.streamApiPath) ? path.substring(kind.streamApiPath.length) : null;
   }
 
   processor.start = function(fn) {
@@ -36,11 +27,10 @@ function StreamProcessor(sdk_key, config, requestor) {
       config.logger.debug('Received put event');
       if (e && e.data) {
         var all = JSON.parse(e.data);
-        featureStore.init(all.flags, function() {
-          segmentStore.init(all.flags, function() {
-            cb();
-          });
-        })     
+        var initData = {};
+        initData[dataKind.features] = all.flags;
+        initData[dataKind.segments] = all.segments;
+        featureStore.init(initData, cb);
       } else {
         cb(new errors.LDStreamingError('Unexpected payload from event stream'));
       }
@@ -50,13 +40,13 @@ function StreamProcessor(sdk_key, config, requestor) {
       config.logger.debug('Received patch event');
       if (e && e.data) {
         var patch = JSON.parse(e.data),
-            key = getFlagKeyFromPath(patch.path);
+            key = getKeyFromPath(dataKind.features, patch.path);
         if (key != null) {
-          featureStore.upsert(key, patch.data);
+          featureStore.upsert(dataKind.features, patch.data);
         } else {
-          key = getSegmentKeyFromPath(patch.path);
+          key = getKeyFromPath(dataKind.segments, patch.path);
           if (key != null) {
-            segmentStore.upsert(key, patch.data);
+            featureStore.upsert(dataKind.segments, patch.data);
           }
         }
       } else {
@@ -69,13 +59,13 @@ function StreamProcessor(sdk_key, config, requestor) {
       if (e && e.data) {        
         var data = JSON.parse(e.data),
             version = data.version,
-            key = getFlagKeyFromPath(data.path);
+            key = getKeyFromPath(dataKind.features, data.path);
         if (key != null) {
-          featureStore.delete(key, version);
+          featureStore.delete(dataKind.features, key, version);
         } else {
-          key = getSegmentKeyFromPath(patch.path);
+          key = getKeyFromPath(dataKind.segments, patch.path);
           if (key != null) {
-            segmentStore.delete(key, version);
+            featureStore.delete(dataKind.segments, key, version);
           }
         }
       } else {
@@ -85,21 +75,14 @@ function StreamProcessor(sdk_key, config, requestor) {
 
     es.addEventListener('indirect/put', function(e) {
       config.logger.debug('Received indirect put event')
-      requestor.request_all_flags(function (err, flags) {
+      requestor.request_all_flags(function (err, all) {
         if (err) {
           cb(err);
         } else {
-          featureStore.init(JSON.parse(flags), function() {
-            requestor.request_all_segments(function(err, segments) {
-              if (err) {
-                cb(err);
-              } else {
-                segmentStore.init(JSON.parse(segments), function() {
-                  cb();
-                })
-              }
-            });
-          })          
+          var initData = {};
+          initData[dataKind.features] = all.flags;
+          initData[dataKind.segments] = all.segments;
+          featureStore.init(initData, cb);
         }
       })
     });
@@ -108,23 +91,23 @@ function StreamProcessor(sdk_key, config, requestor) {
       config.logger.debug('Received indirect patch event')
       if (e && e.data) {
         var path = e.data,
-            key = getFlagKeyFromPath(path);
+            key = getKeyFromPath(dataKind.features, path);
         if (key != null) {
           requestor.request_flag(key, function(err, flag) {
             if (err) {
               cb(new errors.LDStreamingError('Unexpected error requesting feature flag'));
             } else {
-              featureStore.upsert(key, JSON.parse(flag));
+              featureStore.upsert(dataKind.features, JSON.parse(flag));
             }
           });
         } else {
-          key = getSegmentKeyFromPath(path);
+          key = getKeyFromPath(dataKind.segments, path);
           if (key != null) {
             requestor.request_segment(key, function(err, segment) {
             if (err) {
               cb(new errors.LDStreamingError('Unexpected error requesting segment'));
             } else {
-              segmentStore.upsert(key, JSON.parse(segment));
+              featureStore.upsert(dataKind.segments, JSON.parse(segment));
             }
           });
           }

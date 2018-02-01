@@ -7,11 +7,13 @@
 */
 
 var features = {
-  namespace: 'features'
+  namespace: 'features',
+  streamApiPath: '/flags/'
 };
 
 var segments = {
-  namespace: 'segments'
+  namespace: 'segments',
+  streamApiPath: '/segments/'
 };
 
 module.exports = {
