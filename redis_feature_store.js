@@ -215,7 +215,6 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
 	};
 
 	return store;
-	};
 }
 
 module.exports = RedisFeatureStore;
