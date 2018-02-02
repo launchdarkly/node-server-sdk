@@ -4,6 +4,9 @@
   referenced in the API.  If we add another storable data type in the future, as long as it
   follows the same pattern (having "key", "version", and "deleted" properties), we only need
   to add a corresponding constant here and the existing store should be able to handle it.
+
+  Note, for things to work correctly, the "namespace" property must match the key used in
+  module.exports.
 */
 
 var features = {
