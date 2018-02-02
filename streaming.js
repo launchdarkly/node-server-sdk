@@ -45,10 +45,12 @@ function StreamProcessor(sdk_key, config, requestor) {
         var patch = JSON.parse(e.data),
             key = getKeyFromPath(dataKind.features, patch.path);
         if (key != null) {
+          config.logger.debug('Updating flag ' + patch.data.key);
           featureStore.upsert(dataKind.features, patch.data);
         } else {
           key = getKeyFromPath(dataKind.segments, patch.path);
           if (key != null) {
+            config.logger.debug('Updating segment ' + patch.data.key);
             featureStore.upsert(dataKind.segments, patch.data);
           }
         }
@@ -64,10 +66,12 @@ function StreamProcessor(sdk_key, config, requestor) {
             version = data.version,
             key = getKeyFromPath(dataKind.features, data.path);
         if (key != null) {
+          config.logger.debug('Deleting flag ' + key);
           featureStore.delete(dataKind.features, key, version);
         } else {
           key = getKeyFromPath(dataKind.segments, patch.path);
           if (key != null) {
+            config.logger.debug('Deleting segment ' + key);
             featureStore.delete(dataKind.segments, key, version);
           }
         }
