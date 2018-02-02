@@ -65,21 +65,13 @@ function Requestor(sdk_key, config) {
     }
   }
 
-  requestor.request_flag = function(key, cb) {
-    var req = make_request('/sdk/latest-flags/' + key);
+  requestor.request_object = function(kind, key, cb) {
+    var req = make_request(kind.requestPath + key);
     req(
       process_response(cb),
       process_error_response(cb)
     );
-  } 
-
-  requestor.request_segment = function(key, cb) {
-    var req = make_request('/sdk/latest-segments/' + key);
-    req(
-      process_response(cb),
-      process_error_response(cb)
-    );
-  } 
+  }
 
   requestor.request_all_data = function(cb) {
     var req = make_request('/sdk/latest-all');

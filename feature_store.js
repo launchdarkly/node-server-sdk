@@ -71,7 +71,7 @@ function InMemoryFeatureStore() {
   store.upsert = function(kind, item, cb) {
     cb = cb || noop;
     var key = item.key;
-    var items = this.allData[kind];
+    var items = this.allData[kind.namespace];
     if (!items) {
       items = {};
       this.allData[kind] = items;

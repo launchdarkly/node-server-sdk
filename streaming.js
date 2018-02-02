@@ -42,16 +42,14 @@ function StreamProcessor(sdk_key, config, requestor) {
     es.addEventListener('patch', function(e) {
       config.logger.debug('Received patch event');
       if (e && e.data) {
-        var patch = JSON.parse(e.data),
-            key = getKeyFromPath(dataKind.features, patch.path);
-        if (key != null) {
-          config.logger.debug('Updating flag ' + patch.data.key);
-          featureStore.upsert(dataKind.features, patch.data);
-        } else {
-          key = getKeyFromPath(dataKind.segments, patch.path);
+        var patch = JSON.parse(e.data);
+        for (var k in dataKind) {
+          var kind = dataKind[k];
+          var key = getKeyFromPath(kind, patch.path);
           if (key != null) {
-            config.logger.debug('Updating segment ' + patch.data.key);
-            featureStore.upsert(dataKind.segments, patch.data);
+            config.logger.debug('Updating ' + key + ' in ' + kind.namespace);
+            featureStore.upsert(kind, patch.data);
+            break;
           }
         }
       } else {
@@ -63,16 +61,14 @@ function StreamProcessor(sdk_key, config, requestor) {
       config.logger.debug('Received delete event');
       if (e && e.data) {        
         var data = JSON.parse(e.data),
-            version = data.version,
-            key = getKeyFromPath(dataKind.features, data.path);
-        if (key != null) {
-          config.logger.debug('Deleting flag ' + key);
-          featureStore.delete(dataKind.features, key, version);
-        } else {
-          key = getKeyFromPath(dataKind.segments, patch.path);
+            version = data.version;
+        for (var k in dataKind) {
+          var kind = dataKind[k];
+          var key = getKeyFromPath(kind, data.path);
           if (key != null) {
-            config.logger.debug('Deleting segment ' + key);
-            featureStore.delete(dataKind.segments, key, version);
+            config.logger.debug('Deleting ' + key + ' in ' + kind.namespace);
+            featureStore.delete(kind, key, version);
+            break;
           }
         }
       } else {
@@ -100,26 +96,20 @@ function StreamProcessor(sdk_key, config, requestor) {
     es.addEventListener('indirect/patch', function(e) {
       config.logger.debug('Received indirect patch event')
       if (e && e.data) {
-        var path = e.data,
-            key = getKeyFromPath(dataKind.features, path);
-        if (key != null) {
-          requestor.request_flag(key, function(err, flag) {
-            if (err) {
-              cb(new errors.LDStreamingError('Unexpected error requesting feature flag'));
-            } else {
-              featureStore.upsert(dataKind.features, JSON.parse(flag));
-            }
-          });
-        } else {
-          key = getKeyFromPath(dataKind.segments, path);
+        var path = e.data;
+        for (var k in dataKind) {
+          var kind = dataKind[k];
+          var key = getKeyFromPath(kind, patch.path);
           if (key != null) {
-            requestor.request_segment(key, function(err, segment) {
-            if (err) {
-              cb(new errors.LDStreamingError('Unexpected error requesting segment'));
-            } else {
-              featureStore.upsert(dataKind.segments, JSON.parse(segment));
-            }
-          });
+            requestor.request_object(kind, key, function(err, resp) {
+              if (err) {
+                cb(new errors.LDStreamingError('Unexpected error requesting ' + key + ' in ' + kind.namespace));
+              } else {
+                config.logger.debug('Updating ' + key + ' in ' + kind.namespace);
+                featureStore.upsert(kind, JSON.parse(resp));
+              }
+            });
+            break;
           }
         }
       } else {

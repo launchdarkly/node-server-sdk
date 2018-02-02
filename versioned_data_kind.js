@@ -8,12 +8,14 @@
 
 var features = {
   namespace: 'features',
-  streamApiPath: '/flags/'
+  streamApiPath: '/flags/',
+  requestPath: '/sdk/latest-flags/'
 };
 
 var segments = {
   namespace: 'segments',
-  streamApiPath: '/segments/'
+  streamApiPath: '/segments/',
+  requestPath: '/sdk/latest-segments/'
 };
 
 module.exports = {

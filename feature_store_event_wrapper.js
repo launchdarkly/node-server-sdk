@@ -45,11 +45,11 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
       });
     },
 
-    upsert: function(kind, newFlag, callback) {
-      featureStore.get(newFlag.key, function(oldFlag) {
-        featureStore.upsert(kind, key, newFlag, function() {
+    upsert: function(kind, newItem, callback) {
+      featureStore.get(kind, newItem.key, function(oldItem) {
+        featureStore.upsert(kind, newItem, function() {
           if (kind === dataKind.features) {
-            differ(key, oldFlag, newFlag);
+            differ(oldItem ? oldItem.key : null, oldItem, newItem);
           }
           callback && callback.apply(null, arguments);
         });
