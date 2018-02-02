@@ -89,8 +89,9 @@ function InMemoryFeatureStore() {
     cb();
   }
 
-  store.initialized = function() {
-    return this.init_called === true;
+  store.initialized = function(cb) {
+    cb = cb || noop;
+    cb(this.init_called === true);
   }
 
   store.close = function() {
