@@ -64,7 +64,6 @@ function InMemoryFeatureStore() {
       items[key] = deletedItem;
     }
 
-
     cb();
   }
 
@@ -90,7 +89,6 @@ function InMemoryFeatureStore() {
   }
 
   store.initialized = function(cb) {
-    cb = cb || noop;
     cb(this.init_called === true);
   }
 
