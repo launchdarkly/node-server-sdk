@@ -62,6 +62,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
 	}
 
 	store.get = function(kind, key, cb) {
+	  cb = cb || noop;
 	  do_get(kind, key, function(item) {
 	    if (item && !item.deleted) {
 	      cb(item);
