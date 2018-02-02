@@ -4,21 +4,18 @@ var dataKind = require('../versioned_data_kind');
 
 var featureStore = new InMemoryFeatureStore();
 
-function defineSegment(segment) {
+function defineSegment(segment, cb) {
   var data = {};
   data[dataKind.segments.namespace] = {};
   data[dataKind.segments.namespace][segment.key] = segment;
   featureStore.init(data);
-  var result = featureStore.get(dataKind.segments, segment.key);
+  setTimeout(cb, 0);
 }
 
-function evalBooleanFlag(flag, user) {
-  var gotResult;
+function evalBooleanFlag(flag, user, cb) {
   evaluate.evaluate(flag, user, featureStore, function(err, result) {
-    // the in-memory store isn't really async - we can count on receiving this callback before we return.
-    gotResult = result;
-  })
-  return gotResult;
+    cb(result);
+  });
 }
 
 function makeFlagWithSegmentMatch(segment) {
@@ -50,56 +47,72 @@ function makeFlagWithSegmentMatch(segment) {
 
 describe('evaluate', function() {
 
-  it('matches segment with explicitly included user', function() {
+  it('matches segment with explicitly included user', function(done) {
     var segment = {
       key: 'test',
       included: [ 'foo' ],
       version: 1
     };
-    defineSegment(segment);
-    var flag = makeFlagWithSegmentMatch(segment);
-    var user = { key: 'foo' };
-    expect(evalBooleanFlag(flag, user)).toBe(true);
+    defineSegment(segment, function() {
+      var flag = makeFlagWithSegmentMatch(segment);
+      var user = { key: 'foo' };
+      evaluate.evaluate(flag, user, featureStore, function(err, result) {
+        expect(result).toBe(true);
+        done();
+      });
+    });
   });
 
-  it('does not match segment with explicitly excluded user', function() {
+  it('does not match segment with explicitly excluded user', function(done) {
     var segment = {
       key: 'test',
       excluded: [ 'foo' ],
       version: 1
     };
-    defineSegment(segment);
-    var flag = makeFlagWithSegmentMatch(segment);
-    var user = { key: 'foo' };
-    expect(evalBooleanFlag(flag, user)).toBe(false);
+    defineSegment(segment, function() {
+      var flag = makeFlagWithSegmentMatch(segment);
+      var user = { key: 'foo' };
+      evaluate.evaluate(flag, user, featureStore, function(err, result) {
+        expect(result).toBe(false);
+        done();
+      });
+    });
   });
 
-  it('does not match segment with unknown user', function() {
+  it('does not match segment with unknown user', function(done) {
     var segment = {
       key: 'test',
       included: [ 'foo' ],
       version: 1
     };
-    defineSegment(segment);
-    var flag = makeFlagWithSegmentMatch(segment);
-    var user = { key: 'bar' };
-    expect(evalBooleanFlag(flag, user)).toBe(false);
+    defineSegment(segment, function() {
+      var flag = makeFlagWithSegmentMatch(segment);
+      var user = { key: 'bar' };
+      evaluate.evaluate(flag, user, featureStore, function(err, result) {
+        expect(result).toBe(false);
+        done();
+      });
+    });
   });
 
-  it('matches segment with user who is both included and excluded', function() {
+  it('matches segment with user who is both included and excluded', function(done) {
     var segment = {
       key: 'test',
       included: [ 'foo' ],
       excluded: [ 'foo' ],
       version: 1
     };
-    defineSegment(segment);
-    var flag = makeFlagWithSegmentMatch(segment);
-    var user = { key: 'foo' };
-    expect(evalBooleanFlag(flag, user)).toBe(true);
+    defineSegment(segment, function() {
+      var flag = makeFlagWithSegmentMatch(segment);
+      var user = { key: 'foo' };
+      evaluate.evaluate(flag, user, featureStore, function(err, result) {
+        expect(result).toBe(true);
+        done();
+      });
+    });
   });
 
-  it('matches segment with rule with full rollout', function() {
+  it('matches segment with rule with full rollout', function(done) {
     var segment = {
       key: 'test',
       rules: [
@@ -116,13 +129,17 @@ describe('evaluate', function() {
       ],
       version: 1
     };
-    defineSegment(segment);
-    var flag = makeFlagWithSegmentMatch(segment);
-    var user = { key: 'foo', email: 'test@example.com' };
-    expect(evalBooleanFlag(flag, user)).toBe(true);
+    defineSegment(segment, function() {
+      var flag = makeFlagWithSegmentMatch(segment);
+      var user = { key: 'foo', email: 'test@example.com' };
+      evaluate.evaluate(flag, user, featureStore, function(err, result) {
+        expect(result).toBe(true);
+        done();
+      });
+    });
   });
 
-  it('does not match segment with rule with zero rollout', function() {
+  it('does not match segment with rule with zero rollout', function(done) {
     var segment = {
       key: 'test',
       rules: [
@@ -139,13 +156,17 @@ describe('evaluate', function() {
       ],
       version: 1
     };
-    defineSegment(segment);
-    var flag = makeFlagWithSegmentMatch(segment);
-    var user = { key: 'foo', email: 'test@example.com' };
-    expect(evalBooleanFlag(flag, user)).toBe(false);
+    defineSegment(segment, function() {
+      var flag = makeFlagWithSegmentMatch(segment);
+      var user = { key: 'foo', email: 'test@example.com' };
+      evaluate.evaluate(flag, user, featureStore, function(err, result) {
+        expect(result).toBe(false);
+        done();
+      });
+    });
   });
 
-  it('matches segment with multiple matching clauses', function() {
+  it('matches segment with multiple matching clauses', function(done) {
     var segment = {
       key: 'test',
       rules: [
@@ -166,13 +187,17 @@ describe('evaluate', function() {
       ],
       version: 1
     };
-    defineSegment(segment);
-    var flag = makeFlagWithSegmentMatch(segment);
-    var user = { key: 'foo', email: 'test@example.com', name: 'bob' };
-    expect(evalBooleanFlag(flag, user)).toBe(true);
+    defineSegment(segment, function() {
+      var flag = makeFlagWithSegmentMatch(segment);
+      var user = { key: 'foo', email: 'test@example.com', name: 'bob' };
+      evaluate.evaluate(flag, user, featureStore, function(err, result) {
+        expect(result).toBe(true);
+        done();
+      });
+    });
   });
 
-  it('does not match segment if one clause does not match', function() {
+  it('does not match segment if one clause does not match', function(done) {
     var segment = {
       key: 'test',
       rules: [
@@ -193,9 +218,13 @@ describe('evaluate', function() {
       ],
       version: 1
     };
-    defineSegment(segment);
-    var flag = makeFlagWithSegmentMatch(segment);
-    var user = { key: 'foo', email: 'test@example.com', name: 'bob' };
-    expect(evalBooleanFlag(flag, user)).toBe(false);
+    defineSegment(segment, function() {
+      var flag = makeFlagWithSegmentMatch(segment);
+      var user = { key: 'foo', email: 'test@example.com', name: 'bob' };
+      evaluate.evaluate(flag, user, featureStore, function(err, result) {
+        expect(result).toBe(false);
+        done();
+      });
+    });
   });
 });
