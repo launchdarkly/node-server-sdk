@@ -153,44 +153,51 @@ var new_client = function(sdk_key, config) {
       }
 
       if (!init_complete) {
-        if (config.feature_store.initialized()) {
-          config.logger.warn("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using last known values from feature store")
-        } else {
-          variationErr = new errors.LDClientError("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using default value");
-          maybeReportError(variationErr);
-          send_flag_event(key, user, default_val, default_val);
-          return resolve(default_val);
-        }
+        config.feature_store.initialized(function(storeInited) {
+          if (config.feature_store.initialized()) {
+            config.logger.warn("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using last known values from feature store")
+            variationInternal(key, user, default_val, resolve, reject);
+          } else {
+            variationErr = new errors.LDClientError("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using default value");
+            maybeReportError(variationErr);
+            send_flag_event(key, user, default_val, default_val);
+            return resolve(default_val);
+          }
+        });
       }
 
-      config.feature_store.get(key, function(flag) {
-        evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
-          var i;
-          var version = flag ? flag.version : null;
-
-          if (err) {
-            maybeReportError(new errors.LDClientError('Encountered error evaluating feature flag:' + (err.message ? (': ' + err.message) : err)));
-          }
-
-          // Send off any events associated with evaluating prerequisites. The events
-          // have already been constructed, so we just have to push them onto the queue.
-          if (events) {
-            for (i = 0; i < events.length; i++) {
-              enqueue(events[i]);
-            }
-          }
-
-          if (result === null) {
-            config.logger.debug("Result value is null in variation");
-            send_flag_event(key, user, default_val, default_val, version);
-            return resolve(default_val);
-          } else {
-            send_flag_event(key, user, result, default_val, version);
-            return resolve(result);
-          }               
-        });
-      });
+      variationInternal(key, user, default_val, resolve, reject);
     }.bind(this)), callback);
+  }
+
+  function variationInternal(key, user, default_val, resolve, reject) {
+    config.feature_store.get(key, function(flag) {
+      evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
+        var i;
+        var version = flag ? flag.version : null;
+
+        if (err) {
+          maybeReportError(new errors.LDClientError('Encountered error evaluating feature flag:' + (err.message ? (': ' + err.message) : err)));
+        }
+
+        // Send off any events associated with evaluating prerequisites. The events
+        // have already been constructed, so we just have to push them onto the queue.
+        if (events) {
+          for (i = 0; i < events.length; i++) {
+            enqueue(events[i]);
+          }
+        }
+
+        if (result === null) {
+          config.logger.debug("Result value is null in variation");
+          send_flag_event(key, user, default_val, default_val, version);
+          return resolve(default_val);
+        } else {
+          send_flag_event(key, user, result, default_val, version);
+          return resolve(result);
+        }               
+      });
+    });
   }
 
   client.toggle = function(key, user, default_val, callback) {
