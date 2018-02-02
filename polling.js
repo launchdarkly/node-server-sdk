@@ -32,8 +32,8 @@ function PollingProcessor(config, requestor) {
         }
       } else {
         var initData = {};
-        initData[dataKind.features] = allData.flags;
-        initData[dataKind.segments] = allData.segments;
+        initData[dataKind.features.namespace] = allData.flags;
+        initData[dataKind.segments.namespace] = allData.segments;
         featureStore.init(initData, function() {
           cb();
           // Recursively call poll after the appropriate delay

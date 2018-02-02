@@ -102,7 +102,8 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
 	    cache.flushAll();
 	  }
 
-	  for (var kind in allData) {
+	  for (var kindNamespace in allData) {
+	  	var kind = dataKind[kindNamespace];
 	  	if (Object.hasOwnProperty.call(allData, kind)) {
 	  		var baseKey = items_key(kind);
 	  		var items = allData[kind];

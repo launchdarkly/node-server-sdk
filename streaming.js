@@ -29,8 +29,8 @@ function StreamProcessor(sdk_key, config, requestor) {
       if (e && e.data) {
         var all = JSON.parse(e.data);
         var initData = {};
-        initData[dataKind.features] = all.data.flags;
-        initData[dataKind.segments] = all.data.segments;
+        initData[dataKind.features.namespace] = all.data.flags;
+        initData[dataKind.segments.namespace] = all.data.segments;
         featureStore.init(initData, function() {
           cb();
         });
@@ -83,8 +83,8 @@ function StreamProcessor(sdk_key, config, requestor) {
           cb(err);
         } else {
           var initData = {};
-          initData[dataKind.features] = all.flags;
-          initData[dataKind.segments] = all.segments;
+          initData[dataKind.features.namespace] = all.flags;
+          initData[dataKind.segments.namespace] = all.segments;
           featureStore.init(initData, function() {
             cb();
           });

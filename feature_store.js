@@ -1,3 +1,5 @@
+var dataKind = require('./versioned_data_kind');
+
 // An in-memory store with an async interface.
 // It's async as other implementations (e.g. the RedisFeatureStore)
 // may be async, and we want to retain interface compatibility.
@@ -7,7 +9,7 @@ function InMemoryFeatureStore() {
 
   store.get = function(kind, key, cb) {
     cb = cb || noop;
-    var items = this.allData[kind] || {};
+    var items = this.allData[kind.namespace] || {};
     if (Object.hasOwnProperty.call(items, key)) {
       var item = items[key];
 
@@ -24,7 +26,7 @@ function InMemoryFeatureStore() {
   store.all = function(kind, cb) {
     cb = cb || noop;
     var results = {};
-    var items = this.allData[kind] || {};
+    var items = this.allData[kind.namespace] || {};
 
     for (var key in items) {
       if (Object.hasOwnProperty.call(items, key)) {
@@ -47,7 +49,7 @@ function InMemoryFeatureStore() {
 
   store.delete = function(kind, key, version, cb) {
     cb = cb || noop;
-    var items = this.allData[kind];
+    var items = this.allData[kind.namespace];
     if (!items) {
       items = {};
       this.allData[kind] = items;
