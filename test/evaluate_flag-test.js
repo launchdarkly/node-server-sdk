@@ -6,8 +6,8 @@ var featureStore = new InMemoryFeatureStore();
 
 function defineSegment(segment) {
   var data = {};
-  data[dataKind.segments] = {};
-  data[dataKind.segments][segment.key] = segment;
+  data[dataKind.segments.namespace] = {};
+  data[dataKind.segments.namespace][segment.key] = segment;
   featureStore.init(data);
   var result = featureStore.get(dataKind.segments, segment.key);
 }
