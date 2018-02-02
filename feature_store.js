@@ -7,24 +7,27 @@ var noop = function(){};
 function InMemoryFeatureStore() {
   var store = {allData:{}};
 
-  store.get = function(kind, key, cb) {
+  function callbackResult(cb, result) {
     cb = cb || noop;
+    setTimeout(function() { cb(result); }, 0);  // ensure this is dispatched asynchronously
+  }
+
+  store.get = function(kind, key, cb) {
     var items = this.allData[kind.namespace] || {};
     if (Object.hasOwnProperty.call(items, key)) {
       var item = items[key];
 
       if (!item || item.deleted) {
-        cb(null);
+        callbackResult(cb, null);
       } else {
-        cb(clone(item));
+        callbackResult(cb, clone(item));
       }
     } else {
-      cb (null);
+      callbackResult(cb, null);
     }
   }
 
   store.all = function(kind, cb) {
-    cb = cb || noop;
     var results = {};
     var items = this.allData[kind.namespace] || {};
 
@@ -37,18 +40,16 @@ function InMemoryFeatureStore() {
       }
     }
 
-    cb(results);
+    callbackResult(cb, results);
   }
 
   store.init = function(allData, cb) {
-    cb = cb || noop;
     this.allData = allData;
     this.init_called = true;
-    cb();
+    callbackResult(cb);
   }
 
   store.delete = function(kind, key, version, cb) {
-    cb = cb || noop;
     var items = this.allData[kind.namespace];
     if (!items) {
       items = {};
@@ -64,11 +65,10 @@ function InMemoryFeatureStore() {
       items[key] = deletedItem;
     }
 
-    cb();
+    callbackResult(cb);
   }
 
   store.upsert = function(kind, item, cb) {
-    cb = cb || noop;
     var key = item.key;
     var items = this.allData[kind.namespace];
     if (!items) {
@@ -85,11 +85,11 @@ function InMemoryFeatureStore() {
       items[key] = item;
     }
 
-    cb();
+    callbackResult(cb);
   }
 
   store.initialized = function(cb) {
-    cb(this.init_called === true);
+    callbackResult(cb, this.init_called === true);
   }
 
   store.close = function() {
