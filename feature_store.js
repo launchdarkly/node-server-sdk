@@ -5,16 +5,19 @@ var noop = function(){};
 function InMemoryFeatureStore() {
   var store = {flags:{}};
 
-  store.get = function(key, cb) {
+  function callbackResult(cb, result) {
     cb = cb || noop;
+    setTimeout(function() { cb(result); }, 0);  // ensure this is dispatched asynchronously
+  }
 
+  store.get = function(key, cb) {
     if (this.flags.hasOwnProperty(key)) {
       var flag = this.flags[key];
 
       if (!flag || flag.deleted) {
-        cb(null);
+        callbackResult(cb, null);
       } else {
-        cb(clone(flag));
+        callbackResult(cb, clone(flag));
       }
     } else {
       cb(null);
@@ -22,7 +25,6 @@ function InMemoryFeatureStore() {
   }
 
   store.all = function(cb) {
-    cb = cb || noop;
     var results = {};
 
     for (var key in this.flags) {
@@ -34,18 +36,16 @@ function InMemoryFeatureStore() {
       }
     }
 
-    cb(results);
+    callbackResult(cb, results);
   }
 
   store.init = function(flags, cb) {
-    cb = cb || noop;
     this.flags = flags;
     this.init_called = true;
-    cb();
+    callbackResult(cb);
   }
 
   store.delete = function(key, version, cb) {
-    cb = cb || noop;
     var deletedItem = { version: version, deleted: true };
     if (this.flags.hasOwnProperty(key)) {
       var old = this.flags[key];
@@ -56,11 +56,10 @@ function InMemoryFeatureStore() {
       this.flags[key] = deletedItem;
     }
 
-    cb();
+    callbackResult(cb);
   }
 
   store.upsert = function(key, flag, cb) {
-    cb = cb || noop;    
     var old = this.flags[key];
 
     if (this.flags.hasOwnProperty(key)) {
@@ -72,11 +71,11 @@ function InMemoryFeatureStore() {
       this.flags[key] = flag;
     }
 
-    cb();
+    callbackResult(cb);
   }
 
   store.initialized = function(cb) {
-    cb(this.init_called === true);
+    callbackResult(cb, this.init_called === true);
   }
 
   store.close = function() {
