@@ -46,18 +46,15 @@ function InMemoryFeatureStore() {
 
   store.delete = function(key, version, cb) {
     cb = cb || noop;
-
+    var deletedItem = { version: version, deleted: true };
     if (this.flags.hasOwnProperty(key)) {
       var old = this.flags[key];
       if (old && old.version < version) {
-        old.deleted = true;
-        old.version = version;
-        this.flags[key] = old;
+        this.flags[key] = deletedItem;
       } 
     } else {
-      this.flags[key] = old;
+      this.flags[key] = deletedItem;
     }
-
 
     cb();
   }
@@ -78,8 +75,8 @@ function InMemoryFeatureStore() {
     cb();
   }
 
-  store.initialized = function() {
-    return this.init_called === true;
+  store.initialized = function(cb) {
+    cb(this.init_called === true);
   }
 
   store.close = function() {

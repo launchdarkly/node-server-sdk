@@ -122,25 +122,23 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
     client.watch(features_key);
     multi = client.multi();
 
-
     do_get(key, function(flag) {
-      if (flag) {
-        if (flag.version >= version) {
+      if (flag && flag.version < version) {
+        flag.deleted = true;
+        flag.version = version;
+        multi.hset(features_key, key, JSON.stringify(flag));
+        multi.exec(function(err, replies) {
+          if (err) {
+            logger.error("Error deleting feature flag", err);
+          } else if (cache_ttl) {            
+            cache.set(key, flag);
+          }
           cb();
-          return;
-        } else {
-          flag.deleted = true;
-          flag.version = version;
-          multi.hset(features_key, key, JSON.stringify(flag));
-          multi.exec(function(err, replies) {
-            if (err) {
-              logger.error("Error deleting feature flag", err);
-            } else if (cache_ttl) {            
-              cache.set(key, flag);
-            }
-            cb();
-          });
-        }
+        });
+      } else {
+        multi.discard();
+        cb();
+        return;
       }
     });
   };
