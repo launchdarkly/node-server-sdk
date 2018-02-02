@@ -18,7 +18,7 @@ function PollingProcessor(config, requestor) {
 
     start_time = new Date().getTime();
     config.logger.debug("Polling LaunchDarkly for feature flag updates");
-    requestor.request_all_data(function(err, allData) {
+    requestor.request_all_data(function(err, resp) {
       elapsed = new Date().getTime() - start_time;
       sleepFor = Math.max(config.poll_interval * 1000 - elapsed, 0);
       config.logger.debug("Elapsed: %d ms, sleeping for %d ms", elapsed, sleepFor);
@@ -31,6 +31,7 @@ function PollingProcessor(config, requestor) {
           setTimeout(function() { poll(cb); }, sleepFor);
         }
       } else {
+        var allData = JSON.parse(resp);
         var initData = {};
         initData[dataKind.features.namespace] = allData.flags;
         initData[dataKind.segments.namespace] = allData.segments;

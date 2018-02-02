@@ -78,10 +78,11 @@ function StreamProcessor(sdk_key, config, requestor) {
 
     es.addEventListener('indirect/put', function(e) {
       config.logger.debug('Received indirect put event')
-      requestor.request_all_flags(function (err, all) {
+      requestor.request_all_flags(function (err, resp) {
         if (err) {
           cb(err);
         } else {
+          var all = JSON.parse(resp);
           var initData = {};
           initData[dataKind.features.namespace] = all.flags;
           initData[dataKind.segments.namespace] = all.segments;
