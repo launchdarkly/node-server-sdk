@@ -65,15 +65,22 @@ describe('operators', function() {
 
       // semver
       [ "semVerEqual",       "2.0.1", "2.0.1",    true ],
+      [ "semVerEqual",       "2.0.1", "02.0.1",   false ],      // leading zeroes should be disallowed
       [ "semVerEqual",       "2.0",   "2.0.0",    true ],
       [ "semVerEqual",       "2",     "2.0.0",    true ],
       [ "semVerEqual",       "2-rc1", "2.0.0-rc1", true ],
       [ "semVerEqual",       "2+build2", "2.0.0+build2", true ],
+      [ "semVerEqual",       "2.0.0", "2.0.0+build2", true ],   // build metadata should be ignored in comparison
+      [ "semVerEqual",       "2.0.0", "2.0.0-rc1", false ],     // prerelease should not be ignored
+      [ "semVerEqual",       "2.0.0", "2.0.0+build_2", false ], // enforce allowable character set in build metadata
       [ "semVerLessThan",    "2.0.0", "2.0.1",    true ],
       [ "semVerLessThan",    "2.0",   "2.0.1",    true ],
       [ "semVerLessThan",    "2.0.1", "2.0.0",    false ],
       [ "semVerLessThan",    "2.0.1", "2.0",      false ],
       [ "semVerLessThan",    "2.0.0-rc", "2.0.0-rc.beta", true ],
+      [ "semVerLessThan",    "2.0.0-rc", "2.0.0", true ],
+      [ "semVerLessThan",    "2.0.0-rc.3", "2.0.0-rc.29", true ],
+      [ "semVerLessThan",    "2.0.0-rc.x29", "2.0.0-rc.x3", true ],
       [ "semVerGreaterThan", "2.0.1", "2.0.0",    true ],
       [ "semVerGreaterThan", "2.0.1", "2.0",      true ],
       [ "semVerGreaterThan", "2.0.0", "2.0.1",    false ],
