@@ -99,7 +99,7 @@ function StreamProcessor(sdk_key, config, requestor) {
         var path = e.data;
         for (var k in dataKind) {
           var kind = dataKind[k];
-          var key = getKeyFromPath(kind, patch.path);
+          var key = getKeyFromPath(kind, path);
           if (key != null) {
             requestor.request_object(kind, key, function(err, resp) {
               if (err) {
