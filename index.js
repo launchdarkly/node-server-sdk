@@ -15,6 +15,7 @@ var async = require('async');
 var errors = require('./errors');
 var package_json = require('./package.json');
 var wrapPromiseCallback = require('./utils/wrapPromiseCallback');
+var dataKind = require('./versioned_data_kind');
 
 function createErrorReporter(emitter, logger) {
   return function(error) {
@@ -171,7 +172,7 @@ var new_client = function(sdk_key, config) {
   }
 
   function variationInternal(key, user, default_val, resolve, reject) {
-    config.feature_store.get(key, function(flag) {
+    config.feature_store.get(dataKind.features, key, function(flag) {
       evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
         var i;
         var version = flag ? flag.version : null;
@@ -215,7 +216,7 @@ var new_client = function(sdk_key, config) {
         return resolve({});
       }
 
-      config.feature_store.all(function(flags) {
+      config.feature_store.all(dataKind.features, function(flags) {
         async.forEachOf(flags, function(flag, key, iteratee_cb) {
           // At the moment, we don't send any events here
           evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {

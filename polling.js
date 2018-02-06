@@ -1,8 +1,10 @@
 var errors = require('./errors');
+var dataKind = require('./versioned_data_kind');
 
 function PollingProcessor(config, requestor) {
   var processor = {},
-      store = config.feature_store,
+      featureStore = config.feature_store,
+      segmentStore = config.segment_store,
       stopped = false;
 
   function poll(cb) {
@@ -16,7 +18,7 @@ function PollingProcessor(config, requestor) {
 
     start_time = new Date().getTime();
     config.logger.debug("Polling LaunchDarkly for feature flag updates");
-    requestor.request_all_flags(function(err, flags) {
+    requestor.request_all_data(function(err, resp) {
       elapsed = new Date().getTime() - start_time;
       sleepFor = Math.max(config.poll_interval * 1000 - elapsed, 0);
       config.logger.debug("Elapsed: %d ms, sleeping for %d ms", elapsed, sleepFor);
@@ -29,7 +31,11 @@ function PollingProcessor(config, requestor) {
           setTimeout(function() { poll(cb); }, sleepFor);
         }
       } else {
-        store.init(JSON.parse(flags), function() {
+        var allData = JSON.parse(resp);
+        var initData = {};
+        initData[dataKind.features.namespace] = allData.flags;
+        initData[dataKind.segments.namespace] = allData.segments;
+        featureStore.init(initData, function() {
           cb();
           // Recursively call poll after the appropriate delay
           setTimeout(function() { poll(cb); }, sleepFor);

@@ -1,15 +1,17 @@
 var redis = require('redis'),
     NodeCache = require( "node-cache" ),
-    winston = require('winston');
+    winston = require('winston'),
+    dataKind = require('./versioned_data_kind');
 
 
 var noop = function(){};
 
 
 function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
+
   var client = redis.createClient(redis_opts),
       store = {},
-      features_key = prefix ? prefix + ":features" : "launchdarkly:features",
+      items_prefix = (prefix || "launchdarkly") + ":",
       cache = cache_ttl ? new NodeCache({ stdTTL: cache_ttl}) : null,
       inited = false,
       checked_init = false;
@@ -27,55 +29,64 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
   // socket is active
   client.unref();
 
+  function items_key(kind) {
+    return items_prefix + kind.namespace;
+  }
+
+  function cache_key(kind, key) {
+    return kind.namespace + ":" + key;
+  }
+
   // A helper that performs a get with the redis client
-  function do_get(key, cb) {
-    var flag;
+  function do_get(kind, key, cb) {
+    var item;
     cb = cb || noop;
 
     if (cache_ttl) {
-      flag = cache.get(key);
-      if (flag) {
-        cb(flag);
+      item = cache.get(cache_key(kind, key));
+      if (item) {
+        cb(item);
         return;
       }
     }
 
-    client.hget(features_key, key, function(err, obj) {
+    client.hget(items_key(kind), key, function(err, obj) {
       if (err) {
-        logger.error("Error fetching flag from redis", err);
+        logger.error("Error fetching key " + key + " from redis in '" + kind.namespace + "'", err);
         cb(null);
       } else {
-        flag = JSON.parse(obj);
-        cb( (!flag || flag.deleted) ? null : flag);
+        item = JSON.parse(obj);
+        cb(item);
       }
     });
   }
 
-  store.get = function(key, cb) {
-    do_get(key, function(flag) {
-      if (flag && !flag.deleted) {
-        cb(flag);
+  store.get = function(kind, key, cb) {
+    cb = cb || noop;
+    do_get(kind, key, function(item) {
+      if (item && !item.deleted) {
+        cb(item);
       } else {
         cb(null);
       }
     });
   };
 
-  store.all = function(cb) {
+  store.all = function(kind, cb) {
     cb = cb || noop;
-    client.hgetall(features_key, function(err, obj) {
+    client.hgetall(items_key(kind), function(err, obj) {
       if (err) {
-        logger.error("Error fetching flag from redis", err);
+        logger.error("Error fetching '" + kind.namespace + "'' from redis", err);
         cb(null);
       } else {
         var results = {},
-            flags = obj;
+            items = obj;
 
-        for (var key in flags) {
-          if (Object.hasOwnProperty.call(flags,key)) {
-            var flag = JSON.parse(flags[key]);
-            if (!flag.deleted) {
-              results[key] = flag;
+        for (var key in items) {
+          if (Object.hasOwnProperty.call(items,key)) {
+            var item = JSON.parse(items[key]);
+            if (!item.deleted) {
+              results[key] = item;
             }
           }
         }
@@ -84,31 +95,36 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
     });
   };
 
-  store.init = function(flags, cb) {
-    var stringified = {};
+  store.init = function(allData, cb) {
     var multi = client.multi();
     cb = cb || noop;
 
-    multi.del(features_key);
     if (cache_ttl) {
       cache.flushAll();
     }
 
-
-    for (var key in flags) {
-      if (Object.hasOwnProperty.call(flags,key)) {
-        stringified[key] = JSON.stringify(flags[key]);
-      }
-      if (cache_ttl) {
-        cache.set(key, flags[key]);
+    for (var kindNamespace in allData) {
+      if (Object.hasOwnProperty.call(allData, kindNamespace)) {
+        var kind = dataKind[kindNamespace];
+        var baseKey = items_key(kind);
+        var items = allData[kindNamespace];
+        var stringified = {};
+        multi.del(baseKey);
+        for (var key in items) {
+          if (Object.hasOwnProperty.call(items, key)) {
+            stringified[key] = JSON.stringify(items[key]);
+          }
+          if (cache_ttl) {
+            cache.set(cache_key(kind, key), items[key]);
+          }
+        }
+        multi.hmset(baseKey, stringified);
       }
     }
 
-    multi.hmset(features_key, stringified);
-
     multi.exec(function(err, replies) {
       if (err) {
-        logger.error("Error initializing redis feature store", err);
+        logger.error("Error initializing redis store", err);
       } else {
         inited = true;
       }
@@ -116,25 +132,25 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
     });
   };
 
-  store.delete = function(key, version, cb) {
+  store.delete = function(kind, key, version, cb) {
     var multi;
+    var baseKey = items_key(kind);
     cb = cb || noop;
-    client.watch(features_key);
+    client.watch(baseKey);
     multi = client.multi();
 
-    do_get(key, function(flag) {
-      if (flag && flag.version >= version) {
+    do_get(kind, key, function(item) {
+      if (item && item.version >= version) {
         multi.discard();
         cb();
-        return;
       } else {
-        var deletedItem = { version: version, deleted: true };
-        multi.hset(features_key, key, JSON.stringify(deletedItem));
+        deletedItem = { version: version, deleted: true };
+        multi.hset(baseKey, key, JSON.stringify(deletedItem));
         multi.exec(function(err, replies) {
           if (err) {
-            logger.error("Error deleting feature flag", err);
+            logger.error("Error deleting key " + key + " in '" + kind.namespace + "'", err);
           } else if (cache_ttl) {            
-            cache.set(key, deletedItem);
+            cache.set(cache_key(kind, key), deletedItem);
           }
           cb();
         });
@@ -142,25 +158,27 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
     });
   };
 
-  store.upsert = function(key, flag, cb) {
+  store.upsert = function(kind, item, cb) {
     var multi;
+    var baseKey = items_key(kind);
+    var key = item.key;
     cb = cb || noop;
-    client.watch(features_key);
+    client.watch(baseKey);
     multi = client.multi();
 
-    do_get(key, function(original) {
-      if (original && original.version >= flag.version) {
+    do_get(kind, key, function(original) {
+      if (original && original.version >= item.version) {
         cb();
         return;
       }
 
-      multi.hset(features_key, key, JSON.stringify(flag));
+      multi.hset(baseKey, key, JSON.stringify(item));
       multi.exec(function(err, replies) {
         if (err) {
-          logger.error("Error upserting feature flag", err);
+          logger.error("Error upserting key " + key + " in '" + kind.namespace + "'", err);
         } else {
           if (cache_ttl) {
-            cache.set(key, flag);
+            cache.set(cache_key(kind, key), item);
           }
         }
         cb();
@@ -181,7 +199,8 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
       cb(false);
     }
     else {
-      client.exists(features_key, function(err, obj) {
+      var inited = false;
+      client.exists(items_key(dataKind.features), function(err, obj) {
         if (!err && obj) {
           inited = true;
         } 
