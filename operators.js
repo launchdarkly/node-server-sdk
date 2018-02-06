@@ -1,4 +1,31 @@
 
+var semver = require('semver');
+
+function semVerOperator(fn) {
+  return function(a, b) {
+    var av = parseSemVer(a), bv = parseSemVer(b);
+    return (av && bv) ? fn(av, bv) : false;
+  };
+}
+
+function parseSemVer(input) {
+  var ret = semver.parse(input);
+  if (!ret) {
+    var versionNumericComponents = new RegExp("^\\d+(\\.\\d+)?(\\.\\d+)?").exec(input);
+    if (versionNumericComponents) {
+      var transformed = versionNumericComponents[0];
+      for (var i = 1; i < versionNumericComponents.length; i++) {
+        if (versionNumericComponents[i] == undefined) {
+          transformed = transformed + ".0";
+        }
+      }
+      transformed = transformed + input.substring(versionNumericComponents[0].length);
+      ret = semver.parse(transformed);
+    }
+  }
+  return ret;
+}
+
 var operators = {
   "in": function(a, b) {
     return a === b;
@@ -52,8 +79,11 @@ var operators = {
       return a > b;
     }
     return false;
-  }
-}
+  },
+  "semVerEqual": semVerOperator(function(a, b) { return a.compare(b) == 0; }),
+  "semVerLessThan": semVerOperator(function(a, b) { return a.compare(b) < 0; }),
+  "semVerGreaterThan": semVerOperator(function(a, b) { return a.compare(b) > 0; })
+};
 
 var operator_none = function(a, b) {
   return false;
