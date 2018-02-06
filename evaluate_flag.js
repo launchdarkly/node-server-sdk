@@ -251,7 +251,7 @@ function bucket_user(user, key, attr, salt) {
   var uValue;
   var idHash;
 
-  idHash = user_value(user, attr);
+  idHash = bucketable_string_value(user_value(user, attr));
 
   if (idHash === null) {
     return 0;
@@ -268,6 +268,16 @@ function bucket_user(user, key, attr, salt) {
   return result;
 }
 
+function bucketable_string_value(value) {
+  if (typeof(value) === 'string') {
+    return value;
+  }
+  if (Number.isInteger(value)) {
+    return '' + value;
+  }
+  return null;
+}
+
 function create_flag_event(key, user, value, default_val, version, prereqOf) {
   return {
     "kind": "feature",
@@ -281,4 +291,4 @@ function create_flag_event(key, user, value, default_val, version, prereqOf) {
   };
 }
 
-module.exports = {evaluate: evaluate, create_flag_event: create_flag_event};
+module.exports = {evaluate: evaluate, bucket_user: bucket_user, create_flag_event: create_flag_event};
