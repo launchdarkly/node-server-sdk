@@ -9,6 +9,10 @@ function semVerOperator(fn) {
 }
 
 function parseSemVer(input) {
+  if (input.startsWith("v")) {
+    // the semver library tolerates a leading "v", but the standard does not.
+    return null;
+  }
   var ret = semver.parse(input);
   if (!ret) {
     var versionNumericComponents = new RegExp("^\\d+(\\.\\d+)?(\\.\\d+)?").exec(input);
