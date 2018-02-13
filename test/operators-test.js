@@ -73,6 +73,7 @@ describe('operators', function() {
       [ "semVerEqual",       "2.0.0", "2.0.0+build2", true ],   // build metadata should be ignored in comparison
       [ "semVerEqual",       "2.0.0", "2.0.0-rc1", false ],     // prerelease should not be ignored
       [ "semVerEqual",       "2.0.0", "2.0.0+build_2", false ], // enforce allowable character set in build metadata
+      [ "semVerEqual",       "2.0.0", "v2.0.0",   false ],      // disallow leading "v"
       [ "semVerLessThan",    "2.0.0", "2.0.1",    true ],
       [ "semVerLessThan",    "2.0",   "2.0.1",    true ],
       [ "semVerLessThan",    "2.0.1", "2.0.0",    false ],
