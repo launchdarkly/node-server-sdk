@@ -1,6 +1,6 @@
 {
   "name": "ldclient-node",
-  "version": "3.3.2",
+  "version": "3.4.0",
   "description": "LaunchDarkly SDK for Node.js",
   "main": "index.js",
   "scripts": {
@@ -30,6 +30,7 @@
     "redis": "^2.6.0-2",
     "request": "^2.83.0",
     "request-etag": "^2.0.3",
+    "semver": "^5.4.1",
     "tunnel": "https://github.com/launchdarkly/node-tunnel/tarball/d860e57650cce1ea655d00854c81babe6b47e02c",
     "winston": "^2.2.0"
   },
