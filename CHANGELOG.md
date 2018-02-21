@@ -3,6 +3,14 @@
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres 
 to [Semantic Versioning](http://semver.org).
 
+## [3.4.0] - 2018-02-13
+### Added
+- Adds support for a future LaunchDarkly feature, coming soon: semantic version user attributes.
+
+### Fixed
+- When using a Redis feature store, if the client has not finished initializing but the store has already been populated, checking a feature flag will use the last known data from the store rather than returning the default value.
+- For consistency with the other SDKs, it is no longer possible to compute rollouts based on a user attribute whose value is a floating-point number or a boolean. String and int attributes are allowed.
+
 ## [3.3.2] - 2018-01-31
 ### Fixed
 - The TypeScript definition for the `all` method of `LDFeatureStore` is now correct — [#77](https://github.com/launchdarkly/node-client/issues/77)
