@@ -1,37 +1,41 @@
-// An in-memory feature store with an async interface.
+var dataKind = require('./versioned_data_kind');
+
+// An in-memory store with an async interface.
 // It's async as other implementations (e.g. the RedisFeatureStore)
 // may be async, and we want to retain interface compatibility.
 var noop = function(){};
 function InMemoryFeatureStore() {
-  var store = {flags:{}};
+  var store = {allData:{}};
 
   function callbackResult(cb, result) {
     cb = cb || noop;
     setTimeout(function() { cb(result); }, 0);  // ensure this is dispatched asynchronously
   }
 
-  store.get = function(key, cb) {
-    if (this.flags.hasOwnProperty(key)) {
-      var flag = this.flags[key];
+  store.get = function(kind, key, cb) {
+    var items = this.allData[kind.namespace] || {};
+    if (Object.hasOwnProperty.call(items, key)) {
+      var item = items[key];
 
-      if (!flag || flag.deleted) {
+      if (!item || item.deleted) {
         callbackResult(cb, null);
       } else {
-        callbackResult(cb, clone(flag));
+        callbackResult(cb, clone(item));
       }
     } else {
-      cb(null);
+      callbackResult(cb, null);
     }
   }
 
-  store.all = function(cb) {
+  store.all = function(kind, cb) {
     var results = {};
+    var items = this.allData[kind.namespace] || {};
 
-    for (var key in this.flags) {
-      if (this.flags.hasOwnProperty(key)) {
-        var flag = this.flags[key];
-        if (flag && !flag.deleted) {
-          results[key] = clone(flag);          
+    for (var key in items) {
+      if (Object.hasOwnProperty.call(items, key)) {
+        var item = items[key];
+        if (item && !item.deleted) {
+          results[key] = clone(item);          
         }
       }
     }
@@ -39,36 +43,46 @@ function InMemoryFeatureStore() {
     callbackResult(cb, results);
   }
 
-  store.init = function(flags, cb) {
-    this.flags = flags;
+  store.init = function(allData, cb) {
+    this.allData = allData;
     this.init_called = true;
     callbackResult(cb);
   }
 
-  store.delete = function(key, version, cb) {
+  store.delete = function(kind, key, version, cb) {
+    var items = this.allData[kind.namespace];
+    if (!items) {
+      items = {};
+      this.allData[kind] = items;
+    }
     var deletedItem = { version: version, deleted: true };
-    if (this.flags.hasOwnProperty(key)) {
-      var old = this.flags[key];
-      if (old && old.version < version) {
-        this.flags[key] = deletedItem;
+    if (Object.hasOwnProperty.call(items, key)) {
+      var old = items[key];
+      if (!old || old.version < version) {
+        items[key] = deletedItem;
       } 
     } else {
-      this.flags[key] = deletedItem;
+      items[key] = deletedItem;
     }
 
     callbackResult(cb);
   }
 
-  store.upsert = function(key, flag, cb) {
-    var old = this.flags[key];
+  store.upsert = function(kind, item, cb) {
+    var key = item.key;
+    var items = this.allData[kind.namespace];
+    if (!items) {
+      items = {};
+      this.allData[kind] = items;
+    }
 
-    if (this.flags.hasOwnProperty(key)) {
-      var old = this.flags[key];
-      if (old && old.version < flag.version) {
-        this.flags[key] = flag;
+    if (Object.hasOwnProperty.call(items, key)) {
+      var old = items[key];
+      if (old && old.version < item.version) {
+        items[key] = item;
       }
     } else {
-      this.flags[key] = flag;
+      items[key] = item;
     }
 
     callbackResult(cb);

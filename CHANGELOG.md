@@ -3,6 +3,13 @@
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres 
 to [Semantic Versioning](http://semver.org).
 
+## [4.0.0] - 2018-02-21
+### Added
+- Support for a new LaunchDarkly feature: reusable user segments.
+
+### Changed
+- The feature store interface has been changed to support user segment data as well as feature flags. Existing code that uses `RedisFeatureStore` should work as before, but custom feature store implementations will need to be updated.
+
 ## [3.4.0] - 2018-02-13
 ### Added
 - Adds support for a future LaunchDarkly feature, coming soon: semantic version user attributes.

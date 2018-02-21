@@ -1,15 +1,20 @@
 var errors = require('./errors');
 
 var EventSource = require('./eventsource');
+var dataKind = require('./versioned_data_kind');
 
 function StreamProcessor(sdk_key, config, requestor) {
   var processor = {},
-      store = config.feature_store,
+      featureStore = config.feature_store,
       es;
+
+  function getKeyFromPath(kind, path) {
+    return path.startsWith(kind.streamApiPath) ? path.substring(kind.streamApiPath.length) : null;
+  }
 
   processor.start = function(fn) {
     var cb = fn || function(){};
-    es = new EventSource(config.stream_uri + "/flags", 
+    es = new EventSource(config.stream_uri + "/all", 
       {
         agent: config.proxy_agent, 
         headers: {'Authorization': sdk_key,'User-Agent': config.user_agent}
@@ -22,10 +27,13 @@ function StreamProcessor(sdk_key, config, requestor) {
     es.addEventListener('put', function(e) {
       config.logger.debug('Received put event');
       if (e && e.data) {
-        var flags = JSON.parse(e.data);
-        store.init(flags, function() {
+        var all = JSON.parse(e.data);
+        var initData = {};
+        initData[dataKind.features.namespace] = all.data.flags;
+        initData[dataKind.segments.namespace] = all.data.segments;
+        featureStore.init(initData, function() {
           cb();
-        })     
+        });
       } else {
         cb(new errors.LDStreamingError('Unexpected payload from event stream'));
       }
@@ -35,7 +43,15 @@ function StreamProcessor(sdk_key, config, requestor) {
       config.logger.debug('Received patch event');
       if (e && e.data) {
         var patch = JSON.parse(e.data);
-        store.upsert(patch.data.key, patch.data);
+        for (var k in dataKind) {
+          var kind = dataKind[k];
+          var key = getKeyFromPath(kind, patch.path);
+          if (key != null) {
+            config.logger.debug('Updating ' + key + ' in ' + kind.namespace);
+            featureStore.upsert(kind, patch.data);
+            break;
+          }
+        }
       } else {
         cb(new errors.LDStreamingError('Unexpected payload from event stream'));
       }
@@ -45,10 +61,16 @@ function StreamProcessor(sdk_key, config, requestor) {
       config.logger.debug('Received delete event');
       if (e && e.data) {        
         var data = JSON.parse(e.data),
-            key = data.path.charAt(0) === '/' ? data.path.substring(1) : data.path, // trim leading '/'
             version = data.version;
-
-        store.delete(key, version);
+        for (var k in dataKind) {
+          var kind = dataKind[k];
+          var key = getKeyFromPath(kind, data.path);
+          if (key != null) {
+            config.logger.debug('Deleting ' + key + ' in ' + kind.namespace);
+            featureStore.delete(kind, key, version);
+            break;
+          }
+        }
       } else {
         cb(new errors.LDStreamingError('Unexpected payload from event stream'));
       }
@@ -56,13 +78,17 @@ function StreamProcessor(sdk_key, config, requestor) {
 
     es.addEventListener('indirect/put', function(e) {
       config.logger.debug('Received indirect put event')
-      requestor.request_all_flags(function (err, flags) {
+      requestor.request_all_flags(function (err, resp) {
         if (err) {
           cb(err);
         } else {
-          store.init(JSON.parse(flags), function() {
+          var all = JSON.parse(resp);
+          var initData = {};
+          initData[dataKind.features.namespace] = all.flags;
+          initData[dataKind.segments.namespace] = all.segments;
+          featureStore.init(initData, function() {
             cb();
-          })          
+          });
         }
       })
     });
@@ -70,14 +96,22 @@ function StreamProcessor(sdk_key, config, requestor) {
     es.addEventListener('indirect/patch', function(e) {
       config.logger.debug('Received indirect patch event')
       if (e && e.data) {
-        var key = e.data.charAt(0) === '/' ? e.data.substring(1) : e.data;
-        requestor.request_flag(key, function(err, flag) {
-          if (err) {
-            cb(new errors.LDStreamingError('Unexpected error requesting feature flag'));
-          } else {
-            store.upsert(key, JSON.parse(flag));
+        var path = e.data;
+        for (var k in dataKind) {
+          var kind = dataKind[k];
+          var key = getKeyFromPath(kind, path);
+          if (key != null) {
+            requestor.request_object(kind, key, function(err, resp) {
+              if (err) {
+                cb(new errors.LDStreamingError('Unexpected error requesting ' + key + ' in ' + kind.namespace));
+              } else {
+                config.logger.debug('Updating ' + key + ' in ' + kind.namespace);
+                featureStore.upsert(kind, JSON.parse(resp));
+              }
+            });
+            break;
           }
-        })
+        }
       } else {
         cb(new errors.LDStreamingError('Unexpected payload from event stream'));
       }

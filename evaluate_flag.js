@@ -1,4 +1,5 @@
 var operators = require('./operators');
+var dataKind = require('./versioned_data_kind');
 var util = require('util');
 var sha1 = require('node-sha1');
 var async = require('async');
@@ -7,7 +8,7 @@ var builtins = ['key', 'ip', 'country', 'email', 'firstName', 'lastName', 'avata
 
 var noop = function(){};
 
-function evaluate(flag, user, store, cb) {
+function evaluate(flag, user, featureStore, cb) {
   cb = cb || noop;
   if (!user || user.key === null || user.key === undefined) {
     cb(null, null, null);
@@ -31,7 +32,7 @@ function evaluate(flag, user, store, cb) {
     return;
   }
 
-  eval_internal(flag, user, store, [], function(err, result, events) {
+  eval_internal(flag, user, featureStore, [], function(err, result, events) {
     if (err) {
       cb(err, result, events);
       return;
@@ -53,19 +54,19 @@ function evaluate(flag, user, store, cb) {
   return;
 }
 
-function eval_internal(flag, user, store, events, cb) {
+function eval_internal(flag, user, featureStore, events, cb) {
   // Evaluate prerequisites, if any
   if (flag.prerequisites) {
     async.mapSeries(flag.prerequisites, 
       function(prereq, callback) {
-        store.get(prereq.key, function(f) {
+        featureStore.get(dataKind.features, prereq.key, function(f) {
           // If the flag does not exist in the store or is not on, the prerequisite
           // is not satisfied
           if (!f || !f.on) {
             callback(new Error("Unsatisfied prerequisite"), null);
             return;
           }
-          eval_internal(f, user, store, events, function(err, value) {
+          eval_internal(f, user, featureStore, events, function(err, value) {
             // If there was an error, the value is null, the variation index is out of range, 
             // or the value does not match the indexed variation the prerequisite is not satisfied
             var variation = get_variation(f, prereq.variation);
@@ -86,18 +87,18 @@ function eval_internal(flag, user, store, events, cb) {
           cb(null, null, events);
           return;
         } 
-        evalRules(flag, user, function(e, variation) {
+        evalRules(flag, user, featureStore, function(e, variation) {
           cb(e, variation, events);
         });
       })
   } else {
-    evalRules(flag, user, function(e, variation) {
+    evalRules(flag, user, featureStore, function(e, variation) {
       cb(e, variation, events);
     });
   }
 }
 
-function evalRules(flag, user, cb) {
+function evalRules(flag, user, featureStore, cb) {
   var i, j;
   var target;
   var variation;
@@ -119,22 +120,29 @@ function evalRules(flag, user, cb) {
     }
   }
 
-  // Check rules
-  for (i = 0; i < flag.rules.length; i++) {
-    rule = flag.rules[i];
-    if (rule_match_user(rule, user)) {
-      variation = variation_for_user(rule, user, flag);
-      cb(variation === null ? new Error("Undefined variation for flag " + flag.key) : null, variation);
-      return;
+  async.mapSeries(flag.rules,
+    function(rule, callback) {
+      rule_match_user(rule, user, featureStore, function(matched) {
+        callback(matched ? rule : null, null);
+      });
+    },
+    function(err, results) {
+      // we use the "error" value to indicate that a rule was successfully matched (since we only care
+      // about the first match, and mapSeries terminates on the first "error")
+      if (err) {
+        var rule = err;
+        variation = variation_for_user(rule, user, flag);
+        cb(variation === null ? new Error("Undefined variation for flag " + flag.key) : null, variation);
+      } else {
+        // no rule matched; check the fallthrough
+        variation = variation_for_user(flag.fallthrough, user, flag);
+        cb(variation === null ? new Error("Undefined variation for flag " + flag.key) : null, variation);
+      }
     }
-  }
-
-  // Check the fallthrough
-  variation = variation_for_user(flag.fallthrough, user, flag);
-  cb(variation === null ? new Error("Undefined variation for flag " + flag.key) : null, variation);
+  );
 }
 
-function rule_match_user(r, user) {
+function rule_match_user(r, user, featureStore, cb) {
   var i;
 
   if (!r.clauses) {
@@ -142,15 +150,43 @@ function rule_match_user(r, user) {
   }
 
   // A rule matches if all its clauses match
-  for (i = 0; i < r.clauses.length; i++) {
-    if (!clause_match_user(r.clauses[i], user)) {
-      return false;
+  async.mapSeries(r.clauses,
+    function(clause, callback) {
+      clause_match_user(clause, user, featureStore, function(matched) {
+        // on the first clause that does *not* match, we raise an "error" to stop the loop
+        callback(matched ? null : clause, null);
+      });
+    },
+    function(err, results) {
+      cb(!err);
     }
-  }
-  return true;
+  );
 }
 
-function clause_match_user(c, user) {
+function clause_match_user(c, user, featureStore, cb) {
+  if (c.op == 'segmentMatch') {
+    async.mapSeries(c.values,
+      function(value, callback) {
+        featureStore.get(dataKind.segments, value, function(segment) {
+          if (segment && segment_match_user(segment, user)) {
+            // on the first segment that matches, we raise an "error" to stop the loop
+            callback(segment, null);
+          } else {
+            callback(null, null);
+          }
+        });
+      },
+      function(err, results) {
+        // an "error" indicates that a segment *did* match
+        cb(maybe_negate(c, !!err));
+      }
+    );
+  } else {
+    cb(clause_match_user_no_segments(c, user));
+  }
+}
+
+function clause_match_user_no_segments(c, user) {
   var uValue;
   var matchFn;
   var i;
@@ -174,6 +210,41 @@ function clause_match_user(c, user) {
   }
 
   return maybe_negate(c, match_any(matchFn, uValue, c.values));
+}
+
+function segment_match_user(segment, user) {
+  if (user.key) {
+    if ((segment.included || []).indexOf(user.key) >= 0) {
+      return true;
+    }
+    if ((segment.excluded || []).indexOf(user.key) >= 0) {
+      return false;
+    }
+    for (var i = 0; i < (segment.rules || []).length; i++) {
+      if (segment_rule_match_user(segment.rules[i], user, segment.key, segment.salt)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function segment_rule_match_user(rule, user, segmentKey, salt) {
+  for (var i = 0; i < (rule.clauses || []).length; i++) {
+    if (!clause_match_user_no_segments(rule.clauses[i], user)) {
+      return false;
+    }
+  }
+
+  // If the weight is absent, this rule matches
+  if (rule.weight === undefined || rule.weight === null) {
+    return true;
+  }
+
+  // All of the clauses are met. See if the user buckets in
+  var bucket = bucket_user(user, segmentKey, rule.bucketBy || "key", salt);
+  var weight = rule.weight / 100000.0;
+  return bucket < weight;
 }
 
 function maybe_negate(c, b) {
