@@ -222,7 +222,39 @@ var new_client = function(sdk_key, config) {
           evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
             results[key] = result;
             iteratee_cb(null);
-          })
+          });
+        }, function(err) {
+          return err ? reject(err) : resolve(results);
+        });
+      });
+    }.bind(this)), callback);
+  }
+
+  client.all_users_all_flags = function(callback) {
+    return wrapPromiseCallback(new Promise(function(resolve, reject) {
+      var results = {};
+
+      if (this.is_offline()) {
+        config.logger.info("all_user_all_flags() called in offline mode. Returning empty map.");
+        return resolve({});
+      }
+
+      config.feature_store.all(dataKind.features, function(flags) {
+        async.forEachOf(flags, function(flag, key, iteratee_cb) {
+          async.each(flag.targets, function (target, iteratee_cb) {
+            async.each(target.values, function (userKey, iteratee_cb) {
+              var user = {key: userKey};
+              evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
+                if (!results[user.key]) {
+                  results[user.key] = {};
+                }
+
+                results[user.key][key] = result;
+                iteratee_cb(null);
+              });
+            }, iteratee_cb);
+          }, iteratee_cb);
+          // At the moment, we don't send any events here
         }, function(err) {
           return err ? reject(err) : resolve(results);
         });
