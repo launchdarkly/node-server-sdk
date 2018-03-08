@@ -118,7 +118,10 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
             cache.set(cache_key(kind, key), items[key]);
           }
         }
-        multi.hmset(baseKey, stringified);
+        // Redis does not allow hmset() with an empty object
+        if (Object.keys(stringified).length > 0) {
+          multi.hmset(baseKey, stringified);
+        }
       }
     }
 
