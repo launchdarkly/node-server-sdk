@@ -25,8 +25,24 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
     })
   );
 
-  // Allow driver programs to exit, even if the Redis
-  // socket is active
+  initialConnect = true;
+  client.on('error', function(err) {
+    // Note that we *must* have an error listener or else any connection error will trigger an
+    // uncaught exception.
+    logger.error('Redis error - ' + err);
+  });
+  client.on('reconnecting', function(info) {
+    logger.info('Attempting to reconnect to Redis (attempt #' + info.attempt +
+      ', delay: ' + info.delay + 'ms)');
+  });
+  client.on('connect', function() {
+    if (!initialConnect) {
+      logger.warn('Reconnected to Redis');
+    }
+    initialConnect = false;
+  })
+
+  // Allow driver programs to exit, even if the Redis socket is active
   client.unref();
 
   function items_key(kind) {
@@ -52,7 +68,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
 
     client.hget(items_key(kind), key, function(err, obj) {
       if (err) {
-        logger.error("Error fetching key " + key + " from redis in '" + kind.namespace + "'", err);
+        logger.error("Error fetching key " + key + " from Redis in '" + kind.namespace + "'", err);
         cb(null);
       } else {
         item = JSON.parse(obj);
@@ -76,7 +92,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
     cb = cb || noop;
     client.hgetall(items_key(kind), function(err, obj) {
       if (err) {
-        logger.error("Error fetching '" + kind.namespace + "'' from redis", err);
+        logger.error("Error fetching '" + kind.namespace + "'' from Redis", err);
         cb(null);
       } else {
         var results = {},
@@ -127,7 +143,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
 
     multi.exec(function(err, replies) {
       if (err) {
-        logger.error("Error initializing redis store", err);
+        logger.error("Error initializing Redis store", err);
       } else {
         inited = true;
       }
