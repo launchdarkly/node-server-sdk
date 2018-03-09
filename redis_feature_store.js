@@ -25,8 +25,29 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
     })
   );
 
-  // Allow driver programs to exit, even if the Redis
-  // socket is active
+  connected = false;
+  initialConnect = true;
+  client.on('error', function(err) {
+    // Note that we *must* have an error listener or else any connection error will trigger an
+    // uncaught exception.
+    logger.error('Redis error - ' + err);
+  });
+  client.on('reconnecting', function(info) {
+    logger.info('Attempting to reconnect to Redis (attempt #' + info.attempt +
+      ', delay: ' + info.delay + 'ms)');
+  });
+  client.on('connect', function() {
+    if (!initialConnect) {
+      logger.warn('Reconnected to Redis');
+    }
+    initialConnect = false;
+    connected = true;
+  })
+  client.on('end', function() {
+    connected = false;
+  })
+
+  // Allow driver programs to exit, even if the Redis socket is active
   client.unref();
 
   function items_key(kind) {
@@ -50,9 +71,15 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
       }
     }
 
+    if (!connected) {
+      logger.warn('Attempted to fetch key ' + key + ' while Redis connection is down');
+      cb(null);
+      return;
+    }
+
     client.hget(items_key(kind), key, function(err, obj) {
       if (err) {
-        logger.error("Error fetching key " + key + " from redis in '" + kind.namespace + "'", err);
+        logger.error("Error fetching key " + key + " from Redis in '" + kind.namespace + "'", err);
         cb(null);
       } else {
         item = JSON.parse(obj);
@@ -74,9 +101,15 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
 
   store.all = function(kind, cb) {
     cb = cb || noop;
+    if (!connected) {
+      logger.warn('Attempted to fetch all keys while Redis connection is down');
+      cb(null);
+      return;
+    }
+
     client.hgetall(items_key(kind), function(err, obj) {
       if (err) {
-        logger.error("Error fetching '" + kind.namespace + "'' from redis", err);
+        logger.error("Error fetching '" + kind.namespace + "'' from Redis", err);
         cb(null);
       } else {
         var results = {},
@@ -118,13 +151,16 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
             cache.set(cache_key(kind, key), items[key]);
           }
         }
-        multi.hmset(baseKey, stringified);
+        // Redis does not allow hmset() with an empty object
+        if (Object.keys(stringified).length > 0) {
+          multi.hmset(baseKey, stringified);
+        }
       }
     }
 
     multi.exec(function(err, replies) {
       if (err) {
-        logger.error("Error initializing redis store", err);
+        logger.error("Error initializing Redis store", err);
       } else {
         inited = true;
       }

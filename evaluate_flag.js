@@ -41,11 +41,11 @@ function evaluate(flag, user, featureStore, cb) {
     if (result === null) {
       // Return the off variation if defined and valid
       if (flag.offVariation != null) {
-        cb(null, get_variation(flag, flag.offVariation), null);
+        cb(null, get_variation(flag, flag.offVariation), events);
       }
       // Otherwise, return the default variation
       else {
-        cb(null, null, null);
+        cb(null, null, events);
       }
     } else {
       cb(err, result, events);

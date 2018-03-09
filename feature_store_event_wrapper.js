@@ -16,7 +16,7 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
     close: featureStore.close.bind(featureStore),
 
     init: function(newData, callback) {
-      featureStore.all(dataKind, function(oldFlags){
+      featureStore.all(dataKind.features, function(oldFlags){
         featureStore.init(newData, function(){
           var allFlags = {};
           var newFlags = newData[dataKind.features] || {};
