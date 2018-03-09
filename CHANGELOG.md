@@ -1,6 +1,13 @@
 # Change log
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres 
+
+## [4.0.1] - 2018-03-09
+### Fixed
+- Any Redis connection failure will now be logged and will trigger reconnection attempts transparently. Previously, it caused an uncaught exception. Note that during a Redis outage, flag evaluations will use the last known value from the in-memory cache if available (if this cache was enabled with the `cache_ttl` parameter to `RedisFeatureStore`), or otherwise the default value.
+- Fixed a bug in the Redis adapter that caused an error ("Transaction discarded because of previous errors") at startup time if there were either no feature flags or no user segments.
+- Fixed a bug that caused a spurious Redis query for the key "launchdarkly:undefined".
+- Fixed a bug that could cause analytics events not to be reported for feature flags that were evaluated due to being prerequisites of other flags.
 to [Semantic Versioning](http://semver.org).
 
 ## [4.0.0] - 2018-02-21
