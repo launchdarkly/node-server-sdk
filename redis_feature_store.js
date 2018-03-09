@@ -25,6 +25,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
     })
   );
 
+  connected = false;
   initialConnect = true;
   client.on('error', function(err) {
     // Note that we *must* have an error listener or else any connection error will trigger an
@@ -40,6 +41,10 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
       logger.warn('Reconnected to Redis');
     }
     initialConnect = false;
+    connected = true;
+  })
+  client.on('end', function() {
+    connected = false;
   })
 
   // Allow driver programs to exit, even if the Redis socket is active
@@ -66,6 +71,12 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
       }
     }
 
+    if (!connected) {
+      logger.warn('Attempted to fetch key ' + key + ' while Redis connection is down');
+      cb(null);
+      return;
+    }
+
     client.hget(items_key(kind), key, function(err, obj) {
       if (err) {
         logger.error("Error fetching key " + key + " from Redis in '" + kind.namespace + "'", err);
@@ -90,6 +101,12 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
 
   store.all = function(kind, cb) {
     cb = cb || noop;
+    if (!connected) {
+      logger.warn('Attempted to fetch all keys while Redis connection is down');
+      cb(null);
+      return;
+    }
+
     client.hgetall(items_key(kind), function(err, obj) {
       if (err) {
         logger.error("Error fetching '" + kind.namespace + "'' from Redis", err);
