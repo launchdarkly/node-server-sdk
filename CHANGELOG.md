@@ -1,6 +1,6 @@
 # Change log
 
-All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres 
+All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
 ## [4.0.1] - 2018-03-09
 ### Fixed
@@ -8,7 +8,6 @@ All notable changes to the LaunchDarkly Node.js SDK will be documented in this f
 - Fixed a bug in the Redis adapter that caused an error ("Transaction discarded because of previous errors") at startup time if there were either no feature flags or no user segments.
 - Fixed a bug that caused a spurious Redis query for the key "launchdarkly:undefined".
 - Fixed a bug that could cause analytics events not to be reported for feature flags that were evaluated due to being prerequisites of other flags.
-to [Semantic Versioning](http://semver.org).
 
 ## [4.0.0] - 2018-02-21
 ### Added
