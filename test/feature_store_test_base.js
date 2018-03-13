@@ -97,6 +97,27 @@ function allFeatureStoreTests(makeStore) {
     });
   });
 
+  it('handles upsert race condition within same client correctly', function(done) {
+    var ver1 = { key: feature1.key, version: feature1.version + 1 };
+    var ver2 = { key: feature1.key, version: feature1.version + 2 };
+    initedStore(function(store) {
+      var counter = 0;
+      var combinedCallback = function() {
+        counter++;
+        if (counter == 2) {
+          store.get(dataKind.features, feature1.key, function(result) {
+            expect(result).toEqual(ver2);
+            done();
+          });
+        }
+      };
+      // Deliberately do not wait for the first upsert to complete before starting the second,
+      // so their transactions will be interleaved unless we're correctly serializing updates
+      store.upsert(dataKind.features, ver2, combinedCallback);
+      store.upsert(dataKind.features, ver1, combinedCallback);
+    });
+  });
+
   it('deletes with newer version', function(done) {
     initedStore(function(store) {
       store.delete(dataKind.features, feature1.key, feature1.version + 1, function(result) {
