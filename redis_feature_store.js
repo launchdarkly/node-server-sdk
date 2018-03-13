@@ -226,36 +226,33 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
   }
 
   function updateItemWithVersioning(kind, newItem, cb, resultFn) {
-    var attempt = function() {
-      client.watch(items_key(kind));
-      var multi = client.multi();
-      // test_transaction_hook is instrumentation, set only by the unit tests
-      var prepare = store.test_transaction_hook || function(prepareCb) { prepareCb(); };
-      prepare(function() {
-        do_get(kind, newItem.key, function(oldItem) {
-          if (oldItem && oldItem.version >= newItem.version) {
-            multi.discard();
-            cb();
-          } else {
-            multi.hset(items_key(kind), newItem.key, JSON.stringify(newItem));
-            multi.exec(function(err, replies) {
-              if (!err && replies === null) {
-                // This means the EXEC failed because someone modified the watched key
-                logger.debug("Concurrent modification detected, retrying");
-                attempt();
-              } else {
-                resultFn(err);
-                if (!err && cache_ttl) {
-                  cache.set(cache_key(kind, newItem.key), newItem);
-                }
-                cb();
+    client.watch(items_key(kind));
+    var multi = client.multi();
+    // test_transaction_hook is instrumentation, set only by the unit tests
+    var prepare = store.test_transaction_hook || function(prepareCb) { prepareCb(); };
+    prepare(function() {
+      do_get(kind, newItem.key, function(oldItem) {
+        if (oldItem && oldItem.version >= newItem.version) {
+          multi.discard();
+          cb();
+        } else {
+          multi.hset(items_key(kind), newItem.key, JSON.stringify(newItem));
+          multi.exec(function(err, replies) {
+            if (!err && replies === null) {
+              // This means the EXEC failed because someone modified the watched key
+              logger.debug("Concurrent modification detected, retrying");
+              updateItemWithVersioning(kind, newItem, cb, resultFn);
+            } else {
+              resultFn(err);
+              if (!err && cache_ttl) {
+                cache.set(cache_key(kind, newItem.key), newItem);
               }
-            });
-          }
-        });
+              cb();
+            }
+          });
+        }
       });
-    }
-    attempt();
+    });
   }
 
   store.initialized = function(cb) {
