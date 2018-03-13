@@ -89,29 +89,31 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
     });
   }
 
-  // Places an update operation on the queue. Each update operation must call completedUpdate()
-  // before the next one can start.
-  function queueUpdate(updateFn) {
-    updateQueue.push(updateFn);
+  function executePendingUpdates() {
+    if (updateQueue.length > 0) {
+      const entry = updateQueue[0];
+      const fn = entry[0];
+      const args = entry[1];
+      const cb = entry[2];
+      const newCb = function() {
+        updateQueue.shift();
+        if (updateQueue.length > 0) {
+          setImmediate(executePendingUpdates);
+        }
+        cb && cb();
+      };
+      fn.apply(store, args.concat([newCb]));
+    }
+  }
+
+  // Places an update operation on the queue.
+  var serializeFn = function(updateFn, fnArgs, cb) {
+    updateQueue.push([updateFn, fnArgs, cb]);
     if (updateQueue.length == 1) {
       // if nothing else is in progress, we can start this one right away
       executePendingUpdates();
     }
-  }
-
-  function executePendingUpdates() {
-    if (updateQueue.length > 0) {
-      updateQueue[0]();
-    }
-  }
-
-  function completedUpdate(cb) {
-    updateQueue.shift();
-    if (updateQueue.length > 0) {
-      setImmediate(executePendingUpdates);
-    }
-    cb && cb();
-  }
+  };
 
   store.get = function(kind, key, cb) {
     cb = cb || noop;
@@ -154,99 +156,105 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
   };
 
   store.init = function(allData, cb) {
-    queueUpdate(function() {
-      var multi = client.multi();
+    serializeFn(store._init, [allData], cb);
+  };
 
-      if (cache_ttl) {
-        cache.flushAll();
-      }
+  store._init = function(allData, cb) {
+    var multi = client.multi();
 
-      for (var kindNamespace in allData) {
-        if (Object.hasOwnProperty.call(allData, kindNamespace)) {
-          var kind = dataKind[kindNamespace];
-          var baseKey = items_key(kind);
-          var items = allData[kindNamespace];
-          var stringified = {};
-          multi.del(baseKey);
-          for (var key in items) {
-            if (Object.hasOwnProperty.call(items, key)) {
-              stringified[key] = JSON.stringify(items[key]);
-            }
-            if (cache_ttl) {
-              cache.set(cache_key(kind, key), items[key]);
-            }
+    if (cache_ttl) {
+      cache.flushAll();
+    }
+
+    for (var kindNamespace in allData) {
+      if (Object.hasOwnProperty.call(allData, kindNamespace)) {
+        var kind = dataKind[kindNamespace];
+        var baseKey = items_key(kind);
+        var items = allData[kindNamespace];
+        var stringified = {};
+        multi.del(baseKey);
+        for (var key in items) {
+          if (Object.hasOwnProperty.call(items, key)) {
+            stringified[key] = JSON.stringify(items[key]);
           }
-          // Redis does not allow hmset() with an empty object
-          if (Object.keys(stringified).length > 0) {
-            multi.hmset(baseKey, stringified);
+          if (cache_ttl) {
+            cache.set(cache_key(kind, key), items[key]);
           }
         }
-      }
-
-      multi.exec(function(err, replies) {
-        if (err) {
-          logger.error("Error initializing Redis store", err);
-        } else {
-          inited = true;
+        // Redis does not allow hmset() with an empty object
+        if (Object.keys(stringified).length > 0) {
+          multi.hmset(baseKey, stringified);
         }
-        completedUpdate(cb);
-      });
+      }
+    }
+
+    multi.exec(function(err, replies) {
+      if (err) {
+        logger.error("Error initializing Redis store", err);
+      } else {
+        inited = true;
+      }
+      cb();
     });
   };
 
   store.delete = function(kind, key, version, cb) {
-    queueUpdate(function() {
-      var multi;
-      var baseKey = items_key(kind);
-      client.watch(baseKey);
-      multi = client.multi();
+      serializeFn(store._delete, [kind, key, version], cb);
+  };
 
-      do_get(kind, key, function(item) {
-        if (item && item.version >= version) {
-          multi.discard();
-          completedUpdate(cb);
-        } else {
-          deletedItem = { version: version, deleted: true };
-          multi.hset(baseKey, key, JSON.stringify(deletedItem));
-          multi.exec(function(err, replies) {
-            if (err) {
-              logger.error("Error deleting key " + key + " in '" + kind.namespace + "'", err);
-            } else if (cache_ttl) {            
-              cache.set(cache_key(kind, key), deletedItem);
-            }
-            completedUpdate(cb);
-          });
-        }
-      });
+  store._delete = function(kind, key, version, cb) {
+    var multi;
+    var baseKey = items_key(kind);
+    client.watch(baseKey);
+    multi = client.multi();
+
+    do_get(kind, key, function(item) {
+      if (item && item.version >= version) {
+        multi.discard();
+        cb();
+      } else {
+        deletedItem = { version: version, deleted: true };
+        multi.hset(baseKey, key, JSON.stringify(deletedItem));
+        multi.exec(function(err, replies) {
+          if (err) {
+            logger.error("Error deleting key " + key + " in '" + kind.namespace + "'", err);
+          } else if (cache_ttl) {
+            cache.set(cache_key(kind, key), deletedItem);
+          }
+          cb();
+        });
+      }
     });
   };
 
   store.upsert = function(kind, item, cb) {
-    queueUpdate(function() {
-      var multi;
-      var baseKey = items_key(kind);
-      var key = item.key;
-      client.watch(baseKey);
-      multi = client.multi();
+    serializeFn(store._upsert, [kind, item], cb);
+  };
 
-      do_get(kind, key, function(original) {
-        if (original && original.version >= item.version) {
-          multi.discard();
-          completedUpdate(cb);
-        } else {
-          multi.hset(baseKey, key, JSON.stringify(item));
-          multi.exec(function(err, replies) {
-            if (err) {
-              logger.error("Error upserting key " + key + " in '" + kind.namespace + "'", err);
-            } else {
-              if (cache_ttl) {
-                cache.set(cache_key(kind, key), item);
-              }
+  store._upsert = function(kind, item, cb) {
+    var multi;
+    var baseKey = items_key(kind);
+    var key = item.key;
+    client.watch(baseKey);
+    multi = client.multi();
+
+    do_get(kind, key, function(original) {
+      if (original && original.version >= item.version) {
+        multi.discard();
+        cb();
+      } else {
+        multi.hset(baseKey, key, JSON.stringify(item));
+        multi.exec(function(err, replies) {
+          if (err) {
+            logger.error("Error upserting key " + key + " in '" + kind.namespace + "'", err);
+          } else {
+            if (cache_ttl) {
+              cache.set(cache_key(kind, key), item);
             }
-            completedUpdate(cb);
-          });
-        }
-      });
+          }
+          cb();
+        });
+      }
     });
   };
 
@@ -266,7 +274,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
       client.exists(items_key(dataKind.features), function(err, obj) {
         if (!err && obj) {
           inited = true;
-        } 
+        }
         checked_init = true;
         cb(inited);
       });
