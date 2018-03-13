@@ -199,7 +199,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
   };
 
   store.delete = function(kind, key, version, cb) {
-      serializeFn(store._delete, [kind, key, version], cb);
+    serializeFn(store._delete, [kind, key, version], cb);
   };
 
   store._delete = function(kind, key, version, cb) {
