@@ -97,7 +97,7 @@ function allFeatureStoreTests(makeStore) {
     });
   });
 
-  it('handles upsert race condition correctly', function(done) {
+  it('handles upsert race condition within same client correctly', function(done) {
     var ver1 = { key: feature1.key, version: feature1.version + 1 };
     var ver2 = { key: feature1.key, version: feature1.version + 2 };
     initedStore(function(store) {
