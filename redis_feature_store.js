@@ -89,9 +89,12 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
     });
   }
 
+  // Places an update operation on the queue. Each update operation must call completedUpdate()
+  // before the next one can start.
   function queueUpdate(updateFn) {
     updateQueue.push(updateFn);
     if (updateQueue.length == 1) {
+      // if nothing else is in progress, we can start this one right away
       executePendingUpdates();
     }
   }
