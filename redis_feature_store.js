@@ -13,6 +13,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
       store = {},
       items_prefix = (prefix || "launchdarkly") + ":",
       cache = cache_ttl ? new NodeCache({ stdTTL: cache_ttl}) : null,
+      updateQueue = [],
       inited = false,
       checked_init = false;
 
@@ -88,6 +89,27 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
     });
   }
 
+  function queueUpdate(updateFn) {
+    updateQueue.push(updateFn);
+    if (updateQueue.length == 1) {
+      executePendingUpdates();
+    }
+  }
+
+  function executePendingUpdates() {
+    if (updateQueue.length > 0) {
+      updateQueue[0]();
+    }
+  }
+
+  function completedUpdate(cb) {
+    updateQueue.shift();
+    if (updateQueue.length > 0) {
+      setImmediate(executePendingUpdates);
+    }
+    cb && cb();
+  }
+
   store.get = function(kind, key, cb) {
     cb = cb || noop;
     do_get(kind, key, function(item) {
@@ -129,97 +151,99 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
   };
 
   store.init = function(allData, cb) {
-    var multi = client.multi();
-    cb = cb || noop;
+    queueUpdate(function() {
+      var multi = client.multi();
 
-    if (cache_ttl) {
-      cache.flushAll();
-    }
+      if (cache_ttl) {
+        cache.flushAll();
+      }
 
-    for (var kindNamespace in allData) {
-      if (Object.hasOwnProperty.call(allData, kindNamespace)) {
-        var kind = dataKind[kindNamespace];
-        var baseKey = items_key(kind);
-        var items = allData[kindNamespace];
-        var stringified = {};
-        multi.del(baseKey);
-        for (var key in items) {
-          if (Object.hasOwnProperty.call(items, key)) {
-            stringified[key] = JSON.stringify(items[key]);
+      for (var kindNamespace in allData) {
+        if (Object.hasOwnProperty.call(allData, kindNamespace)) {
+          var kind = dataKind[kindNamespace];
+          var baseKey = items_key(kind);
+          var items = allData[kindNamespace];
+          var stringified = {};
+          multi.del(baseKey);
+          for (var key in items) {
+            if (Object.hasOwnProperty.call(items, key)) {
+              stringified[key] = JSON.stringify(items[key]);
+            }
+            if (cache_ttl) {
+              cache.set(cache_key(kind, key), items[key]);
+            }
           }
-          if (cache_ttl) {
-            cache.set(cache_key(kind, key), items[key]);
+          // Redis does not allow hmset() with an empty object
+          if (Object.keys(stringified).length > 0) {
+            multi.hmset(baseKey, stringified);
           }
         }
-        // Redis does not allow hmset() with an empty object
-        if (Object.keys(stringified).length > 0) {
-          multi.hmset(baseKey, stringified);
-        }
       }
-    }
 
-    multi.exec(function(err, replies) {
-      if (err) {
-        logger.error("Error initializing Redis store", err);
-      } else {
-        inited = true;
-      }
-      cb();
+      multi.exec(function(err, replies) {
+        if (err) {
+          logger.error("Error initializing Redis store", err);
+        } else {
+          inited = true;
+        }
+        completedUpdate(cb);
+      });
     });
   };
 
   store.delete = function(kind, key, version, cb) {
-    var multi;
-    var baseKey = items_key(kind);
-    cb = cb || noop;
-    client.watch(baseKey);
-    multi = client.multi();
+    queueUpdate(function() {
+      var multi;
+      var baseKey = items_key(kind);
+      client.watch(baseKey);
+      multi = client.multi();
 
-    do_get(kind, key, function(item) {
-      if (item && item.version >= version) {
-        multi.discard();
-        cb();
-      } else {
-        deletedItem = { version: version, deleted: true };
-        multi.hset(baseKey, key, JSON.stringify(deletedItem));
-        multi.exec(function(err, replies) {
-          if (err) {
-            logger.error("Error deleting key " + key + " in '" + kind.namespace + "'", err);
-          } else if (cache_ttl) {            
-            cache.set(cache_key(kind, key), deletedItem);
-          }
-          cb();
-        });
-      }
+      do_get(kind, key, function(item) {
+        if (item && item.version >= version) {
+          multi.discard();
+          completedUpdate(cb);
+        } else {
+          deletedItem = { version: version, deleted: true };
+          multi.hset(baseKey, key, JSON.stringify(deletedItem));
+          multi.exec(function(err, replies) {
+            if (err) {
+              logger.error("Error deleting key " + key + " in '" + kind.namespace + "'", err);
+            } else if (cache_ttl) {            
+              cache.set(cache_key(kind, key), deletedItem);
+            }
+            completedUpdate(cb);
+          });
+        }
+      });
     });
   };
 
   store.upsert = function(kind, item, cb) {
-    var multi;
-    var baseKey = items_key(kind);
-    var key = item.key;
-    cb = cb || noop;
-    client.watch(baseKey);
-    multi = client.multi();
+    queueUpdate(function() {
+      var multi;
+      var baseKey = items_key(kind);
+      var key = item.key;
+      client.watch(baseKey);
+      multi = client.multi();
 
-    do_get(kind, key, function(original) {
-      if (original && original.version >= item.version) {
-        cb();
-        return;
-      }
-
-      multi.hset(baseKey, key, JSON.stringify(item));
-      multi.exec(function(err, replies) {
-        if (err) {
-          logger.error("Error upserting key " + key + " in '" + kind.namespace + "'", err);
+      do_get(kind, key, function(original) {
+        if (original && original.version >= item.version) {
+          multi.discard();
+          completedUpdate(cb);
         } else {
-          if (cache_ttl) {
-            cache.set(cache_key(kind, key), item);
-          }
+          multi.hset(baseKey, key, JSON.stringify(item));
+          multi.exec(function(err, replies) {
+            if (err) {
+              logger.error("Error upserting key " + key + " in '" + kind.namespace + "'", err);
+            } else {
+              if (cache_ttl) {
+                cache.set(cache_key(kind, key), item);
+              }
+            }
+            completedUpdate(cb);
+          });
         }
-        cb();
       });
-
     });
   };
 
