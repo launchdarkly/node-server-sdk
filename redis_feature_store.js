@@ -43,10 +43,10 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
     }
     initialConnect = false;
     connected = true;
-  })
+  });
   client.on('end', function() {
     connected = false;
-  })
+  });
 
   // Allow driver programs to exit, even if the Redis socket is active
   client.unref();
