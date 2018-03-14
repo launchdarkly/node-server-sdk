@@ -13,6 +13,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
       store = {},
       items_prefix = (prefix || "launchdarkly") + ":",
       cache = cache_ttl ? new NodeCache({ stdTTL: cache_ttl}) : null,
+      updateQueue = [],
       inited = false,
       checked_init = false;
 
@@ -42,10 +43,10 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
     }
     initialConnect = false;
     connected = true;
-  })
+  });
   client.on('end', function() {
     connected = false;
-  })
+  });
 
   // Allow driver programs to exit, even if the Redis socket is active
   client.unref();
@@ -88,6 +89,32 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
     });
   }
 
+  function executePendingUpdates() {
+    if (updateQueue.length > 0) {
+      const entry = updateQueue[0];
+      const fn = entry[0];
+      const args = entry[1];
+      const cb = entry[2];
+      const newCb = function() {
+        updateQueue.shift();
+        if (updateQueue.length > 0) {
+          setImmediate(executePendingUpdates);
+        }
+        cb && cb();
+      };
+      fn.apply(store, args.concat([newCb]));
+    }
+  }
+
+  // Places an update operation on the queue.
+  var serializeFn = function(updateFn, fnArgs, cb) {
+    updateQueue.push([updateFn, fnArgs, cb]);
+    if (updateQueue.length == 1) {
+      // if nothing else is in progress, we can start this one right away
+      executePendingUpdates();
+    }
+  };
+
   store.get = function(kind, key, cb) {
     cb = cb || noop;
     do_get(kind, key, function(item) {
@@ -129,8 +156,11 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
   };
 
   store.init = function(allData, cb) {
+    serializeFn(store._init, [allData], cb);
+  };
+
+  store._init = function(allData, cb) {
     var multi = client.multi();
-    cb = cb || noop;
 
     if (cache_ttl) {
       cache.flushAll();
@@ -169,59 +199,61 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
   };
 
   store.delete = function(kind, key, version, cb) {
-    var multi;
-    var baseKey = items_key(kind);
-    cb = cb || noop;
-    client.watch(baseKey);
-    multi = client.multi();
-
-    do_get(kind, key, function(item) {
-      if (item && item.version >= version) {
-        multi.discard();
-        cb();
-      } else {
-        deletedItem = { version: version, deleted: true };
-        multi.hset(baseKey, key, JSON.stringify(deletedItem));
-        multi.exec(function(err, replies) {
-          if (err) {
-            logger.error("Error deleting key " + key + " in '" + kind.namespace + "'", err);
-          } else if (cache_ttl) {            
-            cache.set(cache_key(kind, key), deletedItem);
-          }
-          cb();
-        });
-      }
-    });
+    serializeFn(store._delete, [kind, key, version], cb);
   };
+
+  store._delete = function(kind, key, version, cb) {
+    var deletedItem = { key: key, version: version, deleted: true };
+    updateItemWithVersioning(kind, deletedItem, cb,
+      function(err) {
+        if (err) {
+          logger.error("Error deleting key " + key + " in '" + kind.namespace + "'", err);
+        }
+      });
+  }
 
   store.upsert = function(kind, item, cb) {
-    var multi;
-    var baseKey = items_key(kind);
-    var key = item.key;
-    cb = cb || noop;
-    client.watch(baseKey);
-    multi = client.multi();
+    serializeFn(store._upsert, [kind, item], cb);
+  };
 
-    do_get(kind, key, function(original) {
-      if (original && original.version >= item.version) {
-        cb();
-        return;
-      }
-
-      multi.hset(baseKey, key, JSON.stringify(item));
-      multi.exec(function(err, replies) {
+  store._upsert = function(kind, item, cb) {
+    updateItemWithVersioning(kind, item, cb,
+      function(err) {
         if (err) {
           logger.error("Error upserting key " + key + " in '" + kind.namespace + "'", err);
-        } else {
-          if (cache_ttl) {
-            cache.set(cache_key(kind, key), item);
-          }
         }
-        cb();
       });
+  }
 
+  function updateItemWithVersioning(kind, newItem, cb, resultFn) {
+    client.watch(items_key(kind));
+    var multi = client.multi();
+    // test_transaction_hook is instrumentation, set only by the unit tests
+    var prepare = store.test_transaction_hook || function(prepareCb) { prepareCb(); };
+    prepare(function() {
+      do_get(kind, newItem.key, function(oldItem) {
+        if (oldItem && oldItem.version >= newItem.version) {
+          multi.discard();
+          cb();
+        } else {
+          multi.hset(items_key(kind), newItem.key, JSON.stringify(newItem));
+          multi.exec(function(err, replies) {
+            if (!err && replies === null) {
+              // This means the EXEC failed because someone modified the watched key
+              logger.debug("Concurrent modification detected, retrying");
+              updateItemWithVersioning(kind, newItem, cb, resultFn);
+            } else {
+              resultFn(err);
+              if (!err && cache_ttl) {
+                cache.set(cache_key(kind, newItem.key), newItem);
+              }
+              cb();
+            }
+          });
+        }
+      });
     });
-  };
+  }
 
   store.initialized = function(cb) {
     cb = cb || noop;
@@ -239,7 +271,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
       client.exists(items_key(dataKind.features), function(err, obj) {
         if (!err && obj) {
           inited = true;
-        } 
+        }
         checked_init = true;
         cb(inited);
       });
