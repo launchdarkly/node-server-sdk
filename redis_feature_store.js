@@ -199,64 +199,61 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
   };
 
   store.delete = function(kind, key, version, cb) {
-      serializeFn(store._delete, [kind, key, version], cb);
+    serializeFn(store._delete, [kind, key, version], cb);
   };
 
   store._delete = function(kind, key, version, cb) {
-    var multi;
-    var baseKey = items_key(kind);
-    client.watch(baseKey);
-    multi = client.multi();
-
-    do_get(kind, key, function(item) {
-      if (item && item.version >= version) {
-        multi.discard();
-        cb();
-      } else {
-        deletedItem = { version: version, deleted: true };
-        multi.hset(baseKey, key, JSON.stringify(deletedItem));
-        multi.exec(function(err, replies) {
-          if (err) {
-            logger.error("Error deleting key " + key + " in '" + kind.namespace + "'", err);
-          } else if (cache_ttl) {
-            cache.set(cache_key(kind, key), deletedItem);
-          }
-          cb();
-        });
-      }
-    });
-  };
+    var deletedItem = { key: key, version: version, deleted: true };
+    updateItemWithVersioning(kind, deletedItem, cb,
+      function(err) {
+        if (err) {
+          logger.error("Error deleting key " + key + " in '" + kind.namespace + "'", err);
+        }
+      });
+  }
 
   store.upsert = function(kind, item, cb) {
     serializeFn(store._upsert, [kind, item], cb);
   };
 
   store._upsert = function(kind, item, cb) {
-    var multi;
-    var baseKey = items_key(kind);
-    var key = item.key;
-    client.watch(baseKey);
-    multi = client.multi();
+    updateItemWithVersioning(kind, item, cb,
+      function(err) {
+        if (err) {
+          logger.error("Error upserting key " + key + " in '" + kind.namespace + "'", err);
+        }
+      });
+  }
 
-    do_get(kind, key, function(original) {
-      if (original && original.version >= item.version) {
-        multi.discard();
-        cb();
-      } else {
-        multi.hset(baseKey, key, JSON.stringify(item));
-        multi.exec(function(err, replies) {
-          if (err) {
-            logger.error("Error upserting key " + key + " in '" + kind.namespace + "'", err);
-          } else {
-            if (cache_ttl) {
-              cache.set(cache_key(kind, key), item);
-            }
-          }
+  function updateItemWithVersioning(kind, newItem, cb, resultFn) {
+    client.watch(items_key(kind));
+    var multi = client.multi();
+    // test_transaction_hook is instrumentation, set only by the unit tests
+    var prepare = store.test_transaction_hook || function(prepareCb) { prepareCb(); };
+    prepare(function() {
+      do_get(kind, newItem.key, function(oldItem) {
+        if (oldItem && oldItem.version >= newItem.version) {
+          multi.discard();
           cb();
-        });
-      }
+        } else {
+          multi.hset(items_key(kind), newItem.key, JSON.stringify(newItem));
+          multi.exec(function(err, replies) {
+            if (!err && replies === null) {
+              // This means the EXEC failed because someone modified the watched key
+              logger.debug("Concurrent modification detected, retrying");
+              updateItemWithVersioning(kind, newItem, cb, resultFn);
+            } else {
+              resultFn(err);
+              if (!err && cache_ttl) {
+                cache.set(cache_key(kind, newItem.key), newItem);
+              }
+              cb();
+            }
+          });
+        }
+      });
     });
-  };
+  }
 
   store.initialized = function(cb) {
     cb = cb || noop;
