@@ -42,9 +42,6 @@ describe('RedisFeatureStore', function() {
           cb();
         }
       };
-      // Deliberately do not wait for the first action (ver3) to complete before starting the
-      // second (ver2), so the WATCH on the first will be triggered by the concurrent modification.
-      // The result should be that the ver3 update is transparently retried and succeeds.
       store.upsert(dataKind.features, finalVer, function() {
         store.get(dataKind.features, feature1.key, function(result) {
           otherClient.quit();
