@@ -2,7 +2,7 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
-## [4.0.2] = 2018-03-14
+## [4.0.2] - 2018-03-14
 ### Fixed
 - In the Redis feature store, fixed synchronization problems that could cause a feature flag update to be missed if several of them happened in rapid succession.
 
