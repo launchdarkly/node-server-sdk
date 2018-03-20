@@ -19,6 +19,21 @@ Quick setup
 
         var ld_client = LaunchDarkly.init("YOUR SDK KEY")
 
+HTTPS proxy
+------------
+
+Node provides built-in support for the use of an HTTPS proxy. You can use NPM to configure node to proxy all network requests through the URL provided.
+```
+npm config set https-proxy https://web-proxy.domain.com:8080
+```
+
+
+If your proxy requires authentication then you can prefix the URN with your login information:
+```
+npm config set https-proxy http://user:pass@web-proxy.domain.com:8080
+```
+
+
 Your first feature flag
 -----------------------
 
