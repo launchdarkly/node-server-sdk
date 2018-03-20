@@ -22,7 +22,7 @@ Quick setup
 HTTPS proxy
 ------------
 
-Node provides built-in support for the use of an HTTPS proxy. You can use NPM to configure node to proxy all network requests through the URL provided.
+Node provides built-in support for the use of an HTTPS proxy. You can use NPM to configure Node to proxy all network requests through the URL provided.
 ```
 npm config set https-proxy https://web-proxy.domain.com:8080
 ```
