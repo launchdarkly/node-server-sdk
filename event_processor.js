@@ -4,7 +4,7 @@ var UserFilter = require('./user_filter');
 var errors = require('./errors');
 var wrapPromiseCallback = require('./utils/wrapPromiseCallback');
 
-function EventProcessor(sdk_key, config, request_client) {
+function EventProcessor(sdk_key, config, error_reporter, request_client) {
   var ep = {};
 
   var makeRequest = request_client || request,
@@ -161,11 +161,11 @@ function EventProcessor(sdk_key, config, request_client) {
         if (resp.statusCode > 204) {
           var err = new errors.LDUnexpectedResponseError("Unexpected status code " + resp.statusCode + "; events may not have been processed",
             resp.statusCode);
-          maybeReportError(err);
+          error_reporter && error_reporter(err);
           reject(err);
           if (resp.statusCode === 401) {
             var err1 = new errors.LDInvalidSDKKeyError("Received 401 error, no further events will be posted since SDK key is invalid");
-            maybeReportError(err1);
+            error_reporter && error_reporter(err1);
             shutdown = true;
           }
         } else {

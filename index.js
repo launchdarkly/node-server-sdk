@@ -83,13 +83,13 @@ var new_client = function(sdk_key, config) {
   var featureStore = config.feature_store || InMemoryFeatureStore();
   config.feature_store = FeatureStoreEventWrapper(featureStore, client);
 
+  var maybeReportError = createErrorReporter(client, config.logger);
+
   if (config.offline || !config.send_events) {
     event_processor = NullEventProcessor();
   } else {
-    event_processor = EventProcessor(sdk_key, config);
+    event_processor = EventProcessor(sdk_key, config, maybeReportError);
   }
-
-  var maybeReportError = createErrorReporter(client, config.logger);
 
   if (!sdk_key && !config.offline) {
     throw new Error("You must configure the client with an SDK key");
