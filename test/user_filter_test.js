@@ -1,7 +1,7 @@
 var assert = require('assert');
-var EventSerializer = require('../event_serializer.js');
+var UserFilter = require('../user_filter');
 
-describe('event_serializer', function() {
+describe('user_filter', function() {
 
   // users to serialize
   var user = {
@@ -62,54 +62,38 @@ describe('event_serializer', function() {
     'privateAttrs': [ 'bizzle', 'dizzle' ]
   };
 
-  function make_event(user) {
-    return {
-      'creationDate': 1000000,
-      'key': 'xyz',
-      'kind': 'thing',
-      'user': user
-    }
-  }
-
   it('includes all user attributes by default', function() {
-    var es = EventSerializer({});
-    var event = make_event(user);
-    assert.deepEqual(es.serialize_events([event]), [event]);
+    var uf = UserFilter({});
+    assert.deepEqual(uf.filter_user(user), user);
   });
 
   it('hides all except key if all_attrs_private is true', function() {
-    var es = EventSerializer({ all_attributes_private: true});
-    var event = make_event(user);
-    assert.deepEqual(es.serialize_events([event]), [make_event(user_with_all_attrs_hidden)]);
+    var uf = UserFilter({ all_attributes_private: true});
+    assert.deepEqual(uf.filter_user(user), user_with_all_attrs_hidden);
   });
 
   it('hides some attributes if private_attr_names is set', function() {
-    var es = EventSerializer({ private_attribute_names: [ 'firstName', 'bizzle' ]});
-    var event = make_event(user);
-    assert.deepEqual(es.serialize_events([event]), [make_event(user_with_some_attrs_hidden)]);
+    var uf = UserFilter({ private_attribute_names: [ 'firstName', 'bizzle' ]});
+    assert.deepEqual(uf.filter_user(user), user_with_some_attrs_hidden);
   });
 
   it('hides attributes specified in per-user privateAttrs', function() {
-    var es = EventSerializer({});
-    var event = make_event(user_specifying_own_private_attr);
-    assert.deepEqual(es.serialize_events([event]), [make_event(user_with_own_specified_attr_hidden)]);
+    var uf = UserFilter({});
+    assert.deepEqual(uf.filter_user(user_specifying_own_private_attr), user_with_own_specified_attr_hidden);
   });
 
   it('looks at both per-user privateAttrs and global config', function() {
-    var es = EventSerializer({ private_attribute_names: [ 'firstName', 'bizzle' ]});
-    var event = make_event(user_specifying_own_private_attr);
-    assert.deepEqual(es.serialize_events([event]), [make_event(user_with_all_attrs_hidden)]);
+    var uf = UserFilter({ private_attribute_names: [ 'firstName', 'bizzle' ]});
+    assert.deepEqual(uf.filter_user(user_specifying_own_private_attr), user_with_all_attrs_hidden);
   });
 
   it('strips unknown top-level attributes', function() {
-    var es = EventSerializer({});
-    var event = make_event(user_with_unknown_top_level_attrs);
-    assert.deepEqual(es.serialize_events([event]), [make_event(user)]);
+    var uf = UserFilter({});
+    assert.deepEqual(uf.filter_user(user_with_unknown_top_level_attrs), user);
   });
 
   it('leaves the "anonymous" attribute as is', function() {
-    var es = EventSerializer({ all_attributes_private: true});
-    var event = make_event(anon_user);
-    assert.deepEqual(es.serialize_events([event]), [make_event(anon_user_with_all_attrs_hidden)]);
+    var uf = UserFilter({ all_attributes_private: true});
+    assert.deepEqual(uf.filter_user(anon_user), anon_user_with_all_attrs_hidden);
   });
 });
