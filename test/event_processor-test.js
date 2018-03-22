@@ -283,7 +283,7 @@ describe('EventProcessor', function() {
         },
         flagkey2: {
           default: 'default2',
-          counters: [ { versino: 22, value: 'value2', count: 1 } ]
+          counters: [ { version: 22, value: 'value2', count: 1 } ]
         }
       });
       done();
