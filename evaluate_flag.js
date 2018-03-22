@@ -11,44 +11,32 @@ var noop = function(){};
 function evaluate(flag, user, featureStore, cb) {
   cb = cb || noop;
   if (!user || user.key === null || user.key === undefined) {
-    cb(null, null, null);
+    cb(null, null, null, null);
     return;
   }
 
   if (!flag) {
-    cb(null, null, null);
+    cb(null, null, null, null);
     return;
   }
 
   if (!flag.on) {
     // Return the off variation if defined and valid
-    if (flag.offVariation != null) {
-      cb(null, get_variation(flag, flag.offVariation), null);
-    }
-    // Otherwise, return the default variation
-    else {
-      cb(null, null, null);
-    }
+    cb(null, flag.offVariation, get_variation(flag, flag.offVariation), null);
     return;
   }
 
-  eval_internal(flag, user, featureStore, [], function(err, result, events) {
+  eval_internal(flag, user, featureStore, [], function(err, variation, value, events) {
     if (err) {
-      cb(err, result, events);
+      cb(err, variation, value, events);
       return;
     }
 
-    if (result === null) {
+    if (variation === null) {
       // Return the off variation if defined and valid
-      if (flag.offVariation != null) {
-        cb(null, get_variation(flag, flag.offVariation), events);
-      }
-      // Otherwise, return the default variation
-      else {
-        cb(null, null, events);
-      }
+      cb(null, flag.offVariation, get_variation(flag, flag.offVariation), events);
     } else {
-      cb(err, result, events);
+      cb(err, variation, value, events);
     }
   });
   return;
@@ -66,12 +54,11 @@ function eval_internal(flag, user, featureStore, events, cb) {
             callback(new Error("Unsatisfied prerequisite"), null);
             return;
           }
-          eval_internal(f, user, featureStore, events, function(err, value) {
+          eval_internal(f, user, featureStore, events, function(err, variation, value) {
             // If there was an error, the value is null, the variation index is out of range, 
             // or the value does not match the indexed variation the prerequisite is not satisfied
-            var variation = get_variation(f, prereq.variation);
-            events.push(create_flag_event(f.key, user, value, null, f.version, flag.key));
-            if (err || value === null || variation === null || value != variation) {
+            events.push(create_flag_event(f.key, f, user, variation, value, null, flag.key));
+            if (err || value === null || variation != prereq.variation) {
               callback(new Error("Unsatisfied prerequisite"), null)
             } else { 
               // The prerequisite was satisfied
@@ -84,16 +71,16 @@ function eval_internal(flag, user, featureStore, events, cb) {
         // If the error is that prerequisites weren't satisfied, we don't return an error,
         // because we want to serve the 'offVariation'
         if (err) {
-          cb(null, null, events);
+          cb(null, null, null, events);
           return;
         } 
-        evalRules(flag, user, featureStore, function(e, variation) {
-          cb(e, variation, events);
+        evalRules(flag, user, featureStore, function(e, variation, value) {
+          cb(e, variation, value, events);
         });
       })
   } else {
-    evalRules(flag, user, featureStore, function(e, variation) {
-      cb(e, variation, events);
+    evalRules(flag, user, featureStore, function(e, variation, value) {
+      cb(e, variation, value, events);
     });
   }
 }
@@ -113,8 +100,9 @@ function evalRules(flag, user, featureStore, cb) {
 
     for (j = 0; j < target.values.length; j++) {
       if (user.key === target.values[j]) {
-        variation = get_variation(flag, target.variation);
-        cb(variation === null ? new Error("Undefined variation for flag " + flag.key) : null, variation);
+        value = get_variation(flag, target.variation);
+        cb(value === null ? new Error("Undefined variation for flag " + flag.key) : null,
+          target.variation, value);
         return;
       }
     }
@@ -132,12 +120,12 @@ function evalRules(flag, user, featureStore, cb) {
       if (err) {
         var rule = err;
         variation = variation_for_user(rule, user, flag);
-        cb(variation === null ? new Error("Undefined variation for flag " + flag.key) : null, variation);
       } else {
         // no rule matched; check the fallthrough
         variation = variation_for_user(flag.fallthrough, user, flag);
-        cb(variation === null ? new Error("Undefined variation for flag " + flag.key) : null, variation);
       }
+      cb(variation === null ? new Error("Undefined variation for flag " + flag.key) : null,
+          variation, get_variation(flag, variation));
     }
   );
 }
@@ -270,7 +258,7 @@ function match_any(matchFn, value, values) {
 // Given an index, return the variation value, or null if 
 // the index is invalid
 function get_variation(flag, index) {
-  if (index >= flag.variations.length) {
+  if (index === null || index === undefined || index >= flag.variations.length) {
     return null;
   } else {
     return flag.variations[index];
@@ -287,7 +275,7 @@ function variation_for_user(r, user, flag) {
   var variation;
   if (r.variation != null) {
     // This represets a fixed variation; return it
-    return get_variation(flag, r.variation);
+    return r.variation;
   } else if (r.rollout != null) {
     // This represents a percentage rollout. Assume 
     // we're rolling out by key
@@ -297,7 +285,7 @@ function variation_for_user(r, user, flag) {
       variate = r.rollout.variations[i];
       sum += variate.weight / 100000.0;
       if (bucket < sum) {
-        return get_variation(flag, variate.variation);
+        return variate.variation;
       }
     }
   }
@@ -349,16 +337,19 @@ function bucketable_string_value(value) {
   return null;
 }
 
-function create_flag_event(key, user, value, default_val, version, prereqOf) {
+function create_flag_event(key, flag, user, variation, value, default_val, prereqOf) {
   return {
     "kind": "feature",
     "key": key,
     "user": user,
+    "variation": variation,
     "value": value,
     "default": default_val,
     "creationDate": new Date().getTime(),
-    "version": version,
-    "prereqOf": prereqOf
+    "version": flag ? flag.version : null,
+    "prereqOf": prereqOf,
+    "trackEvents": flag ? flag.trackEvents : null,
+    "debugEventsUntilDate": flag ? flag.debugEventsUntilDate : null
   };
 }
 

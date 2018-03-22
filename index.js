@@ -138,14 +138,14 @@ var new_client = function(sdk_key, config) {
       else if (!key) {
         variationErr = new errors.LDClientError('No feature flag key specified. Returning default value.');
         maybeReportError(variationError);
-        send_flag_event(key, user, default_val, default_val);
+        send_flag_event(key, null, user, null, default_val, default_val);
         return resolve(default_val);
       }
 
       else if (!user) {
         variationErr = new errors.LDClientError('No user specified. Returning default value.');
         maybeReportError(variationErr);
-        send_flag_event(key, user, default_val, default_val);
+        send_flag_event(key, null, user, null, default_val, default_val);
         return resolve(default_val);
       }
       
@@ -161,7 +161,7 @@ var new_client = function(sdk_key, config) {
           } else {
             variationErr = new errors.LDClientError("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using default value");
             maybeReportError(variationErr);
-            send_flag_event(key, user, default_val, default_val);
+            send_flag_event(key, null, user, null, default_val, default_val);
             return resolve(default_val);
           }
         });
@@ -173,7 +173,7 @@ var new_client = function(sdk_key, config) {
 
   function variationInternal(key, user, default_val, resolve, reject) {
     config.feature_store.get(dataKind.features, key, function(flag) {
-      evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
+      evaluate.evaluate(flag, user, config.feature_store, function(err, variation, value, events) {
         var i;
         var version = flag ? flag.version : null;
 
@@ -189,12 +189,12 @@ var new_client = function(sdk_key, config) {
           }
         }
 
-        if (result === null) {
+        if (value === null) {
           config.logger.debug("Result value is null in variation");
-          send_flag_event(key, user, default_val, default_val, version);
+          send_flag_event(key, flag, user, null, default_val, default_val);
           return resolve(default_val);
         } else {
-          send_flag_event(key, user, result, default_val, version);
+          send_flag_event(key, flag, user, variation, value, default_val);
           return resolve(result);
         }               
       });
@@ -329,8 +329,8 @@ var new_client = function(sdk_key, config) {
     }
   }
 
-  function send_flag_event(key, user, value, default_val, version) {
-    var event = evaluate.create_flag_event(key, user, value, default_val, version);
+  function send_flag_event(key, flag, user, variation, value, default_val) {
+    var event = evaluate.create_flag_event(key, flag, user, variation, value, default_val);
     enqueue(event);
   }
 
