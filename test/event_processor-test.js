@@ -357,13 +357,22 @@ describe('EventProcessor', function() {
     ep.send_event(e);
 
     mockResponse.statusCode = 401;
-    ep.flush(function() {
-      requestParams = null;
-      ep.send_event(e);
-      ep.flush(function() {
-        expect(requestParams).toEqual(null);
-        done();
-      });
-    });
+    ep.flush().then(
+      function() { },
+      function(err) {
+        expect(err.message).toContain("status code 401");
+        requestParams = null;
+
+        ep.send_event(e);
+        
+        ep.flush().then(
+          function() { },
+          function(err) {
+            expect(err.message).toContain("SDK key is invalid");
+            expect(requestParams).toEqual(null);
+            done();
+          });
+      }
+    );
   });
 });
