@@ -152,8 +152,8 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
         timeout: config.timeout * 1000,
         agent: config.proxy_agent
       }).on('response', function(resp, body) {
-        if (resp.headers['Date']) {
-          var date = Date.parse(resp.headers['Date']);
+        if (resp.headers['date']) {
+          var date = Date.parse(resp.headers['date']);
           if (date) {
             lastKnownPastTime = date;
           }

@@ -1,29 +1,21 @@
+var nock = require('nock');
 var EventProcessor = require('../event_processor');
 var EventEmitter = require('events').EventEmitter;
 
 describe('EventProcessor', function() {
 
   var ep;
-  var mockRequest;
-  var requestParams;
-  var mockResponse;
+  var eventsUri = 'http://example.com';
   var sdkKey = 'SDK_KEY';
-  var defaultConfig = { capacity: 100, flush_interval: 30, user_keys_capacity: 1000, user_keys_flush_interval: 300 };
+  var defaultConfig = {
+    events_uri: eventsUri,
+    capacity: 100,
+    flush_interval: 30,
+    user_keys_capacity: 1000,
+    user_keys_flush_interval: 300
+  };
   var user = { key: 'userKey', name: 'Red' };
   var filteredUser = { key: 'userKey', privateAttrs: [ 'name' ] };
-
-  beforeEach(function() {
-    requestParams = null;
-    mockResponse = { statusCode: 200, headers: {} };
-    var requestEvent = new EventEmitter();
-    mockRequest = function(params) {
-      requestParams = params;
-      setTimeout(function() {
-          requestEvent.emit('response', mockResponse, null);
-        }, 0);
-      return requestEvent;
-    };
-  });
 
   afterEach(function() {
     if (ep) {
@@ -31,14 +23,28 @@ describe('EventProcessor', function() {
     }
   });
 
-  function flush_and_get_events(cb) {
-    ep.flush(function() {
-      cb(requestParams.body);
-    });
+  function flush_and_get_request(options, cb) {
+    var callback = cb || options;
+    options = cb ? options : {};
+    var requestBody;
+    var requestHeaders;
+    nock(eventsUri).post('/bulk')
+      .reply(function(uri, body) {
+        requestBody = body;
+        requestHeaders = this.req.headers;
+        return [ options.status || 200, '', options.headers || {} ];
+      });
+    ep.flush().then(
+      function() {
+        callback(requestBody, requestHeaders);
+      },
+      function(error) {
+        callback(requestBody, requestHeaders, error);
+      });
   }
 
-  function add_date_header(response, timestamp) {
-    response.headers['Date'] = new Date(timestamp).toUTCString();
+  function headers_with_date(timestamp) {
+    return { date: new Date(timestamp).toUTCString() };
   }
 
   function check_index_event(e, source, user) {
@@ -78,11 +84,11 @@ describe('EventProcessor', function() {
   }
 
   it('queues identify event', function(done) {
-    ep = EventProcessor(sdkKey, defaultConfig, null, mockRequest);
+    ep = EventProcessor(sdkKey, defaultConfig);
     var e = { kind: 'identify', creationDate: 1000, user: user };
     ep.send_event(e);
 
-    flush_and_get_events(function(output) {
+    flush_and_get_request(function(output) {
       expect(output).toEqual([{
         kind: 'identify',
         creationDate: 1000,
@@ -94,11 +100,11 @@ describe('EventProcessor', function() {
 
   it('filters user in identify event', function(done) {
     var config = Object.assign({}, defaultConfig, { all_attributes_private: true });
-    ep = EventProcessor(sdkKey, config, null, mockRequest);
+    ep = EventProcessor(sdkKey, config);
     var e = { kind: 'identify', creationDate: 1000, user: user };
     ep.send_event(e);
 
-    flush_and_get_events(function(output) {
+    flush_and_get_request(function(output) {
       expect(output).toEqual([{
         kind: 'identify',
         creationDate: 1000,
@@ -109,12 +115,12 @@ describe('EventProcessor', function() {
   });
 
   it('queues individual feature event with index event', function(done) {
-    ep = EventProcessor(sdkKey, defaultConfig, null, mockRequest);
+    ep = EventProcessor(sdkKey, defaultConfig);
     var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
       version: 11, variation: 1, value: 'value', trackEvents: true };
     ep.send_event(e);
 
-    flush_and_get_events(function(output) {
+    flush_and_get_request(function(output) {
       expect(output.length).toEqual(3);
       check_index_event(output[0], e, user);
       check_feature_event(output[1], e, false);
@@ -125,12 +131,12 @@ describe('EventProcessor', function() {
 
   it('filters user in index event', function(done) {
     var config = Object.assign({}, defaultConfig, { all_attributes_private: true });
-    ep = EventProcessor(sdkKey, config, null, mockRequest);
+    ep = EventProcessor(sdkKey, config);
     var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
       version: 11, variation: 1, value: 'value', trackEvents: true };
     ep.send_event(e);
 
-    flush_and_get_events(function(output) {
+    flush_and_get_request(function(output) {
       expect(output.length).toEqual(3);
       check_index_event(output[0], e, filteredUser);
       check_feature_event(output[1], e, false);
@@ -141,12 +147,12 @@ describe('EventProcessor', function() {
 
   it('can include inline user in feature event', function(done) {
     var config = Object.assign({}, defaultConfig, { inline_users_in_events: true });
-    ep = EventProcessor(sdkKey, config, null, mockRequest);
+    ep = EventProcessor(sdkKey, config);
     var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
       version: 11, variation: 1, value: 'value', trackEvents: true };
     ep.send_event(e);
 
-    flush_and_get_events(function(output) {
+    flush_and_get_request(function(output) {
       expect(output.length).toEqual(2);
       check_feature_event(output[0], e, false, user);
       check_summary_event(output[1]);
@@ -157,12 +163,12 @@ describe('EventProcessor', function() {
   it('filters user in feature event', function(done) {
     var config = Object.assign({}, defaultConfig, { all_attributes_private: true,
       inline_users_in_events: true });
-    ep = EventProcessor(sdkKey, config, null, mockRequest);
+    ep = EventProcessor(sdkKey, config);
     var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
       version: 11, variation: 1, value: 'value', trackEvents: true };
     ep.send_event(e);
 
-    flush_and_get_events(function(output) {
+    flush_and_get_request(function(output) {
       expect(output.length).toEqual(2);
       check_feature_event(output[0], e, false, filteredUser);
       check_summary_event(output[1]);
@@ -171,13 +177,13 @@ describe('EventProcessor', function() {
   });
 
   it('sets event kind to debug if event is temporarily in debug mode', function(done) {
-    ep = EventProcessor(sdkKey, defaultConfig, null, mockRequest);
+    ep = EventProcessor(sdkKey, defaultConfig);
     var futureTime = new Date().getTime() + 1000000;
     var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
       version: 11, variation: 1, value: 'value', trackEvents: false, debugEventsUntilDate: futureTime };
     ep.send_event(e);
 
-    flush_and_get_events(function(output) {
+    flush_and_get_request(function(output) {
       expect(output.length).toEqual(3);
       check_index_event(output[0], e, user);
       check_feature_event(output[1], e, true);
@@ -187,15 +193,14 @@ describe('EventProcessor', function() {
   });
 
   it('expires debug mode based on client time if client time is later than server time', function(done) {
-    ep = EventProcessor(sdkKey, defaultConfig, null, mockRequest);
+    ep = EventProcessor(sdkKey, defaultConfig);
 
     // Pick a server time that is somewhat behind the client time
     var serverTime = new Date().getTime() - 20000;
 
     // Send and flush an event we don't care about, just to set the last server time
-    add_date_header(mockResponse, serverTime);
     ep.send_event({ kind: 'identify', user: { key: 'otherUser' } });
-    flush_and_get_events(function() {
+    flush_and_get_request({ status: 200, headers: headers_with_date(serverTime) }, function() {
       // Now send an event with debug mode on, with a "debug until" time that is further in
       // the future than the server time, but in the past compared to the client.
       var debugUntil = serverTime + 1000;
@@ -204,7 +209,7 @@ describe('EventProcessor', function() {
       ep.send_event(e);
 
       // Should get a summary event only, not a full feature event
-      flush_and_get_events(function(output) {
+      flush_and_get_request(function(output) {
         expect(output.length).toEqual(2);
         check_index_event(output[0], e, user);
         check_summary_event(output[1]);
@@ -214,15 +219,14 @@ describe('EventProcessor', function() {
   });
 
   it('expires debug mode based on server time if server time is later than client time', function(done) {
-    ep = EventProcessor(sdkKey, defaultConfig, null, mockRequest);
+    ep = EventProcessor(sdkKey, defaultConfig);
 
     // Pick a server time that is somewhat ahead of the client time
     var serverTime = new Date().getTime() + 20000;
 
     // Send and flush an event we don't care about, just to set the last server time
-    add_date_header(mockResponse, serverTime);
     ep.send_event({ kind: 'identify', user: { key: 'otherUser' } });
-    flush_and_get_events(function() {
+    flush_and_get_request({ status: 200, headers: headers_with_date(serverTime) }, function() {
       // Now send an event with debug mode on, with a "debug until" time that is further in
       // the future than the client time, but in the past compared to the server.
       var debugUntil = serverTime - 1000;
@@ -231,7 +235,7 @@ describe('EventProcessor', function() {
       ep.send_event(e);
 
       // Should get a summary event only, not a full feature event
-      flush_and_get_events(function(output) {
+      flush_and_get_request(function(output) {
         expect(output.length).toEqual(2);
         check_index_event(output[0], e, user);
         check_summary_event(output[1]);
@@ -241,7 +245,7 @@ describe('EventProcessor', function() {
   });
 
   it('generates only one index event from two feature events for same user', function(done) {
-    ep = EventProcessor(sdkKey, defaultConfig, null, mockRequest);
+    ep = EventProcessor(sdkKey, defaultConfig);
     var e1 = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey1',
       version: 11, variation: 1, value: 'value', trackEvents: true };
     var e2 = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey2',
@@ -249,7 +253,7 @@ describe('EventProcessor', function() {
     ep.send_event(e1);
     ep.send_event(e2);
 
-    flush_and_get_events(function(output) {
+    flush_and_get_request(function(output) {
       expect(output.length).toEqual(4);
       check_index_event(output[0], e1, user);
       check_feature_event(output[1], e1, false);
@@ -260,7 +264,7 @@ describe('EventProcessor', function() {
   });
 
   it('summarizes nontracked events', function(done) {
-    ep = EventProcessor(sdkKey, defaultConfig, null, mockRequest);
+    ep = EventProcessor(sdkKey, defaultConfig);
     var e1 = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey1',
       version: 11, variation: 1, value: 'value1', default: 'default1', trackEvents: false };
     var e2 = { kind: 'feature', creationDate: 2000, user: user, key: 'flagkey2',
@@ -268,7 +272,7 @@ describe('EventProcessor', function() {
     ep.send_event(e1);
     ep.send_event(e2);
 
-    flush_and_get_events(function(output) {
+    flush_and_get_request(function(output) {
       expect(output.length).toEqual(2);
       check_index_event(output[0], e1, user);
       var se = output[1];
@@ -290,12 +294,12 @@ describe('EventProcessor', function() {
   });
 
   it('queues custom event with user', function(done) {
-    ep = EventProcessor(sdkKey, defaultConfig, null, mockRequest);
+    ep = EventProcessor(sdkKey, defaultConfig);
     var e = { kind: 'custom', creationDate: 1000, user: user, key: 'eventkey',
       data: { thing: 'stuff' } };
     ep.send_event(e);
 
-    flush_and_get_events(function(output) {
+    flush_and_get_request(function(output) {
       expect(output.length).toEqual(2);
       check_index_event(output[0], e, user);
       check_custom_event(output[1], e);
@@ -305,12 +309,12 @@ describe('EventProcessor', function() {
 
   it('can include inline user in custom event', function(done) {
     var config = Object.assign({}, defaultConfig, { inline_users_in_events: true });
-    ep = EventProcessor(sdkKey, config, null, mockRequest);
+    ep = EventProcessor(sdkKey, config);
     var e = { kind: 'custom', creationDate: 1000, user: user, key: 'eventkey',
       data: { thing: 'stuff' } };
     ep.send_event(e);
 
-    flush_and_get_events(function(output) {
+    flush_and_get_request(function(output) {
       expect(output.length).toEqual(1);
       check_custom_event(output[0], e, user);
       done();
@@ -320,12 +324,12 @@ describe('EventProcessor', function() {
   it('filters user in custom event', function(done) {
     var config = Object.assign({}, defaultConfig, { all_attributes_private: true,
       inline_users_in_events: true });
-    ep = EventProcessor(sdkKey, config, null, mockRequest);
+    ep = EventProcessor(sdkKey, config);
     var e = { kind: 'custom', creationDate: 1000, user: user, key: 'eventkey',
       data: { thing: 'stuff' } };
     ep.send_event(e);
 
-    flush_and_get_events(function(output) {
+    flush_and_get_request(function(output) {
       expect(output.length).toEqual(1);
       check_custom_event(output[0], e, filteredUser);
       done();
@@ -333,46 +337,41 @@ describe('EventProcessor', function() {
   });
 
   it('sends nothing if there are no events', function(done) {
-    ep = EventProcessor(sdkKey, defaultConfig, null, mockRequest);
+    ep = EventProcessor(sdkKey, defaultConfig);
     ep.flush(function() {
-      expect(requestParams).toEqual(null);
+      // Nock will generate an error if we sent a request we didn't explicitly listen for.
       done();
     });
   });
 
   it('sends SDK key', function(done) {
-    ep = EventProcessor(sdkKey, defaultConfig, null, mockRequest);
+    ep = EventProcessor(sdkKey, defaultConfig);
     var e = { kind: 'identify', creationDate: 1000, user: user };
     ep.send_event(e);
 
-    ep.flush(function() {
-      expect(requestParams.headers['Authorization']).toEqual(sdkKey);
+    flush_and_get_request(function(requestBody, requestHeaders) {
+      expect(requestHeaders['authorization']).toEqual(sdkKey);
       done();
     });
   });
 
   it('stops sending events after a 401 error', function(done) {
-    ep = EventProcessor(sdkKey, defaultConfig, null, mockRequest);
+    ep = EventProcessor(sdkKey, defaultConfig);
     var e = { kind: 'identify', creationDate: 1000, user: user };
     ep.send_event(e);
 
-    mockResponse.statusCode = 401;
-    ep.flush().then(
-      function() { },
-      function(err) {
-        expect(err.message).toContain("status code 401");
-        requestParams = null;
+    flush_and_get_request({ status: 401 }, function(body, headers, error) {
+      expect(error.message).toContain("status code 401");
 
-        ep.send_event(e);
-        
-        ep.flush().then(
-          function() { },
-          function(err) {
-            expect(err.message).toContain("SDK key is invalid");
-            expect(requestParams).toEqual(null);
-            done();
-          });
-      }
-    );
+      ep.send_event(e);
+
+      ep.flush().then(
+        // no HTTP request should have been done here - Nock will error out if there was one
+        function() { },
+        function(err) {
+          expect(err.message).toContain("SDK key is invalid");
+          done();
+        });
+    });
   });
 });
