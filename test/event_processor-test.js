@@ -7,7 +7,6 @@ describe('EventProcessor', function() {
   var mockRequest;
   var requestParams;
   var mockResponse;
-  var responseStatus;
   var sdkKey = 'SDK_KEY';
   var defaultConfig = { capacity: 100, flush_interval: 30, user_keys_capacity: 1000, user_keys_flush_interval: 300 };
   var user = { key: 'userKey', name: 'Red' };
@@ -349,6 +348,22 @@ describe('EventProcessor', function() {
     ep.flush(function() {
       expect(requestParams.headers['Authorization']).toEqual(sdkKey);
       done();
+    });
+  });
+
+  it('stops sending events after a 401 error', function(done) {
+    ep = EventProcessor(sdkKey, defaultConfig, null, mockRequest);
+    var e = { kind: 'identify', creationDate: 1000, user: user };
+    ep.send_event(e);
+
+    mockResponse.statusCode = 401;
+    ep.flush(function() {
+      requestParams = null;
+      ep.send_event(e);
+      ep.flush(function() {
+        expect(requestParams).toEqual(null);
+        done();
+      });
     });
   });
 });
