@@ -29,7 +29,6 @@ describe('wrapPromiseCallback',function() {
       expect(promise).toBeUndefined();
       expect(error).toBe(actualError);
       expect(value).toBeNull();
-      expect(error).toEqual(error);
     });
   });
 });
