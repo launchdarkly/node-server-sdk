@@ -23,12 +23,13 @@ describe('wrapPromiseCallback',function() {
     });
   });
 
-  it('should call the callback with an error if the promise rejects', function() {
+  it('should call the callback with an error if the promise rejects', function(done) {
     const actualError = new Error('something went wrong');
     const promise = wrapPromiseCallback(Promise.reject(actualError), function(error, value) {
       expect(promise).toBeUndefined();
       expect(error).toBe(actualError);
       expect(value).toBeNull();
+      done();
     });
   });
 });
