@@ -46,7 +46,9 @@ var new_client = function(sdk_key, config) {
       queue = [],
       requestor,
       update_processor,
-      event_processor;
+      event_processor,
+      event_queue_shutdown = false,
+      flush_timer;
 
   config = Object.assign({}, config || {});
   config.user_agent = 'NodeJSClient/' + package_json.version;
@@ -255,6 +257,7 @@ var new_client = function(sdk_key, config) {
       update_processor.close();
     }
     config.feature_store.close();
+    clearInterval(flush_timer);
   }
 
   client.is_offline = function() {
@@ -292,6 +295,12 @@ var new_client = function(sdk_key, config) {
     var event = evaluate.create_flag_event(key, flag, user, variation, value, default_val);
     event_processor.send_event(event);
   }
+
+  function background_flush() {
+    client.flush().then(function() {}, function() {});
+  }
+
+  flush_timer = setInterval(background_flush, config.flush_interval * 1000);
 
   return client;
 };
