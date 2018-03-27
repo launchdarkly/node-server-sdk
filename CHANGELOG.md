@@ -2,6 +2,10 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [4.0.3] - 2018-03-27
+### Fixed
+- Fixed a [bug](https://github.com/launchdarkly/node-client/issues/85) that would cause an unhandled promise rejection warning-- and, depending on your Node configuration, a crash-- if there was an HTTP error during an automatic event flush.
+
 ## [4.0.2] - 2018-03-14
 ### Fixed
 - In the Redis feature store, fixed synchronization problems that could cause a feature flag update to be missed if several of them happened in rapid succession.
