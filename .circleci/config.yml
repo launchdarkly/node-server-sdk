@@ -8,6 +8,6 @@ jobs:
       - checkout
       - run: npm install
       - run:
-        command: npm test
-        environment:
-          JEST_JUNIT_OUTPUT: "reports/junit/js-test-results.xml"
+          command: npm test
+          environment:
+            JEST_JUNIT_OUTPUT: "reports/junit/js-test-results.xml"
