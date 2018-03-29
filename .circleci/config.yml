@@ -2,8 +2,8 @@ version: 2
 jobs:
   build:
     docker:
-      image: circleci/node:6
-      image: redis
+      - image: circleci/node:6
+      - image: redis
     steps:
       - checkout
       - run: npm install
