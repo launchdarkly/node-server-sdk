@@ -288,7 +288,7 @@ var new_client = function(sdk_key, config) {
   };
 
   client.flush = function(callback) {
-    event_processor.flush(callback);
+    return event_processor.flush(callback);
   };
 
   function send_flag_event(key, flag, user, variation, value, default_val) {
