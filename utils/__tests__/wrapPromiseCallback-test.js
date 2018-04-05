@@ -14,30 +14,22 @@ describe('wrapPromiseCallback',function() {
     return expect(promise).rejects.toBe(error);
   });
 
-  it('should call the callback with a value if the promise resolves', function() {
-    const callback = jest.fn();
-    const promise = wrapPromiseCallback(Promise.resolve('woohoo'), callback);
-
-    return promise.then(function(result) {
-      expect(result).toEqual('woohoo');
-      // callback run on next tick to maintain asynchronous expections
-      setTimeout(function() {
-        expect(callback).toHaveBeenCalledWith(null, 'woohoo');
-      }, 0);
+  it('should call the callback with a value if the promise resolves', function(done) {
+    const promise = wrapPromiseCallback(Promise.resolve('woohoo'), function(error, value) {
+      expect(promise).toBeUndefined();
+      expect(error).toBeNull();
+      expect(value).toBe('woohoo');
+      done()
     });
   });
 
-  it('should call the callback with an error if the promise rejects', function() {
-    const error = new Error('something went wrong');
-    const callback = jest.fn();
-    const promise = wrapPromiseCallback(Promise.reject(error), callback);
-    
-    return promise.catch(function(error) {
-      expect(promise).rejects.toBe(error);
-      // callback run on next tick to maintain asynchronous expections
-      setTimeout(function() {
-        expect(callback).toHaveBeenCalledWith(error, null);
-      }, 0);
+  it('should call the callback with an error if the promise rejects', function(done) {
+    const actualError = new Error('something went wrong');
+    const promise = wrapPromiseCallback(Promise.reject(actualError), function(error, value) {
+      expect(promise).toBeUndefined();
+      expect(error).toBe(actualError);
+      expect(value).toBeNull();
+      done();
     });
   });
 });
