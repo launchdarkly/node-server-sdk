@@ -29,26 +29,19 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
     }
   }
 
-  function should_track_full_event(event) {
-    if (event.kind === 'feature') {
-      if (event.trackEvents) {
+  function should_debug_event(event) {
+    if (event.debugEventsUntilDate) {
+      if (event.debugEventsUntilDate > lastKnownPastTime &&
+        event.debugEventsUntilDate > new Date().getTime()) {
         return true;
       }
-      if (event.debugEventsUntilDate) {
-        if (event.debugEventsUntilDate > lastKnownPastTime &&
-          event.debugEventsUntilDate > new Date().getTime()) {
-          return true;
-        }
-      }
-      return false;
-    } else {
-      return true;
     }
+    return false;
   }
 
   function make_output_event(event) {
     if (event.kind === 'feature') {
-      debug = !event.trackEvents || !!event.debugEventsUntilDate;
+      debug = !!event.debug;
       var out = {
         kind: debug ? 'debug' : 'feature',
         creationDate: event.creationDate,
@@ -58,7 +51,7 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
         default: event.default,
         prereqOf: event.prereqOf
       };
-      if (config.inline_users_in_events) {
+      if (config.inline_users_in_events || debug) {
         out.user = userFilter.filter_user(event.user);
       } else {
         out.userKey = event.user.key;
@@ -93,23 +86,41 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
     }
     config.logger && config.logger.debug("Sending event", JSON.stringify(event));
 
-    // For each user we haven't seen before, we add an index event - unless this is already
-    // an identify event for that user.
-    if (!config.inline_users_in_events && event.user && !summarizer.notice_user(event.user)) {
-      if (event.kind != 'identify') {
-        enqueue({
-          kind: 'index',
-          creationDate: event.creationDate,
-          user: userFilter.filter_user(event.user)
-        });
-      }
-    }
-
     // Always record the event in the summarizer.
     summarizer.summarize_event(event);
 
-    if (should_track_full_event(event)) {
+    // Decide whether to add the event to the payload. Feature events may be added twice, once for
+    // the event (if tracked) and once for debugging.
+    var willAddFullEvent = false,
+        debugEvent = null;
+    if (event.kind === 'feature') {
+      willAddFullEvent = event.trackEvents;
+      if (should_debug_event(event)) {
+        debugEvent = Object.assign({}, event, { debug: true });
+      }
+    } else {
+      willAddFullEvent = true;
+    }
+
+    // For each user we haven't seen before, we add an index event - unless this is already
+    // an identify event for that user.
+    if (!(willAddFullEvent && config.inline_users_in_events)) {
+      if (event.user && !summarizer.notice_user(event.user)) {
+        if (event.kind != 'identify') {
+          enqueue({
+            kind: 'index',
+            creationDate: event.creationDate,
+            user: userFilter.filter_user(event.user)
+          });
+        }
+      }
+    }
+
+    if (willAddFullEvent) {
       enqueue(make_output_event(event));
+    }
+    if (debugEvent) {
+      enqueue(make_output_event(debugEvent));
     }
   }
 

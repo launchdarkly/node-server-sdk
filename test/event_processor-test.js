@@ -186,8 +186,25 @@ describe('EventProcessor', function() {
     flush_and_get_request(function(output) {
       expect(output.length).toEqual(3);
       check_index_event(output[0], e, user);
-      check_feature_event(output[1], e, true);
+      check_feature_event(output[1], e, true, user);
       check_summary_event(output[2]);
+      done();
+    });
+  });
+
+  it('can both track and debug an event', function(done) {
+    ep = EventProcessor(sdkKey, defaultConfig);
+    var futureTime = new Date().getTime() + 1000000;
+    var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
+      version: 11, variation: 1, value: 'value', trackEvents: true, debugEventsUntilDate: futureTime };
+    ep.send_event(e);
+
+    flush_and_get_request(function(output) {
+      expect(output.length).toEqual(4);
+      check_index_event(output[0], e, user);
+      check_feature_event(output[1], e, false);
+      check_feature_event(output[2], e, true, user);
+      check_summary_event(output[3]);
       done();
     });
   });
