@@ -35,7 +35,9 @@ global.setImmediate = global.setImmediate || process.nextTick.bind(process);
 function NullEventProcessor() {
   return {
     send_event: function() {},
-    flush: function(callback) { callback(); },
+    flush: function(callback) {
+      return wrapPromiseCallback(Promise.resolve(), callback);
+    },
     close: function() {}
   }
 }
