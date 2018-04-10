@@ -176,6 +176,21 @@ describe('EventProcessor', function() {
     });
   });
 
+  it('still generates index event if inline_users is true but feature event is not tracked', function(done) {
+    var config = Object.assign({}, defaultConfig, { inline_users_in_events: true });
+    ep = EventProcessor(sdkKey, config);
+    var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
+      version: 11, variation: 1, value: 'value', trackEvents: false };
+    ep.send_event(e);
+
+    flush_and_get_request(function(output) {
+      expect(output.length).toEqual(2);
+      check_index_event(output[0], e, user);
+      check_summary_event(output[1]);
+      done();
+    });
+  });
+
   it('sets event kind to debug if event is temporarily in debug mode', function(done) {
     ep = EventProcessor(sdkKey, defaultConfig);
     var futureTime = new Date().getTime() + 1000000;
