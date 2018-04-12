@@ -99,7 +99,7 @@ describe('EventProcessor', function() {
   });
 
   it('filters user in identify event', function(done) {
-    var config = Object.assign({}, defaultConfig, { all_attributes_private: true });
+    var config = Object.assign({}, defaultConfig, { allAttributesPrivate: true });
     ep = EventProcessor(sdkKey, config);
     var e = { kind: 'identify', creationDate: 1000, user: user };
     ep.send_event(e);
@@ -130,7 +130,7 @@ describe('EventProcessor', function() {
   });
 
   it('filters user in index event', function(done) {
-    var config = Object.assign({}, defaultConfig, { all_attributes_private: true });
+    var config = Object.assign({}, defaultConfig, { allAttributesPrivate: true });
     ep = EventProcessor(sdkKey, config);
     var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
       version: 11, variation: 1, value: 'value', trackEvents: true };
@@ -161,7 +161,7 @@ describe('EventProcessor', function() {
   });
 
   it('filters user in feature event', function(done) {
-    var config = Object.assign({}, defaultConfig, { all_attributes_private: true,
+    var config = Object.assign({}, defaultConfig, { allAttributesPrivate: true,
       inline_users_in_events: true });
     ep = EventProcessor(sdkKey, config);
     var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
@@ -354,7 +354,7 @@ describe('EventProcessor', function() {
   });
 
   it('filters user in custom event', function(done) {
-    var config = Object.assign({}, defaultConfig, { all_attributes_private: true,
+    var config = Object.assign({}, defaultConfig, { allAttributesPrivate: true,
       inline_users_in_events: true });
     ep = EventProcessor(sdkKey, config);
     var e = { kind: 'custom', creationDate: 1000, user: user, key: 'eventkey',

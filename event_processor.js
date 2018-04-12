@@ -55,7 +55,7 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
           prereqOf: event.prereqOf
         };
         if (config.inline_users_in_events || debug) {
-          out.user = userFilter.filter_user(event.user);
+          out.user = userFilter.filterUser(event.user);
         } else {
           out.userKey = event.user.key;
         }
@@ -64,7 +64,7 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
         return {
           kind: 'identify',
           creationDate: event.creationDate,
-          user: userFilter.filter_user(event.user)
+          user: userFilter.filterUser(event.user)
         };
       case 'custom':
         var out = {
@@ -74,7 +74,7 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
           data: event.data
         };
         if (config.inline_users_in_events) {
-          out.user = userFilter.filter_user(event.user);
+          out.user = userFilter.filterUser(event.user);
         } else {
           out.userKey = event.user.key;
         }
@@ -121,7 +121,7 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
       enqueue({
         kind: 'index',
         creationDate: event.creationDate,
-        user: userFilter.filter_user(event.user)
+        user: userFilter.filterUser(event.user)
       });
     }
     if (addFullEvent) {
