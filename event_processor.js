@@ -1,3 +1,4 @@
+var LRUCache = require('lrucache');
 var request = require('request');
 var EventSummarizer = require('./event_summarizer');
 var UserFilter = require('./user_filter');
@@ -10,6 +11,7 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
   var makeRequest = request_client || request,
       userFilter = UserFilter(config),
       summarizer = EventSummarizer(config),
+      userKeysCache = LRUCache(config.user_keys_capacity || 1000),
       queue = [],
       lastKnownPastTime = 0,
       exceededCapacity = false,
@@ -40,47 +42,53 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
   }
 
   function make_output_event(event) {
-    if (event.kind === 'feature') {
-      debug = !!event.debug;
-      var out = {
-        kind: debug ? 'debug' : 'feature',
-        creationDate: event.creationDate,
-        key: event.key,
-        version: event.version,
-        value: event.value,
-        default: event.default,
-        prereqOf: event.prereqOf
-      };
-      if (config.inline_users_in_events || debug) {
-        out.user = userFilter.filter_user(event.user);
-      } else {
-        out.userKey = event.user.key;
-      }
-      return out;
-    } else if (event.kind === 'identify') {
-      return {
-        kind: 'identify',
-        creationDate: event.creationDate,
-        user: userFilter.filter_user(event.user)
-      };
-    } else if (event.kind === 'custom') {
-      var out = {
-        kind: 'custom',
-        creationDate: event.creationDate,
-        key: event.key,
-        data: event.data
-      };
-      if (config.inline_users_in_events) {
-        out.user = userFilter.filter_user(event.user);
-      } else {
-        out.userKey = event.user.key;
-      }
-      return out;
+    switch (event.kind) {
+      case 'feature':
+        debug = !!event.debug;
+        var out = {
+          kind: debug ? 'debug' : 'feature',
+          creationDate: event.creationDate,
+          key: event.key,
+          version: event.version,
+          value: event.value,
+          default: event.default,
+          prereqOf: event.prereqOf
+        };
+        if (config.inline_users_in_events || debug) {
+          out.user = userFilter.filter_user(event.user);
+        } else {
+          out.userKey = event.user.key;
+        }
+        return out;
+      case 'identify':
+        return {
+          kind: 'identify',
+          creationDate: event.creationDate,
+          user: userFilter.filter_user(event.user)
+        };
+      case 'custom':
+        var out = {
+          kind: 'custom',
+          creationDate: event.creationDate,
+          key: event.key,
+          data: event.data
+        };
+        if (config.inline_users_in_events) {
+          out.user = userFilter.filter_user(event.user);
+        } else {
+          out.userKey = event.user.key;
+        }
+        return out;
+      default:
+        return event;
     }
-    return event;
   }
 
   ep.send_event = function(event) {
+    var addIndexEvent = false,
+        addFullEvent = false,
+        addDebugEvent = false;
+
     if (shutdown) {
       return;
     }
@@ -91,35 +99,36 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
 
     // Decide whether to add the event to the payload. Feature events may be added twice, once for
     // the event (if tracked) and once for debugging.
-    var willAddFullEvent = false,
-        debugEvent = null;
     if (event.kind === 'feature') {
-      willAddFullEvent = event.trackEvents;
-      if (should_debug_event(event)) {
-        debugEvent = Object.assign({}, event, { debug: true });
-      }
+      addFullEvent = event.trackEvents;
+      addDebugEvent = should_debug_event(event);
     } else {
-      willAddFullEvent = true;
+      addFullEvent = true;
     }
 
     // For each user we haven't seen before, we add an index event - unless this is already
     // an identify event for that user.
-    if (!(willAddFullEvent && config.inline_users_in_events)) {
-      if (event.user && !summarizer.notice_user(event.user)) {
+    if (!addFullEvent || !config.inline_users_in_events) {
+      if (event.user && !userKeysCache.get(event.user.key)) {
+        userKeysCache.set(event.user.key, true);
         if (event.kind != 'identify') {
-          enqueue({
-            kind: 'index',
-            creationDate: event.creationDate,
-            user: userFilter.filter_user(event.user)
-          });
+          addIndexEvent = true;
         }
       }
     }
 
-    if (willAddFullEvent) {
+    if (addIndexEvent) {
+      enqueue({
+        kind: 'index',
+        creationDate: event.creationDate,
+        user: userFilter.filter_user(event.user)
+      });
+    }
+    if (addFullEvent) {
       enqueue(make_output_event(event));
     }
-    if (debugEvent) {
+    if (addDebugEvent) {
+      var debugEvent = Object.assign({}, event, { debug: true });
       enqueue(make_output_event(debugEvent));
     }
   }
@@ -191,9 +200,12 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
     clearInterval(flushUsersTimer);
   }
 
-  flushTimer = setInterval(ep.flush.bind(ep), config.flush_interval * 1000);
-  flushUsersTimer = setInterval(summarizer.reset_users.bind(summarizer),
-    config.user_keys_flush_interval * 1000);
+  flushTimer = setInterval(function() {
+      ep.flush();
+    }, config.flush_interval * 1000);
+  flushUsersTimer = setInterval(function() {
+      userKeysCache.removeAll();
+    }, config.user_keys_flush_interval * 1000);
 
   return ep;
 }

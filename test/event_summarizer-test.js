@@ -2,46 +2,24 @@ var EventSummarizer = require('../event_summarizer');
 
 describe('EventSummarizer', function() {
 
-  var defaultConfig = { user_keys_capacity: 100 };
   var user = { key: 'key1' };
 
-  it('returns false from notice_user for never-seen user', function() {
-    var es = EventSummarizer(defaultConfig);
-    expect(es.notice_user(user)).toEqual(false);
-  });
-
-  it('returns true from notice_user for already-seen user', function() {
-    var es = EventSummarizer(defaultConfig);
-    es.notice_user({ key: 'key1' });
-    expect(es.notice_user({ key: 'key1' })).toEqual(true);
-  });
-
-  it('discards oldest user if capacity is exceeded', function() {
-    var es = EventSummarizer({ user_keys_capacity: 2 });
-    es.notice_user({ key: 'key1' });
-    es.notice_user({ key: 'key2' });
-    es.notice_user({ key: 'key3' });
-    expect(es.notice_user({ key: 'key3' })).toEqual(true);
-    expect(es.notice_user({ key: 'key2' })).toEqual(true);
-    expect(es.notice_user({ key: 'key1' })).toEqual(false);
-  });
-
   it('does nothing for identify event', function() {
-    var es = EventSummarizer(defaultConfig);
+    var es = EventSummarizer();
     var snapshot = es.get_summary();
     es.summarize_event({ kind: 'identify', creationDate: 1000, user: user });
     expect(es.get_summary()).toEqual(snapshot);
   });
 
   it('does nothing for custom event', function() {
-    var es = EventSummarizer(defaultConfig);
+    var es = EventSummarizer();
     var snapshot = es.get_summary();
     es.summarize_event({ kind: 'custom', creationDate: 1000, key: 'eventkey', user: user });
     expect(es.get_summary()).toEqual(snapshot);
   });
 
   it('sets start and end dates for feature events', function() {
-    var es = EventSummarizer(defaultConfig);
+    var es = EventSummarizer();
     var event1 = { kind: 'feature', creationDate: 2000, key: 'key', user: user };
     var event2 = { kind: 'feature', creationDate: 1000, key: 'key', user: user };
     var event3 = { kind: 'feature', creationDate: 1500, key: 'key', user: user };
@@ -55,7 +33,7 @@ describe('EventSummarizer', function() {
   });
 
   it('increments counters for feature events', function() {
-    var es = EventSummarizer(defaultConfig);
+    var es = EventSummarizer();
     var event1 = { kind: 'feature', creationDate: 1000, key: 'key1', version: 11, user: user,
       variation: 1, value: 100, default: 111 };
     var event2 = { kind: 'feature', creationDate: 1000, key: 'key1', version: 11, user: user,

@@ -1,28 +1,11 @@
-var LRUCache = require('lrucache');
 
 function EventSummarizer(config) {
   var es = {};
 
-  var users = LRUCache(config.user_keys_capacity),
-      startDate = 0,
+  var startDate = 0,
       endDate = 0,
       counters = {};
-
-  es.notice_user = function(user) {
-    if (!user || !user.key) {
-      return false;
-    }
-    if (users.get(user.key)) {
-      return true;
-    }
-    users.set(user.key, true);
-    return false;
-  }
-
-  es.reset_users = function() {
-    users.removeAll();
-  }
-
+  
   es.summarize_event = function(event) {
     if (event.kind === 'feature') {
       var counterKey = event.key + ':' + (event.variation || '') + (event.version || '');
