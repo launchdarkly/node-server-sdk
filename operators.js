@@ -89,12 +89,12 @@ var operators = {
   "semVerGreaterThan": semVerOperator(function(a, b) { return a.compare(b) > 0; })
 };
 
-var operator_none = function(a, b) {
+var operatorNone = function(a, b) {
   return false;
 }
 
 function fn(op) {
-  return operators[op] || operator_none;
+  return operators[op] || operatorNone;
 }
 
 module.exports = {operators: operators, fn: fn};

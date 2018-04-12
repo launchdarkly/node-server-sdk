@@ -23,7 +23,7 @@ function Requestor(sdk_key, config) {
   var requestWithETagCaching = new ETagRequest(cacheConfig);
 
   function make_request(resource) {
-    var request_params = {
+    var requestParams = {
       method: "GET",
       url: config.base_uri + resource,
       headers: {
@@ -34,12 +34,12 @@ function Requestor(sdk_key, config) {
       agent: config.proxy_agent
     }
 
-    return function(cb, err_cb) {
-      requestWithETagCaching(request_params, function(err, resp, body) {
+    return function(cb, errCb) {
+      requestWithETagCaching(requestParams, function(err, resp, body) {
         // Note that when request-etag gives us a cached response, the body will only be in the "body"
         // callback parameter -- not in resp.getBody().  For a fresh response, it'll be in both.
         if (err) {
-          err_cb(err);
+          errCb(err);
         } else {
           cb(resp, body);
         }
@@ -47,7 +47,7 @@ function Requestor(sdk_key, config) {
     };
   }
 
-  function process_response(cb) {
+  function processResponse(cb) {
     return function(response, body) {
       if (response.statusCode !== 200 && response.statusCode != 304) {
         var err = new Error('Unexpected status code: ' + response.statusCode);
@@ -59,7 +59,7 @@ function Requestor(sdk_key, config) {
     };
   }
 
-  function process_error_response(cb) {
+  function processErrorResponse(cb) {
     return function(err) {
       cb(err, null);
     }
@@ -68,16 +68,16 @@ function Requestor(sdk_key, config) {
   requestor.request_object = function(kind, key, cb) {
     var req = make_request(kind.requestPath + key);
     req(
-      process_response(cb),
-      process_error_response(cb)
+      processResponse(cb),
+      processErrorResponse(cb)
     );
   }
 
   requestor.request_all_data = function(cb) {
     var req = make_request('/sdk/latest-all');
     req(
-      process_response(cb),
-      process_error_response(cb)
+      processResponse(cb),
+      processErrorResponse(cb)
     );
   }
 

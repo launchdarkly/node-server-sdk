@@ -31,7 +31,7 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
     }
   }
 
-  function should_debug_event(event) {
+  function shouldDebugEvent(event) {
     if (event.debugEventsUntilDate) {
       if (event.debugEventsUntilDate > lastKnownPastTime &&
         event.debugEventsUntilDate > new Date().getTime()) {
@@ -41,7 +41,7 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
     return false;
   }
 
-  function make_output_event(event) {
+  function makeOutputEvent(event) {
     switch (event.kind) {
       case 'feature':
         debug = !!event.debug;
@@ -84,7 +84,7 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
     }
   }
 
-  ep.send_event = function(event) {
+  ep.sendEvent = function(event) {
     var addIndexEvent = false,
         addFullEvent = false,
         addDebugEvent = false;
@@ -95,13 +95,13 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
     config.logger && config.logger.debug("Sending event", JSON.stringify(event));
 
     // Always record the event in the summarizer.
-    summarizer.summarize_event(event);
+    summarizer.summarizeEvent(event);
 
     // Decide whether to add the event to the payload. Feature events may be added twice, once for
     // the event (if tracked) and once for debugging.
     if (event.kind === 'feature') {
       addFullEvent = event.trackEvents;
-      addDebugEvent = should_debug_event(event);
+      addDebugEvent = shouldDebugEvent(event);
     } else {
       addFullEvent = true;
     }
@@ -125,11 +125,11 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
       });
     }
     if (addFullEvent) {
-      enqueue(make_output_event(event));
+      enqueue(makeOutputEvent(event));
     }
     if (addDebugEvent) {
       var debugEvent = Object.assign({}, event, { debug: true });
-      enqueue(make_output_event(debugEvent));
+      enqueue(makeOutputEvent(debugEvent));
     }
   }
 
@@ -146,8 +146,8 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
 
       worklist = queue;
       queue = [];
-      summary = summarizer.get_summary();
-      summarizer.clear_summary();
+      summary = summarizer.getSummary();
+      summarizer.clearSummary();
       if (Object.keys(summary.features).length) {
         summary.kind = 'summary';
         worklist.push(summary);

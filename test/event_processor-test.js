@@ -86,7 +86,7 @@ describe('EventProcessor', function() {
   it('queues identify event', function(done) {
     ep = EventProcessor(sdkKey, defaultConfig);
     var e = { kind: 'identify', creationDate: 1000, user: user };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
     flush_and_get_request(function(output) {
       expect(output).toEqual([{
@@ -102,7 +102,7 @@ describe('EventProcessor', function() {
     var config = Object.assign({}, defaultConfig, { allAttributesPrivate: true });
     ep = EventProcessor(sdkKey, config);
     var e = { kind: 'identify', creationDate: 1000, user: user };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
     flush_and_get_request(function(output) {
       expect(output).toEqual([{
@@ -118,7 +118,7 @@ describe('EventProcessor', function() {
     ep = EventProcessor(sdkKey, defaultConfig);
     var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
       version: 11, variation: 1, value: 'value', trackEvents: true };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
     flush_and_get_request(function(output) {
       expect(output.length).toEqual(3);
@@ -134,7 +134,7 @@ describe('EventProcessor', function() {
     ep = EventProcessor(sdkKey, config);
     var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
       version: 11, variation: 1, value: 'value', trackEvents: true };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
     flush_and_get_request(function(output) {
       expect(output.length).toEqual(3);
@@ -150,7 +150,7 @@ describe('EventProcessor', function() {
     ep = EventProcessor(sdkKey, config);
     var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
       version: 11, variation: 1, value: 'value', trackEvents: true };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
     flush_and_get_request(function(output) {
       expect(output.length).toEqual(2);
@@ -166,7 +166,7 @@ describe('EventProcessor', function() {
     ep = EventProcessor(sdkKey, config);
     var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
       version: 11, variation: 1, value: 'value', trackEvents: true };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
     flush_and_get_request(function(output) {
       expect(output.length).toEqual(2);
@@ -181,7 +181,7 @@ describe('EventProcessor', function() {
     ep = EventProcessor(sdkKey, config);
     var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
       version: 11, variation: 1, value: 'value', trackEvents: false };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
     flush_and_get_request(function(output) {
       expect(output.length).toEqual(2);
@@ -196,7 +196,7 @@ describe('EventProcessor', function() {
     var futureTime = new Date().getTime() + 1000000;
     var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
       version: 11, variation: 1, value: 'value', trackEvents: false, debugEventsUntilDate: futureTime };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
     flush_and_get_request(function(output) {
       expect(output.length).toEqual(3);
@@ -212,7 +212,7 @@ describe('EventProcessor', function() {
     var futureTime = new Date().getTime() + 1000000;
     var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
       version: 11, variation: 1, value: 'value', trackEvents: true, debugEventsUntilDate: futureTime };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
     flush_and_get_request(function(output) {
       expect(output.length).toEqual(4);
@@ -231,14 +231,14 @@ describe('EventProcessor', function() {
     var serverTime = new Date().getTime() - 20000;
 
     // Send and flush an event we don't care about, just to set the last server time
-    ep.send_event({ kind: 'identify', user: { key: 'otherUser' } });
+    ep.sendEvent({ kind: 'identify', user: { key: 'otherUser' } });
     flush_and_get_request({ status: 200, headers: headers_with_date(serverTime) }, function() {
       // Now send an event with debug mode on, with a "debug until" time that is further in
       // the future than the server time, but in the past compared to the client.
       var debugUntil = serverTime + 1000;
       var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
         version: 11, variation: 1, value: 'value', trackEvents: false, debugEventsUntilDate: debugUntil };
-      ep.send_event(e);
+      ep.sendEvent(e);
 
       // Should get a summary event only, not a full feature event
       flush_and_get_request(function(output) {
@@ -257,14 +257,14 @@ describe('EventProcessor', function() {
     var serverTime = new Date().getTime() + 20000;
 
     // Send and flush an event we don't care about, just to set the last server time
-    ep.send_event({ kind: 'identify', user: { key: 'otherUser' } });
+    ep.sendEvent({ kind: 'identify', user: { key: 'otherUser' } });
     flush_and_get_request({ status: 200, headers: headers_with_date(serverTime) }, function() {
       // Now send an event with debug mode on, with a "debug until" time that is further in
       // the future than the client time, but in the past compared to the server.
       var debugUntil = serverTime - 1000;
       var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
         version: 11, variation: 1, value: 'value', trackEvents: false, debugEventsUntilDate: debugUntil };
-      ep.send_event(e);
+      ep.sendEvent(e);
 
       // Should get a summary event only, not a full feature event
       flush_and_get_request(function(output) {
@@ -282,8 +282,8 @@ describe('EventProcessor', function() {
       version: 11, variation: 1, value: 'value', trackEvents: true };
     var e2 = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey2',
       version: 11, variation: 1, value: 'value', trackEvents: true };
-    ep.send_event(e1);
-    ep.send_event(e2);
+    ep.sendEvent(e1);
+    ep.sendEvent(e2);
 
     flush_and_get_request(function(output) {
       expect(output.length).toEqual(4);
@@ -301,8 +301,8 @@ describe('EventProcessor', function() {
       version: 11, variation: 1, value: 'value1', default: 'default1', trackEvents: false };
     var e2 = { kind: 'feature', creationDate: 2000, user: user, key: 'flagkey2',
       version: 22, variation: 1, value: 'value2', default: 'default2', trackEvents: false };
-    ep.send_event(e1);
-    ep.send_event(e2);
+    ep.sendEvent(e1);
+    ep.sendEvent(e2);
 
     flush_and_get_request(function(output) {
       expect(output.length).toEqual(2);
@@ -329,7 +329,7 @@ describe('EventProcessor', function() {
     ep = EventProcessor(sdkKey, defaultConfig);
     var e = { kind: 'custom', creationDate: 1000, user: user, key: 'eventkey',
       data: { thing: 'stuff' } };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
     flush_and_get_request(function(output) {
       expect(output.length).toEqual(2);
@@ -344,7 +344,7 @@ describe('EventProcessor', function() {
     ep = EventProcessor(sdkKey, config);
     var e = { kind: 'custom', creationDate: 1000, user: user, key: 'eventkey',
       data: { thing: 'stuff' } };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
     flush_and_get_request(function(output) {
       expect(output.length).toEqual(1);
@@ -359,7 +359,7 @@ describe('EventProcessor', function() {
     ep = EventProcessor(sdkKey, config);
     var e = { kind: 'custom', creationDate: 1000, user: user, key: 'eventkey',
       data: { thing: 'stuff' } };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
     flush_and_get_request(function(output) {
       expect(output.length).toEqual(1);
@@ -379,7 +379,7 @@ describe('EventProcessor', function() {
   it('sends SDK key', function(done) {
     ep = EventProcessor(sdkKey, defaultConfig);
     var e = { kind: 'identify', creationDate: 1000, user: user };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
     flush_and_get_request(function(requestBody, requestHeaders) {
       expect(requestHeaders['authorization']).toEqual(sdkKey);
@@ -390,12 +390,12 @@ describe('EventProcessor', function() {
   it('stops sending events after a 401 error', function(done) {
     ep = EventProcessor(sdkKey, defaultConfig);
     var e = { kind: 'identify', creationDate: 1000, user: user };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
     flush_and_get_request({ status: 401 }, function(body, headers, error) {
       expect(error.message).toContain("status code 401");
 
-      ep.send_event(e);
+      ep.sendEvent(e);
 
       ep.flush().then(
         // no HTTP request should have been done here - Nock will error out if there was one

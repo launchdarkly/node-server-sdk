@@ -8,7 +8,7 @@ function PollingProcessor(config, requestor) {
       stopped = false;
 
   function poll(cb) {
-    var start_time, delta;
+    var startTime, delta;
 
     cb = cb || function(){};
 
@@ -16,10 +16,10 @@ function PollingProcessor(config, requestor) {
       return;
     }
 
-    start_time = new Date().getTime();
+    startTime = new Date().getTime();
     config.logger.debug("Polling LaunchDarkly for feature flag updates");
     requestor.request_all_data(function(err, resp) {
-      elapsed = new Date().getTime() - start_time;
+      elapsed = new Date().getTime() - startTime;
       sleepFor = Math.max(config.poll_interval * 1000 - elapsed, 0);
       config.logger.debug("Elapsed: %d ms, sleeping for %d ms", elapsed, sleepFor);
       if (err) {
