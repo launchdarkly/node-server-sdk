@@ -12,7 +12,10 @@ describe('EventProcessor', function() {
     capacity: 100,
     flushInterval: 30,
     userKeysCapacity: 1000,
-    userKeysFlushInterval: 300
+    userKeysFlushInterval: 300,
+    logger: {
+      debug: jest.fn()
+    }
   };
   var user = { key: 'userKey', name: 'Red' };
   var filteredUser = { key: 'userKey', privateAttrs: [ 'name' ] };
