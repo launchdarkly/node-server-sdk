@@ -11,7 +11,7 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
   var makeRequest = request_client || request,
       userFilter = UserFilter(config),
       summarizer = EventSummarizer(config),
-      userKeysCache = LRUCache(config.userKeysCapacity || 1000),
+      userKeysCache = LRUCache(config.userKeysCapacity),
       queue = [],
       lastKnownPastTime = 0,
       exceededCapacity = false,
