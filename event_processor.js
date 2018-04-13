@@ -26,7 +26,7 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
     } else {
       if (!exceededCapacity) {
         exceededCapacity = true;
-        config.logger && config.logger.warn("Exceeded event queue capacity. Increase capacity to avoid dropping events.");
+        config.logger.warn("Exceeded event queue capacity. Increase capacity to avoid dropping events.");
       }
     }
   }
@@ -92,7 +92,7 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
     if (shutdown) {
       return;
     }
-    config.logger && config.logger.debug("Sending event", JSON.stringify(event));
+    config.logger.debug("Sending event", JSON.stringify(event));
 
     // Always record the event in the summarizer.
     summarizer.summarizeEvent(event);
@@ -158,7 +158,7 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
         return;
       }
 
-      config.logger && config.logger.debug("Flushing %d events", worklist.length);
+      config.logger.debug("Flushing %d events", worklist.length);
 
       makeRequest({
         method: "POST",
