@@ -1,18 +1,17 @@
 var FeatureStoreEventWrapper = require('./feature_store_event_wrapper');
-var InMemoryFeatureStore = require('./feature_store');
 var RedisFeatureStore = require('./redis_feature_store');
 var Requestor = require('./requestor');
 var EventEmitter = require('events').EventEmitter;
 var EventProcessor = require('./event_processor');
 var PollingProcessor = require('./polling');
 var StreamingProcessor = require('./streaming');
+var configuration = require('./configuration');
 var evaluate = require('./evaluate_flag');
+var messages = require('./messages');
 var tunnel = require('tunnel');
-var winston = require('winston');
 var crypto = require('crypto');
 var async = require('async');
 var errors = require('./errors');
-var package_json = require('./package.json');
 var wrapPromiseCallback = require('./utils/wrapPromiseCallback');
 var dataKind = require('./versioned_data_kind');
 
@@ -49,43 +48,18 @@ var newClient = function(sdkKey, config) {
       eventProcessor,
       flushTimer;
 
-  config = Object.assign({}, config || {});
-  config.user_agent = 'NodeJSClient/' + package_json.version;
+  config = configuration.validate(config);
 
-  config.base_uri = (config.base_uri || 'https://app.launchdarkly.com').replace(/\/+$/, "");
-  config.stream_uri = (config.stream_uri || 'https://stream.launchdarkly.com').replace(/\/+$/, "");
-  config.events_uri = (config.events_uri || 'https://events.launchdarkly.com').replace(/\/+$/, "");
-  config.stream = (typeof config.stream === 'undefined') ? true : config.stream;
-  config.send_events = (typeof config.send_events === 'undefined') ? true : config.send_events;
-  config.timeout = config.timeout || 5;
-  config.capacity = config.capacity || 1000;
-  config.flush_interval = config.flush_interval || 5;  
-  config.poll_interval = config.poll_interval > 30 ? config.poll_interval : 30;
-  config.user_keys_capacity = config.user_keys_capacity || 1000;
-  config.user_keys_flush_interval = config.user_keys_flush_interval || 300;
   // Initialize global tunnel if proxy options are set
-  if (config.proxy_host && config.proxy_port ) {
-    config.proxy_agent = createProxyAgent(config);
+  if (config.proxyHost && config.proxyPort ) {
+    config.proxyAgent = createProxyAgent(config);
   }
-  config.logger = (config.logger ||
-    new winston.Logger({
-      level: 'info',
-      transports: [
-        new (winston.transports.Console)(({
-          formatter: function(options) {
-            return '[LaunchDarkly] ' + (options.message ? options.message : '');
-          }
-        })),
-      ]
-    })
-  );
 
-  var featureStore = config.feature_store || InMemoryFeatureStore();
-  config.feature_store = FeatureStoreEventWrapper(featureStore, client);
+  config.featureStore = FeatureStoreEventWrapper(config.featureStore, client);
 
   var maybeReportError = createErrorReporter(client, config.logger);
 
-  if (config.offline || !config.send_events) {
+  if (config.offline || !config.sendEvents) {
     eventProcessor = NullEventProcessor();
   } else {
     eventProcessor = EventProcessor(sdkKey, config, maybeReportError);
@@ -95,7 +69,7 @@ var newClient = function(sdkKey, config) {
     throw new Error("You must configure the client with an SDK key");
   }
 
-  if (!config.use_ldd && !config.offline) {
+  if (!config.useLdd && !config.offline) {
     requestor = Requestor(sdkKey, config);
 
     if (config.stream) {
@@ -167,8 +141,8 @@ var newClient = function(sdkKey, config) {
       }
 
       if (!initComplete) {
-        config.feature_store.initialized(function(storeInited) {
-          if (config.feature_store.initialized()) {
+        config.featureStore.initialized(function(storeInited) {
+          if (config.featureStore.initialized()) {
             config.logger.warn("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using last known values from feature store")
             variationInternal(key, user, defaultVal, resolve, reject);
           } else {
@@ -185,8 +159,8 @@ var newClient = function(sdkKey, config) {
   }
 
   function variationInternal(key, user, defaultVal, resolve, reject) {
-    config.feature_store.get(dataKind.features, key, function(flag) {
-      evaluate.evaluate(flag, user, config.feature_store, function(err, variation, value, events) {
+    config.featureStore.get(dataKind.features, key, function(flag) {
+      evaluate.evaluate(flag, user, config.featureStore, function(err, variation, value, events) {
         var i;
         var version = flag ? flag.version : null;
 
@@ -219,7 +193,7 @@ var newClient = function(sdkKey, config) {
     return client.variation(key, user, defaultVal, callback);
   }
 
-  client.all_flags = function(user, callback) {
+  client.allFlags = function(user, callback) {
     return wrapPromiseCallback(new Promise(function(resolve, reject) {
       sanitizeUser(user);
       var results = {};
@@ -229,10 +203,10 @@ var newClient = function(sdkKey, config) {
         return resolve({});
       }
 
-      config.feature_store.all(dataKind.features, function(flags) {
+      config.featureStore.all(dataKind.features, function(flags) {
         async.forEachOf(flags, function(flag, key, iterateeCb) {
           // At the moment, we don't send any events here
-          evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
+          evaluate.evaluate(flag, user, config.featureStore, function(err, result, events) {
             results[key] = result;
             iterateeCb(null);
           })
@@ -243,7 +217,7 @@ var newClient = function(sdkKey, config) {
     }.bind(this)), callback);
   }
 
-  client.secure_mode_hash = function(user) {
+  client.secureModeHash = function(user) {
     var hmac = crypto.createHmac('sha256', sdkKey);
     hmac.update(user.key);
     return hmac.digest('hex');
@@ -254,11 +228,11 @@ var newClient = function(sdkKey, config) {
     if (updateProcessor) {
       updateProcessor.close();
     }
-    config.feature_store.close();
+    config.featureStore.close();
     clearInterval(flushTimer);
   }
 
-  client.is_offline = function() {
+  client.isOffline = function() {
     return config.offline;
   }
 
@@ -298,7 +272,18 @@ var newClient = function(sdkKey, config) {
     client.flush().then(function() {}, function() {});
   }
 
-  flushTimer = setInterval(backgroundFlush, config.flush_interval * 1000);
+  function deprecatedMethod(oldName, newName) {
+    client[oldName] = function() {
+      config.logger.warn(messages.deprecated(oldName, newName));
+      return client[newName].apply(client, arguments);
+    };
+  }
+  
+  deprecatedMethod('all_flags', 'allFlags');
+  deprecatedMethod('is_offline', 'isOffline');
+  deprecatedMethod('secure_mode_hash', 'secureModeHash');
+
+  flushTimer = setInterval(backgroundFlush, config.flushInterval * 1000);
 
   return client;
 };
@@ -313,19 +298,19 @@ module.exports = {
 function createProxyAgent(config) {
   var options = {
     proxy: {
-      host: config.proxy_host,
-      port: config.proxy_port,
-      proxyAuth: config.proxy_auth
+      host: config.proxyHost,
+      port: config.proxyPort,
+      proxyAuth: config.proxyAuth
     }
   };
 
-  if (config.proxy_scheme === 'https') {
-    if (!config.base_uri || config.base_uri.startsWith('https')) {
+  if (config.proxyScheme === 'https') {
+    if (!config.baseUri || config.baseUri.startsWith('https')) {
      return tunnel.httpsOverHttps(options);
     } else {
       return tunnel.httpOverHttps(options);
     }
-  } else if (!config.base_uri || config.base_uri.startsWith('https')) {
+  } else if (!config.baseUri || config.baseUri.startsWith('https')) {
     return tunnel.httpsOverHttp(options);
   } else {
     return tunnel.httpOverHttp(options);

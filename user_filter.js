@@ -8,21 +8,12 @@ var messages = require('./messages');
  **/
 function UserFilter(config) {
   var filter = {};
-  const allAttributesPrivate =
-    config.allAttributesPrivate !== undefined ? config.allAttributesPrivate : config.all_attributes_private;
-  const privateAttributeNames =
-    (config.privateAttributeNames !== undefined ? config.privateAttributeNames : config.private_attribute_names) || [];
+  const allAttributesPrivate = config.allAttributesPrivate;
+  const privateAttributeNames = config.privateAttributeNames || [];
   var ignoreAttrs = { key: true, custom: true, anonymous: true };
   var allowedTopLevelAttrs = { key: true, secondary: true, ip: true, country: true, email: true,
         firstName: true, lastName: true, avatar: true, name: true, anonymous: true, custom: true };
 
-  if (config.all_attributes_private !== undefined) {
-    console && console.warn && console.warn(messages.deprecated('all_attributes_private', 'allAttributesPrivate'));
-  }
-  if (config.private_attribute_names !== undefined) {
-    console && console.warn && console.warn(messages.deprecated('private_attribute_names', 'privateAttributeNames'));
-  }
-      
   filter.filterUser = function(user) {
     var allPrivateAttrs = {};
     var userPrivateAttrs = user.privateAttributeNames || [];

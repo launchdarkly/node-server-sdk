@@ -3,8 +3,7 @@ var dataKind = require('./versioned_data_kind');
 
 function PollingProcessor(config, requestor) {
   var processor = {},
-      featureStore = config.feature_store,
-      segmentStore = config.segment_store,
+      featureStore = config.featureStore,
       stopped = false;
 
   function poll(cb) {
@@ -20,7 +19,7 @@ function PollingProcessor(config, requestor) {
     config.logger.debug("Polling LaunchDarkly for feature flag updates");
     requestor.request_all_data(function(err, resp) {
       elapsed = new Date().getTime() - startTime;
-      sleepFor = Math.max(config.poll_interval * 1000 - elapsed, 0);
+      sleepFor = Math.max(config.pollInterval * 1000 - elapsed, 0);
       config.logger.debug("Elapsed: %d ms, sleeping for %d ms", elapsed, sleepFor);
       if (err) {
         cb(new errors.LDPollingError('Failed to fetch all feature flags: ' + (err.message || JSON.stringify(err))), err.status);

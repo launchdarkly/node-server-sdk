@@ -5,7 +5,7 @@ var dataKind = require('./versioned_data_kind');
 
 function StreamProcessor(sdk_key, config, requestor) {
   var processor = {},
-      featureStore = config.feature_store,
+      featureStore = config.featureStore,
       es;
 
   function getKeyFromPath(kind, path) {
@@ -14,10 +14,10 @@ function StreamProcessor(sdk_key, config, requestor) {
 
   processor.start = function(fn) {
     var cb = fn || function(){};
-    es = new EventSource(config.stream_uri + "/all", 
+    es = new EventSource(config.streamUri + "/all", 
       {
-        agent: config.proxy_agent, 
-        headers: {'Authorization': sdk_key,'User-Agent': config.user_agent}
+        agent: config.proxyAgent, 
+        headers: {'Authorization': sdk_key,'User-Agent': config.userAgent}
       });
       
     es.onerror = function(err) {

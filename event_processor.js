@@ -11,7 +11,7 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
   var makeRequest = request_client || request,
       userFilter = UserFilter(config),
       summarizer = EventSummarizer(config),
-      userKeysCache = LRUCache(config.user_keys_capacity || 1000),
+      userKeysCache = LRUCache(config.userKeysCapacity || 1000),
       queue = [],
       lastKnownPastTime = 0,
       exceededCapacity = false,
@@ -162,15 +162,15 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
 
       makeRequest({
         method: "POST",
-        url: config.events_uri + '/bulk',
+        url: config.eventsUri + '/bulk',
         headers: {
           'Authorization': sdk_key,
-          'User-Agent': config.user_agent
+          'User-Agent': config.userAgent
         },
         json: true,
         body: worklist,
         timeout: config.timeout * 1000,
-        agent: config.proxy_agent
+        agent: config.proxyAgent
       }).on('response', function(resp, body) {
         if (resp.headers['date']) {
           var date = Date.parse(resp.headers['date']);
@@ -202,10 +202,10 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
 
   flushTimer = setInterval(function() {
       ep.flush();
-    }, config.flush_interval * 1000);
+    }, config.flushInterval * 1000);
   flushUsersTimer = setInterval(function() {
       userKeysCache.removeAll();
-    }, config.user_keys_flush_interval * 1000);
+    }, config.userKeysFlushInterval * 1000);
 
   return ep;
 }

@@ -8,11 +8,11 @@ describe('EventProcessor', function() {
   var eventsUri = 'http://example.com';
   var sdkKey = 'SDK_KEY';
   var defaultConfig = {
-    events_uri: eventsUri,
+    eventsUri: eventsUri,
     capacity: 100,
-    flush_interval: 30,
-    user_keys_capacity: 1000,
-    user_keys_flush_interval: 300
+    flushInterval: 30,
+    userKeysCapacity: 1000,
+    userKeysFlushInterval: 300
   };
   var user = { key: 'userKey', name: 'Red' };
   var filteredUser = { key: 'userKey', privateAttrs: [ 'name' ] };

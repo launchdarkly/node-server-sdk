@@ -25,13 +25,13 @@ function Requestor(sdk_key, config) {
   function make_request(resource) {
     var requestParams = {
       method: "GET",
-      url: config.base_uri + resource,
+      url: config.baseUri + resource,
       headers: {
         'Authorization': sdk_key,
-        'User-Agent': config.user_agent
+        'User-Agent': config.userAgent
       },
       timeout: config.timeout * 1000,
-      agent: config.proxy_agent
+      agent: config.proxyAgent
     }
 
     return function(cb, errCb) {
