@@ -1,10 +1,10 @@
 {
   "name": "ldclient-node",
-  "version": "4.0.3",
+  "version": "4.0.4",
   "description": "LaunchDarkly SDK for Node.js",
   "main": "index.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest --ci --forceExit"
   },
   "types": "./index.d.ts",
   "repository": {
@@ -38,13 +38,15 @@
     "node": ">= 0.8.x"
   },
   "devDependencies": {
-    "jest": "21.2.1"
+    "jest": "22.4.3",
+    "jest-junit": "3.6.0"
   },
   "jest": {
     "rootDir": ".",
     "testEnvironment": "node",
     "testMatch": [
       "**/*-test.js"
-    ]
+    ],
+    "testResultsProcessor": "jest-junit"
   }
 }

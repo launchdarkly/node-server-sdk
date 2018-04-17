@@ -1,5 +1,0 @@
-machine:
-  node:
-    version: 6.12.3
-  services:
-    - redis
