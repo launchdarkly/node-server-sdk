@@ -47,5 +47,5 @@ describe('LDClient', function() {
       expect(Object.keys(result).length).toEqual(flagCount);
       done();
     });
-  })
+  });
 });
