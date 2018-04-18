@@ -17,7 +17,7 @@ function PollingProcessor(config, requestor) {
 
     startTime = new Date().getTime();
     config.logger.debug("Polling LaunchDarkly for feature flag updates");
-    requestor.request_all_data(function(err, resp) {
+    requestor.requestAllData(function(err, resp) {
       elapsed = new Date().getTime() - startTime;
       sleepFor = Math.max(config.pollInterval * 1000 - elapsed, 0);
       config.logger.debug("Elapsed: %d ms, sleeping for %d ms", elapsed, sleepFor);

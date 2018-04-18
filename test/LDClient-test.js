@@ -97,7 +97,7 @@ describe('LDClient', function() {
       featureStore: store
     });
     // Deliberately not waiting for ready event; the update processor is irrelevant for this test
-    client.all_flags({key: 'user'}, function(err, result) {
+    client.allFlags({key: 'user'}, function(err, result) {
       expect(err).toEqual(null);
       expect(Object.keys(result).length).toEqual(flagCount);
       done();

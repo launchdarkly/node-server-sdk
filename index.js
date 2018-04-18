@@ -117,7 +117,7 @@ var newClient = function(sdkKey, config) {
       sanitizeUser(user);
       var variationErr;
 
-      if (this.is_offline()) {
+      if (this.isOffline()) {
         config.logger.info("Variation called in offline mode. Returning default value.");
         return resolve(defaultVal);
       }
@@ -198,8 +198,8 @@ var newClient = function(sdkKey, config) {
       sanitizeUser(user);
       var results = {};
 
-      if (this.is_offline() || !user) {
-        config.logger.info("all_flags() called in offline mode. Returning empty map.");
+      if (this.isOffline() || !user) {
+        config.logger.info("allFlags() called in offline mode. Returning empty map.");
         return resolve({});
       }
 

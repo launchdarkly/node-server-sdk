@@ -3,7 +3,7 @@ var errors = require('./errors');
 var EventSource = require('./eventsource');
 var dataKind = require('./versioned_data_kind');
 
-function StreamProcessor(sdk_key, config, requestor) {
+function StreamProcessor(sdkKey, config, requestor) {
   var processor = {},
       featureStore = config.featureStore,
       es;
@@ -17,7 +17,7 @@ function StreamProcessor(sdk_key, config, requestor) {
     es = new EventSource(config.streamUri + "/all", 
       {
         agent: config.proxyAgent, 
-        headers: {'Authorization': sdk_key,'User-Agent': config.userAgent}
+        headers: {'Authorization': sdkKey,'User-Agent': config.userAgent}
       });
       
     es.onerror = function(err) {
@@ -78,7 +78,7 @@ function StreamProcessor(sdk_key, config, requestor) {
 
     es.addEventListener('indirect/put', function(e) {
       config.logger.debug('Received indirect put event')
-      requestor.request_all_flags(function (err, resp) {
+      requestor.requestAllFlags(function (err, resp) {
         if (err) {
           cb(err);
         } else {
@@ -101,7 +101,7 @@ function StreamProcessor(sdk_key, config, requestor) {
           var kind = dataKind[k];
           var key = getKeyFromPath(kind, path);
           if (key != null) {
-            requestor.request_object(kind, key, function(err, resp) {
+            requestor.requestObject(kind, key, function(err, resp) {
               if (err) {
                 cb(new errors.LDStreamingError('Unexpected error requesting ' + key + ' in ' + kind.namespace));
               } else {

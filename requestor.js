@@ -10,7 +10,7 @@ var ETagRequest = require('request-etag');
  * @param {String} the SDK key
  * @param {Object} the LaunchDarkly client configuration object
  **/
-function Requestor(sdk_key, config) {
+function Requestor(sdkKey, config) {
   var requestor = {};
 
   var cacheConfig = {
@@ -22,12 +22,12 @@ function Requestor(sdk_key, config) {
   };
   var requestWithETagCaching = new ETagRequest(cacheConfig);
 
-  function make_request(resource) {
+  function makeRequest(resource) {
     var requestParams = {
       method: "GET",
       url: config.baseUri + resource,
       headers: {
-        'Authorization': sdk_key,
+        'Authorization': sdkKey,
         'User-Agent': config.userAgent
       },
       timeout: config.timeout * 1000,
@@ -65,16 +65,16 @@ function Requestor(sdk_key, config) {
     }
   }
 
-  requestor.request_object = function(kind, key, cb) {
-    var req = make_request(kind.requestPath + key);
+  requestor.requestObject = function(kind, key, cb) {
+    var req = makeRequest(kind.requestPath + key);
     req(
       processResponse(cb),
       processErrorResponse(cb)
     );
   }
 
-  requestor.request_all_data = function(cb) {
-    var req = make_request('/sdk/latest-all');
+  requestor.requestAllData = function(cb) {
+    var req = makeRequest('/sdk/latest-all');
     req(
       processResponse(cb),
       processErrorResponse(cb)

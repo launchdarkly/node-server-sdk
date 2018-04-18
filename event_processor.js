@@ -5,10 +5,10 @@ var UserFilter = require('./user_filter');
 var errors = require('./errors');
 var wrapPromiseCallback = require('./utils/wrapPromiseCallback');
 
-function EventProcessor(sdk_key, config, error_reporter, request_client) {
+function EventProcessor(sdkKey, config, errorReporter, requestClient) {
   var ep = {};
 
-  var makeRequest = request_client || request,
+  var makeRequest = requestClient || request,
       userFilter = UserFilter(config),
       summarizer = EventSummarizer(config),
       userKeysCache = LRUCache(config.userKeysCapacity),
@@ -54,7 +54,7 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
           default: event.default,
           prereqOf: event.prereqOf
         };
-        if (config.inline_users_in_events || debug) {
+        if (config.inlineUsersInEvents || debug) {
           out.user = userFilter.filterUser(event.user);
         } else {
           out.userKey = event.user.key;
@@ -73,7 +73,7 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
           key: event.key,
           data: event.data
         };
-        if (config.inline_users_in_events) {
+        if (config.inlineUsersInEvents) {
           out.user = userFilter.filterUser(event.user);
         } else {
           out.userKey = event.user.key;
@@ -108,7 +108,7 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
 
     // For each user we haven't seen before, we add an index event - unless this is already
     // an identify event for that user.
-    if (!addFullEvent || !config.inline_users_in_events) {
+    if (!addFullEvent || !config.inlineUsersInEvents) {
       if (event.user && !userKeysCache.get(event.user.key)) {
         userKeysCache.set(event.user.key, true);
         if (event.kind != 'identify') {
@@ -164,8 +164,9 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
         method: "POST",
         url: config.eventsUri + '/bulk',
         headers: {
-          'Authorization': sdk_key,
-          'User-Agent': config.userAgent
+          'Authorization': sdkKey,
+          'User-Agent': config.userAgent,
+          'X-LaunchDarkly-Event-Schema': '2'
         },
         json: true,
         body: worklist,
@@ -181,11 +182,11 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
         if (resp.statusCode > 204) {
           var err = new errors.LDUnexpectedResponseError("Unexpected status code " + resp.statusCode + "; events may not have been processed",
             resp.statusCode);
-          error_reporter && error_reporter(err);
+          errorReporter && errorReporter(err);
           reject(err);
           if (resp.statusCode === 401) {
             var err1 = new errors.LDInvalidSDKKeyError("Received 401 error, no further events will be posted since SDK key is invalid");
-            error_reporter && error_reporter(err1);
+            errorReporter && errorReporter(err1);
             shutdown = true;
           }
         } else {

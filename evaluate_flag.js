@@ -337,14 +337,14 @@ function bucketableStringValue(value) {
   return null;
 }
 
-function createFlagEvent(key, flag, user, variation, value, default_val, prereqOf) {
+function createFlagEvent(key, flag, user, variation, value, defaultVal, prereqOf) {
   return {
     "kind": "feature",
     "key": key,
     "user": user,
     "variation": variation,
     "value": value,
-    "default": default_val,
+    "default": defaultVal,
     "creationDate": new Date().getTime(),
     "version": flag ? flag.version : null,
     "prereqOf": prereqOf,
