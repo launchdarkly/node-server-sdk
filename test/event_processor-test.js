@@ -14,7 +14,8 @@ describe('EventProcessor', function() {
     userKeysCapacity: 1000,
     userKeysFlushInterval: 300,
     logger: {
-      debug: jest.fn()
+      debug: jest.fn(),
+      warn: jest.fn()
     }
   };
   var user = { key: 'userKey', name: 'Red' };
@@ -408,5 +409,21 @@ describe('EventProcessor', function() {
           done();
         });
     });
+  });
+
+  it('retries once after a 5xx error', function(done) {
+    ep = EventProcessor(sdkKey, defaultConfig);
+    var e = { kind: 'identify', creationDate: 1000, user: user };
+    ep.sendEvent(e);
+
+    nock(eventsUri).post('/bulk').reply(503);
+    nock(eventsUri).post('/bulk').reply(503);
+    // since we only queued two responses, Nock will throw an error if it gets a third.
+    ep.flush().then(
+      function() {},
+      function(err) {
+        expect(err.message).toContain('Unexpected status code 503');
+        done();
+      });
   });
 });
