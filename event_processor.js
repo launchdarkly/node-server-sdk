@@ -165,7 +165,8 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
         url: config.events_uri + '/bulk',
         headers: {
           'Authorization': sdk_key,
-          'User-Agent': config.user_agent
+          'User-Agent': config.user_agent,
+          'X-LaunchDarkly-Event-Schema': '2'
         },
         json: true,
         body: worklist,
