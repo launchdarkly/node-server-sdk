@@ -463,9 +463,9 @@ describe('evaluate', function() {
       rules.push({ clauses: [clause], variation: 1 });
     }
     flag.rules = rules;
-    evaluate.evaluate(flag, {key: 'user'}, featureStore, function(err, result) {
+    evaluate.evaluate(flag, {key: 'user'}, featureStore, function(err, variation, value) {
       expect(err).toEqual(null);
-      expect(result).toEqual(false);
+      expect(value).toEqual(false);
       done();
     });
   });
@@ -492,9 +492,9 @@ describe('evaluate', function() {
     }
     var rule = { clauses: clauses, variation: 1 };
     flag.rules = [rule];
-    evaluate.evaluate(flag, {key: 'user'}, featureStore, function(err, result) {
+    evaluate.evaluate(flag, {key: 'user'}, featureStore, function(err, variation, value) {
       expect(err).toEqual(null);
-      expect(result).toEqual(true);
+      expect(value).toEqual(true);
       done();
     });
   });
