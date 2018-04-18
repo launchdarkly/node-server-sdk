@@ -222,7 +222,7 @@ var new_client = function(sdk_key, config) {
           // At the moment, we don't send any events here
           evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
             results[key] = result;
-            iteratee_cb(null);
+            setImmediate(iteratee_cb);
           })
         }, function(err) {
           return err ? reject(err) : resolve(results);
