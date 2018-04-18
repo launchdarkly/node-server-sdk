@@ -441,6 +441,63 @@ describe('evaluate', function() {
       });
     });
   });
+
+  it('does not overflow the call stack when evaluating a huge number of rules', function(done) {
+    var ruleCount = 5000;
+    var flag = {
+      key: 'flag',
+      targets: [],
+      on: true,
+      variations: [false, true],
+      fallthrough: { variation: 0 }
+    };
+    var clause = {
+      attribute: 'key',
+      op: 'in',
+      values: ['x']
+    };
+    // Note, for this test to be meaningful, the rules must *not* match the user, since we
+    // stop evaluating rules on the first match.
+    var rules = [];
+    for (var i = 0; i < ruleCount; i++) {
+      rules.push({ clauses: [clause], variation: 1 });
+    }
+    flag.rules = rules;
+    evaluate.evaluate(flag, {key: 'user'}, featureStore, function(err, variation, value) {
+      expect(err).toEqual(null);
+      expect(value).toEqual(false);
+      done();
+    });
+  });
+
+  it('does not overflow the call stack when evaluating a huge number of clauses', function(done) {
+    var clauseCount = 5000;
+    var flag = {
+      key: 'flag',
+      targets: [],
+      on: true,
+      variations: [false, true],
+      fallthrough: { variation: 0 }
+    };
+    // Note, for this test to be meaningful, the clauses must all match the user, since we
+    // stop evaluating clauses on the first non-match.
+    var clause = {
+      attribute: 'key',
+      op: 'in',
+      values: ['user']
+    };
+    var clauses = [];
+    for (var i = 0; i < clauseCount; i++) {
+      clauses.push(clause);
+    }
+    var rule = { clauses: clauses, variation: 1 };
+    flag.rules = [rule];
+    evaluate.evaluate(flag, {key: 'user'}, featureStore, function(err, variation, value) {
+      expect(err).toEqual(null);
+      expect(value).toEqual(true);
+      done();
+    });
+  });
 });
 
 describe('bucketUser', function() {

@@ -111,7 +111,7 @@ function evalRules(flag, user, featureStore, cb) {
   async.mapSeries(flag.rules,
     function(rule, callback) {
       ruleMatchUser(rule, user, featureStore, function(matched) {
-        callback(matched ? rule : null, null);
+        setImmediate(callback, matched ? rule : null, null);
       });
     },
     function(err, results) {
@@ -142,7 +142,7 @@ function ruleMatchUser(r, user, featureStore, cb) {
     function(clause, callback) {
       clauseMatchUser(clause, user, featureStore, function(matched) {
         // on the first clause that does *not* match, we raise an "error" to stop the loop
-        callback(matched ? null : clause, null);
+        setImmediate(callback, matched ? null : clause, null);
       });
     },
     function(err, results) {

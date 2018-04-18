@@ -208,7 +208,7 @@ var newClient = function(sdkKey, config) {
           // At the moment, we don't send any events here
           evaluate.evaluate(flag, user, config.featureStore, function(err, result, events) {
             results[key] = result;
-            iterateeCb(null);
+            setImmediate(iterateeCb);
           })
         }, function(err) {
           return err ? reject(err) : resolve(results);
