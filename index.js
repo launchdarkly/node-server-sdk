@@ -144,7 +144,7 @@ var newClient = function(sdkKey, config) {
 
       if (!initComplete) {
         config.featureStore.initialized(function(storeInited) {
-          if (config.featureStore.initialized()) {
+          if (storeInited) {
             config.logger.warn("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using last known values from feature store")
             variationInternal(key, user, defaultVal, resolve, reject);
           } else {
@@ -208,8 +208,8 @@ var newClient = function(sdkKey, config) {
       config.featureStore.all(dataKind.features, function(flags) {
         async.forEachOf(flags, function(flag, key, iterateeCb) {
           // At the moment, we don't send any events here
-          evaluate.evaluate(flag, user, config.featureStore, function(err, result, events) {
-            results[key] = result;
+          evaluate.evaluate(flag, user, config.featureStore, function(err, variation, value, events) {
+            results[key] = value;
             setImmediate(iterateeCb);
           })
         }, function(err) {
