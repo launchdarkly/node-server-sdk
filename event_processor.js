@@ -56,13 +56,14 @@ function EventProcessor(sdkKey, config, errorReporter) {
         if (config.inlineUsersInEvents || debug) {
           out.user = userFilter.filterUser(event.user);
         } else {
-          out.userKey = event.user.key;
+          out.userKey = event.user && event.user.key;
         }
         return out;
       case 'identify':
         return {
           kind: 'identify',
           creationDate: event.creationDate,
+          key: event.user && event.user.key,
           user: userFilter.filterUser(event.user)
         };
       case 'custom':
@@ -75,7 +76,7 @@ function EventProcessor(sdkKey, config, errorReporter) {
         if (config.inlineUsersInEvents) {
           out.user = userFilter.filterUser(event.user);
         } else {
-          out.userKey = event.user.key;
+          out.userKey = event.user && event.user.key;
         }
         return out;
       default:
