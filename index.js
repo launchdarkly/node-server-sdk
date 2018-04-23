@@ -1,10 +1,9 @@
-var request = require('request');
 var FeatureStoreEventWrapper = require('./feature_store_event_wrapper');
 var InMemoryFeatureStore = require('./feature_store');
 var RedisFeatureStore = require('./redis_feature_store');
 var Requestor = require('./requestor');
 var EventEmitter = require('events').EventEmitter;
-var EventSerializer = require('./event_serializer');
+var EventProcessor = require('./event_processor');
 var PollingProcessor = require('./polling');
 var StreamingProcessor = require('./streaming');
 var evaluate = require('./evaluate_flag');
@@ -33,12 +32,21 @@ function createErrorReporter(emitter, logger) {
 
 global.setImmediate = global.setImmediate || process.nextTick.bind(process);
 
+function NullEventProcessor() {
+  return {
+    send_event: function() {},
+    flush: function(callback) { callback(); },
+    close: function() {}
+  }
+}
+
 var new_client = function(sdk_key, config) {
   var client = new EventEmitter(),
       init_complete = false,
       queue = [],
       requestor,
       update_processor,
+      event_processor,
       event_queue_shutdown = false,
       flush_timer;
 
@@ -54,6 +62,8 @@ var new_client = function(sdk_key, config) {
   config.capacity = config.capacity || 1000;
   config.flush_interval = config.flush_interval || 5;  
   config.poll_interval = config.poll_interval > 30 ? config.poll_interval : 30;
+  config.user_keys_capacity = config.user_keys_capacity || 1000;
+  config.user_keys_flush_interval = config.user_keys_flush_interval || 300;
   // Initialize global tunnel if proxy options are set
   if (config.proxy_host && config.proxy_port ) {
     config.proxy_agent = create_proxy_agent(config);
@@ -75,9 +85,13 @@ var new_client = function(sdk_key, config) {
   var featureStore = config.feature_store || InMemoryFeatureStore();
   config.feature_store = FeatureStoreEventWrapper(featureStore, client);
 
-  var eventSerializer = EventSerializer(config);
-  
   var maybeReportError = createErrorReporter(client, config.logger);
+
+  if (config.offline || !config.send_events) {
+    event_processor = NullEventProcessor();
+  } else {
+    event_processor = EventProcessor(sdk_key, config, maybeReportError);
+  }
 
   if (!sdk_key && !config.offline) {
     throw new Error("You must configure the client with an SDK key");
@@ -118,7 +132,7 @@ var new_client = function(sdk_key, config) {
 
   client.initialized = function() {
     return init_complete;
-  }
+  };
 
   client.waitUntilReady = function() {
     return new Promise(function(resolve) {
@@ -139,14 +153,14 @@ var new_client = function(sdk_key, config) {
       else if (!key) {
         variationErr = new errors.LDClientError('No feature flag key specified. Returning default value.');
         maybeReportError(variationError);
-        send_flag_event(key, user, default_val, default_val);
+        send_flag_event(key, null, user, null, default_val, default_val);
         return resolve(default_val);
       }
 
       else if (!user) {
         variationErr = new errors.LDClientError('No user specified. Returning default value.');
         maybeReportError(variationErr);
-        send_flag_event(key, user, default_val, default_val);
+        send_flag_event(key, null, user, null, default_val, default_val);
         return resolve(default_val);
       }
       
@@ -162,7 +176,7 @@ var new_client = function(sdk_key, config) {
           } else {
             variationErr = new errors.LDClientError("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using default value");
             maybeReportError(variationErr);
-            send_flag_event(key, user, default_val, default_val);
+            send_flag_event(key, null, user, null, default_val, default_val);
             return resolve(default_val);
           }
         });
@@ -174,7 +188,7 @@ var new_client = function(sdk_key, config) {
 
   function variationInternal(key, user, default_val, resolve, reject) {
     config.feature_store.get(dataKind.features, key, function(flag) {
-      evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
+      evaluate.evaluate(flag, user, config.feature_store, function(err, variation, value, events) {
         var i;
         var version = flag ? flag.version : null;
 
@@ -186,17 +200,17 @@ var new_client = function(sdk_key, config) {
         // have already been constructed, so we just have to push them onto the queue.
         if (events) {
           for (i = 0; i < events.length; i++) {
-            enqueue(events[i]);
+            event_processor.send_event(events[i]);
           }
         }
 
-        if (result === null) {
+        if (value === null) {
           config.logger.debug("Result value is null in variation");
-          send_flag_event(key, user, default_val, default_val, version);
+          send_flag_event(key, flag, user, null, default_val, default_val);
           return resolve(default_val);
         } else {
-          send_flag_event(key, user, result, default_val, version);
-          return resolve(result);
+          send_flag_event(key, flag, user, variation, value, default_val);
+          return resolve(value);
         }               
       });
     });
@@ -238,6 +252,7 @@ var new_client = function(sdk_key, config) {
   }
 
   client.close = function() {
+    event_processor.close();
     if (update_processor) {
       update_processor.close();
     }
@@ -260,7 +275,7 @@ var new_client = function(sdk_key, config) {
       event.data = data;
     }
 
-    enqueue(event);
+    event_processor.send_event(event);
   };
 
   client.identify = function(user) {
@@ -269,71 +284,16 @@ var new_client = function(sdk_key, config) {
                  "kind": "identify",
                  "user": user,
                  "creationDate": new Date().getTime()};
-    enqueue(event);
+    event_processor.send_event(event);
   };
 
   client.flush = function(callback) {
-    return wrapPromiseCallback(new Promise(function(resolve, reject) {
-      var worklist;
-      if (event_queue_shutdown) {
-        var err = new errors.LDInvalidSDKKeyError("Events cannot be posted because SDK key is invalid");
-        reject(err);
-        return;
-      } else if (!queue.length) {
-        resolve();
-        return;
-      }
-
-      worklist = eventSerializer.serialize_events(queue.slice(0));
-      queue = [];
-
-      config.logger.debug("Flushing %d events", worklist.length);
-
-      request({
-        method: "POST",
-        url: config.events_uri + '/bulk',
-        headers: {
-          'Authorization': sdk_key,
-          'User-Agent': config.user_agent
-        },
-        json: true,
-        body: worklist,
-        timeout: config.timeout * 1000,
-        agent: config.proxy_agent
-      }).on('response', function(resp, body) {
-        if (resp.statusCode > 204) {
-          var err = new errors.LDUnexpectedResponseError("Unexpected status code " + resp.statusCode + "; events may not have been processed",
-            resp.statusCode);
-          maybeReportError(err);
-          reject(err);
-          if (resp.statusCode === 401) {
-            var err1 = new errors.LDInvalidSDKKeyError("Received 401 error, no further events will be posted since SDK key is invalid");
-            maybeReportError(err1);
-            event_queue_shutdown = true;
-          }
-        } else {
-          resolve(resp, body);
-        }
-      }).on('error', reject);
-    }.bind(this)), callback);
+    return event_processor.flush(callback);
   };
 
-  function enqueue(event) {
-    if (config.offline || !config.send_events || event_queue_shutdown) {
-      return;
-    }
-
-    config.logger.debug("Sending flag event", JSON.stringify(event));
-    queue.push(event);
-
-    if (queue.length >= config.capacity) {
-      client.flush();
-    }
-  }
-
-  function send_flag_event(key, user, value, default_val, version) {
-    var event = evaluate.create_flag_event(key, user, value, default_val, version);
-    enqueue(event);
+  function send_flag_event(key, flag, user, variation, value, default_val) {
+    var event = evaluate.create_flag_event(key, flag, user, variation, value, default_val);
+    event_processor.send_event(event);
   }
 
   function background_flush() {

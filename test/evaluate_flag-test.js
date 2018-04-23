@@ -58,7 +58,7 @@ describe('evaluate', function() {
       variations: ['a', 'b', 'c']
     };
     var user = { key: 'x' };
-    evaluate.evaluate(flag, user, featureStore, function(err, result) {
+    evaluate.evaluate(flag, user, featureStore, function(err, variation, result) {
       expect(result).toBe('b');
       done();
     });
@@ -72,7 +72,7 @@ describe('evaluate', function() {
       variations: ['a', 'b', 'c']
     };
     var user = { key: 'x' };
-    evaluate.evaluate(flag, user, featureStore, function(err, result) {
+    evaluate.evaluate(flag, user, featureStore, function(err, variation, result) {
       expect(result).toBe(null);
       done();
     });
@@ -89,7 +89,7 @@ describe('evaluate', function() {
       variations: ['a', 'b', 'c']
     };
     var user = { key: 'x' };
-    evaluate.evaluate(flag, user, featureStore, function(err, result) {
+    evaluate.evaluate(flag, user, featureStore, function(err, variation, result) {
       expect(result).toBe('a');
       done();
     });
@@ -105,7 +105,7 @@ describe('evaluate', function() {
       variations: ['a', 'b', 'c']
     };
     var user = { key: 'x' };
-    evaluate.evaluate(flag, user, featureStore, function(err, result) {
+    evaluate.evaluate(flag, user, featureStore, function(err, variation, result) {
       expect(result).toBe('b');
       done();
     });
@@ -135,9 +135,9 @@ describe('evaluate', function() {
     defineFeatures([flag, flag1], function() {
       var user = { key: 'x' };
       var eventsShouldBe = [
-        { kind: 'feature', key: 'feature1', value: 'd', version: 2, prereqOf: 'feature0' }
+        { kind: 'feature', key: 'feature1', variation: 0, value: 'd', version: 2, prereqOf: 'feature0' }
       ];
-      evaluate.evaluate(flag, user, featureStore, function(err, result, events) {
+      evaluate.evaluate(flag, user, featureStore, function(err, variation, result, events) {
         expect(result).toBe('b');
         expect(events).toMatchObject(eventsShouldBe);
         done();
@@ -169,9 +169,9 @@ describe('evaluate', function() {
     defineFeatures([flag, flag1], function() {
       var user = { key: 'x' };
       var eventsShouldBe = [
-        { kind: 'feature', key: 'feature1', value: 'e', version: 2, prereqOf: 'feature0' }
+        { kind: 'feature', key: 'feature1', variation: 1, value: 'e', version: 2, prereqOf: 'feature0' }
       ];
-      evaluate.evaluate(flag, user, featureStore, function(err, result, events) {
+      evaluate.evaluate(flag, user, featureStore, function(err, variation, result, events) {
         expect(result).toBe('a');
         expect(events).toMatchObject(eventsShouldBe);
         done();
@@ -201,7 +201,7 @@ describe('evaluate', function() {
       variations: ['a', 'b', 'c']
     };
     var user = { key: 'userkey' };
-    evaluate.evaluate(flag, user, featureStore, function(err, result) {
+    evaluate.evaluate(flag, user, featureStore, function(err, variation, result) {
       expect(result).toBe('c');
       done();
     });
@@ -223,7 +223,7 @@ describe('evaluate', function() {
       variations: ['a', 'b', 'c']
     };
     var user = { key: 'userkey' };
-    evaluate.evaluate(flag, user, featureStore, function(err, result) {
+    evaluate.evaluate(flag, user, featureStore, function(err, variation, result) {
       expect(result).toBe('c');
       done();
     });
@@ -231,7 +231,7 @@ describe('evaluate', function() {
 
   function testClauseMatch(clause, user, shouldBe, done) {
     var flag = makeBooleanFlagWithOneClause(clause);
-    evaluate.evaluate(flag, user, featureStore, function(err, result) {
+    evaluate.evaluate(flag, user, featureStore, function(err, variation, result) {
       expect(result).toBe(shouldBe);
       done();
     });
@@ -270,7 +270,7 @@ describe('evaluate', function() {
     defineSegment(segment, function() {
       var flag = makeFlagWithSegmentMatch(segment);
       var user = { key: 'foo' };
-      evaluate.evaluate(flag, user, featureStore, function(err, result) {
+      evaluate.evaluate(flag, user, featureStore, function(err, variation, result) {
         expect(result).toBe(true);
         done();
       });
@@ -286,7 +286,7 @@ describe('evaluate', function() {
     defineSegment(segment, function() {
       var flag = makeFlagWithSegmentMatch(segment);
       var user = { key: 'foo' };
-      evaluate.evaluate(flag, user, featureStore, function(err, result) {
+      evaluate.evaluate(flag, user, featureStore, function(err, variation, result) {
         expect(result).toBe(false);
         done();
       });
@@ -302,7 +302,7 @@ describe('evaluate', function() {
     defineSegment(segment, function() {
       var flag = makeFlagWithSegmentMatch(segment);
       var user = { key: 'bar' };
-      evaluate.evaluate(flag, user, featureStore, function(err, result) {
+      evaluate.evaluate(flag, user, featureStore, function(err, variation, result) {
         expect(result).toBe(false);
         done();
       });
@@ -319,7 +319,7 @@ describe('evaluate', function() {
     defineSegment(segment, function() {
       var flag = makeFlagWithSegmentMatch(segment);
       var user = { key: 'foo' };
-      evaluate.evaluate(flag, user, featureStore, function(err, result) {
+      evaluate.evaluate(flag, user, featureStore, function(err, variation, result) {
         expect(result).toBe(true);
         done();
       });
@@ -346,7 +346,7 @@ describe('evaluate', function() {
     defineSegment(segment, function() {
       var flag = makeFlagWithSegmentMatch(segment);
       var user = { key: 'foo', email: 'test@example.com' };
-      evaluate.evaluate(flag, user, featureStore, function(err, result) {
+      evaluate.evaluate(flag, user, featureStore, function(err, variation, result) {
         expect(result).toBe(true);
         done();
       });
@@ -373,7 +373,7 @@ describe('evaluate', function() {
     defineSegment(segment, function() {
       var flag = makeFlagWithSegmentMatch(segment);
       var user = { key: 'foo', email: 'test@example.com' };
-      evaluate.evaluate(flag, user, featureStore, function(err, result) {
+      evaluate.evaluate(flag, user, featureStore, function(err, variation, result) {
         expect(result).toBe(false);
         done();
       });
@@ -404,7 +404,7 @@ describe('evaluate', function() {
     defineSegment(segment, function() {
       var flag = makeFlagWithSegmentMatch(segment);
       var user = { key: 'foo', email: 'test@example.com', name: 'bob' };
-      evaluate.evaluate(flag, user, featureStore, function(err, result) {
+      evaluate.evaluate(flag, user, featureStore, function(err, variation, result) {
         expect(result).toBe(true);
         done();
       });
@@ -435,7 +435,7 @@ describe('evaluate', function() {
     defineSegment(segment, function() {
       var flag = makeFlagWithSegmentMatch(segment);
       var user = { key: 'foo', email: 'test@example.com', name: 'bob' };
-      evaluate.evaluate(flag, user, featureStore, function(err, result) {
+      evaluate.evaluate(flag, user, featureStore, function(err, variation, result) {
         expect(result).toBe(false);
         done();
       });
@@ -463,9 +463,9 @@ describe('evaluate', function() {
       rules.push({ clauses: [clause], variation: 1 });
     }
     flag.rules = rules;
-    evaluate.evaluate(flag, {key: 'user'}, featureStore, function(err, result) {
+    evaluate.evaluate(flag, {key: 'user'}, featureStore, function(err, variation, value) {
       expect(err).toEqual(null);
-      expect(result).toEqual(false);
+      expect(value).toEqual(false);
       done();
     });
   });
@@ -492,9 +492,9 @@ describe('evaluate', function() {
     }
     var rule = { clauses: clauses, variation: 1 };
     flag.rules = [rule];
-    evaluate.evaluate(flag, {key: 'user'}, featureStore, function(err, result) {
+    evaluate.evaluate(flag, {key: 'user'}, featureStore, function(err, variation, value) {
       expect(err).toEqual(null);
-      expect(result).toEqual(true);
+      expect(value).toEqual(true);
       done();
     });
   });

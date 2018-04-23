@@ -22,24 +22,26 @@
   },
   "homepage": "https://github.com/launchdarkly/node-client",
   "dependencies": {
-    "async": "^2.0.0-rc.5",
+    "async": "2.6.0",
     "crypto": "0.0.3",
+    "lrucache": "^1.0.3",
     "node-cache": "^3.2.1",
     "node-sha1": "0.0.1",
     "original": "~0.0.8",
     "redis": "^2.6.0-2",
-    "request": "^2.83.0",
+    "request": "2.85.0",
     "request-etag": "^2.0.3",
-    "semver": "^5.4.1",
+    "semver": "5.5.0",
     "tunnel": "https://github.com/launchdarkly/node-tunnel/tarball/d860e57650cce1ea655d00854c81babe6b47e02c",
-    "winston": "^2.2.0"
+    "winston": "2.4.1"
   },
   "engines": {
     "node": ">= 0.8.x"
   },
   "devDependencies": {
     "jest": "22.4.3",
-    "jest-junit": "3.6.0"
+    "jest-junit": "3.6.0",
+    "nock": "9.2.3"
   },
   "jest": {
     "rootDir": ".",
