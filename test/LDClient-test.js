@@ -73,12 +73,60 @@ describe('LDClient', function() {
     });
   });
 
-  it('should not overflow the call stack when evaluating a huge number of flags', function(done) {
-    var flagCount = 5000;
-    var dummyUri = 'bad';
-    var flags = {};
+  function createOnlineClientWithFlags(flagsMap) {
     var store = InMemoryFeatureStore();
     var allData = {};
+    var dummyUri = 'bad';
+    allData[dataKind.features.namespace] = flagsMap;
+    store.init(allData);
+    return LDClient.init('secret', {
+      baseUri: dummyUri,
+      streamUri: dummyUri,
+      eventsUri: dummyUri,
+      featureStore: store
+    });
+  }
+
+  it('evaluates a flag with variation()', function(done) {
+    var flag = {
+      key: 'feature',
+      version: 1,
+      on: true,
+      targets: [],
+      fallthrough: { variation: 1 },
+      variations: ['a', 'b']
+    };
+    var client = createOnlineClientWithFlags({ feature: flag });
+    var user = { key: 'user' };
+    // Deliberately not waiting for ready event; the update processor is irrelevant for this test
+    client.variation(flag.key, user, 'c', function(err, result) {
+      expect(err).toBeNull();
+      expect(result).toEqual('b');
+      done();
+    });
+  });
+
+  it('evaluates a flag with allFlags()', function(done) {
+    var flag = {
+      key: 'feature',
+      version: 1,
+      on: true,
+      targets: [],
+      fallthrough: { variation: 1 },
+      variations: ['a', 'b']
+    };
+    var client = createOnlineClientWithFlags({ feature: flag });
+    var user = { key: 'user' };
+    client.allFlags(user, function(err, results) {
+      expect(err).toBeNull();
+      expect(results).toEqual({feature: 'b'});
+      done();
+    });
+  });
+
+  it('should not overflow the call stack when evaluating a huge number of flags', function(done) {
+    var flagCount = 5000;
+    var flags = {};
     for (var i = 0; i < flagCount; i++) {
       var key = 'feature' + i;
       var flag = {
@@ -88,15 +136,7 @@ describe('LDClient', function() {
       };
       flags[key] = flag;
     }
-    allData[dataKind.features.namespace] = flags;
-    store.init(allData);
-    var client = LDClient.init('secret', {
-      baseUri: dummyUri,
-      streamUri: dummyUri,
-      eventsUri: dummyUri,
-      featureStore: store
-    });
-    // Deliberately not waiting for ready event; the update processor is irrelevant for this test
+    var client = createOnlineClientWithFlags(flags);
     client.allFlags({key: 'user'}, function(err, result) {
       expect(err).toEqual(null);
       expect(Object.keys(result).length).toEqual(flagCount);

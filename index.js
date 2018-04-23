@@ -208,8 +208,8 @@ var newClient = function(sdkKey, config) {
       config.featureStore.all(dataKind.features, function(flags) {
         async.forEachOf(flags, function(flag, key, iterateeCb) {
           // At the moment, we don't send any events here
-          evaluate.evaluate(flag, user, config.featureStore, function(err, result, events) {
-            results[key] = result;
+          evaluate.evaluate(flag, user, config.featureStore, function(err, variation, value, events) {
+            results[key] = value;
             setImmediate(iterateeCb);
           })
         }, function(err) {
