@@ -2,7 +2,6 @@ var assert = require('assert');
 var UserFilter = require('../user_filter');
 
 describe('user_filter', function() {
-
   // users to serialize
   var user = {
     'key': 'abc',
@@ -10,14 +9,14 @@ describe('user_filter', function() {
     'custom': { 'bizzle': 'def', 'dizzle': 'ghi' }
   };
 
-  var user_specifying_own_private_attr = {
+  var userSpecifyingOwnPrivateAttr = {
     'key': 'abc',
     'firstName': 'Sue',
     'custom': { 'bizzle': 'def', 'dizzle': 'ghi' },
     'privateAttributeNames': [ 'dizzle', 'unused' ]
   };
 
-  var user_with_unknown_top_level_attrs = {
+  var userWithUnknownTopLevelAttrs = {
     'key': 'abc',
     'firstName': 'Sue',
     'species': 'human',
@@ -25,20 +24,20 @@ describe('user_filter', function() {
     'custom': { 'bizzle': 'def', 'dizzle': 'ghi' }
   };
 
-  var anon_user = {
+  var anonUser = {
     'key': 'abc',
     'anonymous': true,
     'custom': { 'bizzle': 'def', 'dizzle': 'ghi' }
   };
 
   // expected results from serializing user
-  var user_with_all_attrs_hidden = {
+  var userWithAllAttrsHidden = {
     'key': 'abc',
     'custom': { },
     'privateAttrs': [ 'bizzle', 'dizzle', 'firstName' ]
   };
 
-  var user_with_some_attrs_hidden = {
+  var userWithSomeAttrsHidden = {
     'key': 'abc',
     'custom': {
         'dizzle': 'ghi'
@@ -46,7 +45,7 @@ describe('user_filter', function() {
     'privateAttrs': [ 'bizzle',  'firstName' ]
   };
 
-  var user_with_own_specified_attr_hidden = {
+  var userWithOwnSpecifiedAttrHidden = {
     'key': 'abc',
     'firstName': 'Sue',
     'custom': {
@@ -55,7 +54,7 @@ describe('user_filter', function() {
     'privateAttrs': [ 'dizzle' ]
   };
 
-  var anon_user_with_all_attrs_hidden = {
+  var anonUserWithAllAttrsHidden = {
     'key': 'abc',
     'anonymous': true,
     'custom': { },
@@ -64,36 +63,36 @@ describe('user_filter', function() {
 
   it('includes all user attributes by default', function() {
     var uf = UserFilter({});
-    assert.deepEqual(uf.filter_user(user), user);
+    assert.deepEqual(uf.filterUser(user), user);
   });
 
-  it('hides all except key if all_attrs_private is true', function() {
-    var uf = UserFilter({ all_attributes_private: true});
-    assert.deepEqual(uf.filter_user(user), user_with_all_attrs_hidden);
+  it('hides all except key if allAttributesPrivate is true', function() {
+    var uf = UserFilter({ allAttributesPrivate: true});
+    assert.deepEqual(uf.filterUser(user), userWithAllAttrsHidden);
   });
 
-  it('hides some attributes if private_attr_names is set', function() {
-    var uf = UserFilter({ private_attribute_names: [ 'firstName', 'bizzle' ]});
-    assert.deepEqual(uf.filter_user(user), user_with_some_attrs_hidden);
+  it('hides some attributes if privateAttributeNames is set', function() {
+    var uf = UserFilter({ privateAttributeNames: [ 'firstName', 'bizzle' ]});
+    assert.deepEqual(uf.filterUser(user), userWithSomeAttrsHidden);
   });
 
   it('hides attributes specified in per-user privateAttrs', function() {
     var uf = UserFilter({});
-    assert.deepEqual(uf.filter_user(user_specifying_own_private_attr), user_with_own_specified_attr_hidden);
+    assert.deepEqual(uf.filterUser(userSpecifyingOwnPrivateAttr), userWithOwnSpecifiedAttrHidden);
   });
 
   it('looks at both per-user privateAttrs and global config', function() {
-    var uf = UserFilter({ private_attribute_names: [ 'firstName', 'bizzle' ]});
-    assert.deepEqual(uf.filter_user(user_specifying_own_private_attr), user_with_all_attrs_hidden);
+    var uf = UserFilter({ privateAttributeNames: [ 'firstName', 'bizzle' ]});
+    assert.deepEqual(uf.filterUser(userSpecifyingOwnPrivateAttr), userWithAllAttrsHidden);
   });
 
   it('strips unknown top-level attributes', function() {
     var uf = UserFilter({});
-    assert.deepEqual(uf.filter_user(user_with_unknown_top_level_attrs), user);
+    assert.deepEqual(uf.filterUser(userWithUnknownTopLevelAttrs), user);
   });
 
   it('leaves the "anonymous" attribute as is', function() {
-    var uf = UserFilter({ all_attributes_private: true});
-    assert.deepEqual(uf.filter_user(anon_user), anon_user_with_all_attrs_hidden);
+    var uf = UserFilter({ allAttributesPrivate: true});
+    assert.deepEqual(uf.filterUser(anonUser), anonUserWithAllAttrsHidden);
   });
 });

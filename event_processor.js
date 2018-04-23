@@ -5,12 +5,12 @@ var UserFilter = require('./user_filter');
 var errors = require('./errors');
 var wrapPromiseCallback = require('./utils/wrapPromiseCallback');
 
-function EventProcessor(sdk_key, config, error_reporter) {
+function EventProcessor(sdkKey, config, errorReporter) {
   var ep = {};
 
   var userFilter = UserFilter(config),
       summarizer = EventSummarizer(config),
-      userKeysCache = LRUCache(config.user_keys_capacity || 1000),
+      userKeysCache = LRUCache(config.userKeysCapacity),
       queue = [],
       lastKnownPastTime = 0,
       exceededCapacity = false,
@@ -25,12 +25,12 @@ function EventProcessor(sdk_key, config, error_reporter) {
     } else {
       if (!exceededCapacity) {
         exceededCapacity = true;
-        config.logger && config.logger.warn("Exceeded event queue capacity. Increase capacity to avoid dropping events.");
+        config.logger.warn("Exceeded event queue capacity. Increase capacity to avoid dropping events.");
       }
     }
   }
 
-  function should_debug_event(event) {
+  function shouldDebugEvent(event) {
     if (event.debugEventsUntilDate) {
       if (event.debugEventsUntilDate > lastKnownPastTime &&
         event.debugEventsUntilDate > new Date().getTime()) {
@@ -40,7 +40,7 @@ function EventProcessor(sdk_key, config, error_reporter) {
     return false;
   }
 
-  function make_output_event(event) {
+  function makeOutputEvent(event) {
     switch (event.kind) {
       case 'feature':
         debug = !!event.debug;
@@ -53,8 +53,8 @@ function EventProcessor(sdk_key, config, error_reporter) {
           default: event.default,
           prereqOf: event.prereqOf
         };
-        if (config.inline_users_in_events || debug) {
-          out.user = userFilter.filter_user(event.user);
+        if (config.inlineUsersInEvents || debug) {
+          out.user = userFilter.filterUser(event.user);
         } else {
           out.userKey = event.user.key;
         }
@@ -63,7 +63,7 @@ function EventProcessor(sdk_key, config, error_reporter) {
         return {
           kind: 'identify',
           creationDate: event.creationDate,
-          user: userFilter.filter_user(event.user)
+          user: userFilter.filterUser(event.user)
         };
       case 'custom':
         var out = {
@@ -72,8 +72,8 @@ function EventProcessor(sdk_key, config, error_reporter) {
           key: event.key,
           data: event.data
         };
-        if (config.inline_users_in_events) {
-          out.user = userFilter.filter_user(event.user);
+        if (config.inlineUsersInEvents) {
+          out.user = userFilter.filterUser(event.user);
         } else {
           out.userKey = event.user.key;
         }
@@ -83,7 +83,7 @@ function EventProcessor(sdk_key, config, error_reporter) {
     }
   }
 
-  ep.send_event = function(event) {
+  ep.sendEvent = function(event) {
     var addIndexEvent = false,
         addFullEvent = false,
         addDebugEvent = false;
@@ -91,23 +91,23 @@ function EventProcessor(sdk_key, config, error_reporter) {
     if (shutdown) {
       return;
     }
-    config.logger && config.logger.debug("Sending event", JSON.stringify(event));
+    config.logger.debug("Sending event", JSON.stringify(event));
 
     // Always record the event in the summarizer.
-    summarizer.summarize_event(event);
+    summarizer.summarizeEvent(event);
 
     // Decide whether to add the event to the payload. Feature events may be added twice, once for
     // the event (if tracked) and once for debugging.
     if (event.kind === 'feature') {
       addFullEvent = event.trackEvents;
-      addDebugEvent = should_debug_event(event);
+      addDebugEvent = shouldDebugEvent(event);
     } else {
       addFullEvent = true;
     }
 
     // For each user we haven't seen before, we add an index event - unless this is already
     // an identify event for that user.
-    if (!addFullEvent || !config.inline_users_in_events) {
+    if (!addFullEvent || !config.inlineUsersInEvents) {
       if (event.user && !userKeysCache.get(event.user.key)) {
         userKeysCache.set(event.user.key, true);
         if (event.kind != 'identify') {
@@ -120,15 +120,15 @@ function EventProcessor(sdk_key, config, error_reporter) {
       enqueue({
         kind: 'index',
         creationDate: event.creationDate,
-        user: userFilter.filter_user(event.user)
+        user: userFilter.filterUser(event.user)
       });
     }
     if (addFullEvent) {
-      enqueue(make_output_event(event));
+      enqueue(makeOutputEvent(event));
     }
     if (addDebugEvent) {
       var debugEvent = Object.assign({}, event, { debug: true });
-      enqueue(make_output_event(debugEvent));
+      enqueue(makeOutputEvent(debugEvent));
     }
   }
 
@@ -145,8 +145,8 @@ function EventProcessor(sdk_key, config, error_reporter) {
 
       worklist = queue;
       queue = [];
-      summary = summarizer.get_summary();
-      summarizer.clear_summary();
+      summary = summarizer.getSummary();
+      summarizer.clearSummary();
       if (Object.keys(summary.features).length) {
         summary.kind = 'summary';
         worklist.push(summary);
@@ -157,7 +157,7 @@ function EventProcessor(sdk_key, config, error_reporter) {
         return;
       }
 
-      config.logger && config.logger.debug("Flushing %d events", worklist.length);
+      config.logger.debug("Flushing %d events", worklist.length);
 
       tryPostingEvents(worklist, resolve, reject, true);
     }.bind(this)), callback);
@@ -177,16 +177,16 @@ function EventProcessor(sdk_key, config, error_reporter) {
 
     request({
       method: "POST",
-      url: config.events_uri + '/bulk',
+      url: config.eventsUri + '/bulk',
       headers: {
-        'Authorization': sdk_key,
-        'User-Agent': config.user_agent,
+        'Authorization': sdkKey,
+        'User-Agent': config.userAgent,
         'X-LaunchDarkly-Event-Schema': '2'
       },
       json: true,
       body: events,
       timeout: config.timeout * 1000,
-      agent: config.proxy_agent
+      agent: config.proxyAgent
     }).on('response', function(resp, body) {
       if (resp.headers['date']) {
         var date = Date.parse(resp.headers['date']);
@@ -197,11 +197,11 @@ function EventProcessor(sdk_key, config, error_reporter) {
       if (resp.statusCode > 204) {
         var err = new errors.LDUnexpectedResponseError("Unexpected status code " + resp.statusCode + "; events may not have been processed",
           resp.statusCode);
-        error_reporter && error_reporter(err);
+        errorReporter && errorReporter(err);
         if (resp.statusCode === 401) {
           reject(err);
           var err1 = new errors.LDInvalidSDKKeyError("Received 401 error, no further events will be posted since SDK key is invalid");
-          error_reporter && error_reporter(err1);
+          errorReporter && errorReporter(err1);
           shutdown = true;
         } else if (resp.statusCode >= 500) {
           retryOrReject(err);
@@ -221,10 +221,10 @@ function EventProcessor(sdk_key, config, error_reporter) {
 
   flushTimer = setInterval(function() {
       ep.flush();
-    }, config.flush_interval * 1000);
+    }, config.flushInterval * 1000);
   flushUsersTimer = setInterval(function() {
       userKeysCache.removeAll();
-    }, config.user_keys_flush_interval * 1000);
+    }, config.userKeysFlushInterval * 1000);
 
   return ep;
 }

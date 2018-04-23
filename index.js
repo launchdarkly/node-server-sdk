@@ -1,18 +1,17 @@
 var FeatureStoreEventWrapper = require('./feature_store_event_wrapper');
-var InMemoryFeatureStore = require('./feature_store');
 var RedisFeatureStore = require('./redis_feature_store');
 var Requestor = require('./requestor');
 var EventEmitter = require('events').EventEmitter;
 var EventProcessor = require('./event_processor');
 var PollingProcessor = require('./polling');
 var StreamingProcessor = require('./streaming');
+var configuration = require('./configuration');
 var evaluate = require('./evaluate_flag');
+var messages = require('./messages');
 var tunnel = require('tunnel');
-var winston = require('winston');
 var crypto = require('crypto');
 var async = require('async');
 var errors = require('./errors');
-var package_json = require('./package.json');
 var wrapPromiseCallback = require('./utils/wrapPromiseCallback');
 var dataKind = require('./versioned_data_kind');
 
@@ -34,7 +33,7 @@ global.setImmediate = global.setImmediate || process.nextTick.bind(process);
 
 function NullEventProcessor() {
   return {
-    send_event: function() {},
+    sendEvent: function() {},
     flush: function(callback) {
       return wrapPromiseCallback(Promise.resolve(), callback);
     },
@@ -42,75 +41,48 @@ function NullEventProcessor() {
   }
 }
 
-var new_client = function(sdk_key, config) {
+var newClient = function(sdkKey, config) {
   var client = new EventEmitter(),
-      init_complete = false,
+      initComplete = false,
       queue = [],
       requestor,
-      update_processor,
-      event_processor,
-      event_queue_shutdown = false,
-      flush_timer;
+      updateProcessor,
+      eventProcessor,
+      flushTimer;
 
-  config = Object.assign({}, config || {});
-  config.user_agent = 'NodeJSClient/' + package_json.version;
+  config = configuration.validate(config);
 
-  config.base_uri = (config.base_uri || 'https://app.launchdarkly.com').replace(/\/+$/, "");
-  config.stream_uri = (config.stream_uri || 'https://stream.launchdarkly.com').replace(/\/+$/, "");
-  config.events_uri = (config.events_uri || 'https://events.launchdarkly.com').replace(/\/+$/, "");
-  config.stream = (typeof config.stream === 'undefined') ? true : config.stream;
-  config.send_events = (typeof config.send_events === 'undefined') ? true : config.send_events;
-  config.timeout = config.timeout || 5;
-  config.capacity = config.capacity || 1000;
-  config.flush_interval = config.flush_interval || 5;  
-  config.poll_interval = config.poll_interval > 30 ? config.poll_interval : 30;
-  config.user_keys_capacity = config.user_keys_capacity || 1000;
-  config.user_keys_flush_interval = config.user_keys_flush_interval || 300;
   // Initialize global tunnel if proxy options are set
-  if (config.proxy_host && config.proxy_port ) {
-    config.proxy_agent = create_proxy_agent(config);
+  if (config.proxyHost && config.proxyPort ) {
+    config.proxyAgent = createProxyAgent(config);
   }
-  config.logger = (config.logger ||
-    new winston.Logger({
-      level: 'info',
-      transports: [
-        new (winston.transports.Console)(({
-          formatter: function(options) {
-            return '[LaunchDarkly] ' + (options.message ? options.message : '');
-          }
-        })),
-      ]
-    })
-  );
-  config.private_attr_names = config.private_attr_names || [];
 
-  var featureStore = config.feature_store || InMemoryFeatureStore();
-  config.feature_store = FeatureStoreEventWrapper(featureStore, client);
+  config.featureStore = FeatureStoreEventWrapper(config.featureStore, client);
 
   var maybeReportError = createErrorReporter(client, config.logger);
 
-  if (config.offline || !config.send_events) {
-    event_processor = NullEventProcessor();
+  if (config.offline || !config.sendEvents) {
+    eventProcessor = NullEventProcessor();
   } else {
-    event_processor = EventProcessor(sdk_key, config, maybeReportError);
+    eventProcessor = EventProcessor(sdkKey, config, maybeReportError);
   }
 
-  if (!sdk_key && !config.offline) {
+  if (!sdkKey && !config.offline) {
     throw new Error("You must configure the client with an SDK key");
   }
 
-  if (!config.use_ldd && !config.offline) {
-    requestor = Requestor(sdk_key, config);
+  if (!config.useLdd && !config.offline) {
+    requestor = Requestor(sdkKey, config);
 
     if (config.stream) {
       config.logger.info("Initializing stream processor to receive feature flag updates");
-      update_processor = StreamingProcessor(sdk_key, config, requestor);
+      updateProcessor = StreamingProcessor(sdkKey, config, requestor);
     } else {
       config.logger.info("Initializing polling processor to receive feature flag updates");
       config.logger.warn("You should only disable the streaming API if instructed to do so by LaunchDarkly support");
-      update_processor = PollingProcessor(config, requestor);
+      updateProcessor = PollingProcessor(config, requestor);
     }
-    update_processor.start(function(err) {
+    updateProcessor.start(function(err) {
       if (err) {
         var error;
         if ((err.status && err.status === 401) || (err.code && err.code === 401)) {
@@ -120,20 +92,20 @@ var new_client = function(sdk_key, config) {
         }
 
         maybeReportError(error);
-      } else if (!init_complete) {
-        init_complete = true;
+      } else if (!initComplete) {
+        initComplete = true;
         client.emit('ready');
       }
     });
   } else {
     process.nextTick(function() {
-      init_complete = true;
+      initComplete = true;
       client.emit('ready');
     });
   }
 
   client.initialized = function() {
-    return init_complete;
+    return initComplete;
   };
 
   client.waitUntilReady = function() {
@@ -142,55 +114,55 @@ var new_client = function(sdk_key, config) {
     });
   };
 
-  client.variation = function(key, user, default_val, callback) {
+  client.variation = function(key, user, defaultVal, callback) {
     return wrapPromiseCallback(new Promise(function(resolve, reject) {
-      sanitize_user(user);
+      sanitizeUser(user);
       var variationErr;
 
-      if (this.is_offline()) {
+      if (this.isOffline()) {
         config.logger.info("Variation called in offline mode. Returning default value.");
-        return resolve(default_val);
+        return resolve(defaultVal);
       }
 
       else if (!key) {
         variationErr = new errors.LDClientError('No feature flag key specified. Returning default value.');
         maybeReportError(variationError);
-        send_flag_event(key, null, user, null, default_val, default_val);
-        return resolve(default_val);
+        sendFlagEvent(key, null, user, null, defaultVal, defaultVal);
+        return resolve(defaultVal);
       }
 
       else if (!user) {
         variationErr = new errors.LDClientError('No user specified. Returning default value.');
         maybeReportError(variationErr);
-        send_flag_event(key, null, user, null, default_val, default_val);
-        return resolve(default_val);
+        sendFlagEvent(key, null, user, null, defaultVal, defaultVal);
+        return resolve(defaultVal);
       }
       
       else if (user.key === "") {
         config.logger.warn("User key is blank. Flag evaluation will proceed, but the user will not be stored in LaunchDarkly");
       }
 
-      if (!init_complete) {
-        config.feature_store.initialized(function(storeInited) {
-          if (config.feature_store.initialized()) {
+      if (!initComplete) {
+        config.featureStore.initialized(function(storeInited) {
+          if (config.featureStore.initialized()) {
             config.logger.warn("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using last known values from feature store")
-            variationInternal(key, user, default_val, resolve, reject);
+            variationInternal(key, user, defaultVal, resolve, reject);
           } else {
             variationErr = new errors.LDClientError("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using default value");
             maybeReportError(variationErr);
-            send_flag_event(key, null, user, null, default_val, default_val);
-            return resolve(default_val);
+            sendFlagEvent(key, null, user, null, defaultVal, defaultVal);
+            return resolve(defaultVal);
           }
         });
       }
 
-      variationInternal(key, user, default_val, resolve, reject);
+      variationInternal(key, user, defaultVal, resolve, reject);
     }.bind(this)), callback);
   }
 
-  function variationInternal(key, user, default_val, resolve, reject) {
-    config.feature_store.get(dataKind.features, key, function(flag) {
-      evaluate.evaluate(flag, user, config.feature_store, function(err, variation, value, events) {
+  function variationInternal(key, user, defaultVal, resolve, reject) {
+    config.featureStore.get(dataKind.features, key, function(flag) {
+      evaluate.evaluate(flag, user, config.featureStore, function(err, variation, value, events) {
         var i;
         var version = flag ? flag.version : null;
 
@@ -202,43 +174,43 @@ var new_client = function(sdk_key, config) {
         // have already been constructed, so we just have to push them onto the queue.
         if (events) {
           for (i = 0; i < events.length; i++) {
-            event_processor.send_event(events[i]);
+            eventProcessor.sendEvent(events[i]);
           }
         }
 
         if (value === null) {
           config.logger.debug("Result value is null in variation");
-          send_flag_event(key, flag, user, null, default_val, default_val);
-          return resolve(default_val);
+          sendFlagEvent(key, flag, user, null, defaultVal, defaultVal);
+          return resolve(defaultVal);
         } else {
-          send_flag_event(key, flag, user, variation, value, default_val);
+          sendFlagEvent(key, flag, user, variation, value, defaultVal);
           return resolve(value);
         }               
       });
     });
   }
 
-  client.toggle = function(key, user, default_val, callback) {
+  client.toggle = function(key, user, defaultVal, callback) {
     config.logger.warn("toggle() is deprecated. Call 'variation' instead");
-    return client.variation(key, user, default_val, callback);
+    return client.variation(key, user, defaultVal, callback);
   }
 
-  client.all_flags = function(user, callback) {
+  client.allFlags = function(user, callback) {
     return wrapPromiseCallback(new Promise(function(resolve, reject) {
-      sanitize_user(user);
+      sanitizeUser(user);
       var results = {};
 
-      if (this.is_offline() || !user) {
-        config.logger.info("all_flags() called in offline mode. Returning empty map.");
+      if (this.isOffline() || !user) {
+        config.logger.info("allFlags() called in offline mode. Returning empty map.");
         return resolve({});
       }
 
-      config.feature_store.all(dataKind.features, function(flags) {
-        async.forEachOf(flags, function(flag, key, iteratee_cb) {
+      config.featureStore.all(dataKind.features, function(flags) {
+        async.forEachOf(flags, function(flag, key, iterateeCb) {
           // At the moment, we don't send any events here
-          evaluate.evaluate(flag, user, config.feature_store, function(err, result, events) {
+          evaluate.evaluate(flag, user, config.featureStore, function(err, result, events) {
             results[key] = result;
-            setImmediate(iteratee_cb);
+            setImmediate(iterateeCb);
           })
         }, function(err) {
           return err ? reject(err) : resolve(results);
@@ -247,27 +219,27 @@ var new_client = function(sdk_key, config) {
     }.bind(this)), callback);
   }
 
-  client.secure_mode_hash = function(user) {
-    var hmac = crypto.createHmac('sha256', sdk_key);
+  client.secureModeHash = function(user) {
+    var hmac = crypto.createHmac('sha256', sdkKey);
     hmac.update(user.key);
     return hmac.digest('hex');
   }
 
   client.close = function() {
-    event_processor.close();
-    if (update_processor) {
-      update_processor.close();
+    eventProcessor.close();
+    if (updateProcessor) {
+      updateProcessor.close();
     }
-    config.feature_store.close();
-    clearInterval(flush_timer);
+    config.featureStore.close();
+    clearInterval(flushTimer);
   }
 
-  client.is_offline = function() {
+  client.isOffline = function() {
     return config.offline;
   }
 
   client.track = function(eventName, user, data) {
-    sanitize_user(user);
+    sanitizeUser(user);
     var event = {"key": eventName,
                 "user": user,
                 "kind": "custom",
@@ -277,59 +249,70 @@ var new_client = function(sdk_key, config) {
       event.data = data;
     }
 
-    event_processor.send_event(event);
+    eventProcessor.sendEvent(event);
   };
 
   client.identify = function(user) {
-    sanitize_user(user);
+    sanitizeUser(user);
     var event = {"key": user.key,
                  "kind": "identify",
                  "user": user,
                  "creationDate": new Date().getTime()};
-    event_processor.send_event(event);
+    eventProcessor.sendEvent(event);
   };
 
   client.flush = function(callback) {
-    return event_processor.flush(callback);
+    return eventProcessor.flush(callback);
   };
 
-  function send_flag_event(key, flag, user, variation, value, default_val) {
-    var event = evaluate.create_flag_event(key, flag, user, variation, value, default_val);
-    event_processor.send_event(event);
+  function sendFlagEvent(key, flag, user, variation, value, defaultVal) {
+    var event = evaluate.createFlagEvent(key, flag, user, variation, value, defaultVal);
+    eventProcessor.sendEvent(event);
   }
 
-  function background_flush() {
+  function backgroundFlush() {
     client.flush().then(function() {}, function() {});
   }
 
-  flush_timer = setInterval(background_flush, config.flush_interval * 1000);
+  function deprecatedMethod(oldName, newName) {
+    client[oldName] = function() {
+      config.logger.warn(messages.deprecated(oldName, newName));
+      return client[newName].apply(client, arguments);
+    };
+  }
+  
+  deprecatedMethod('all_flags', 'allFlags');
+  deprecatedMethod('is_offline', 'isOffline');
+  deprecatedMethod('secure_mode_hash', 'secureModeHash');
+
+  flushTimer = setInterval(backgroundFlush, config.flushInterval * 1000);
 
   return client;
 };
 
 module.exports = {
-  init: new_client,
+  init: newClient,
   RedisFeatureStore: RedisFeatureStore,
   errors: errors
 };
 
 
-function create_proxy_agent(config) {
+function createProxyAgent(config) {
   var options = {
     proxy: {
-      host: config.proxy_host,
-      port: config.proxy_port,
-      proxyAuth: config.proxy_auth
+      host: config.proxyHost,
+      port: config.proxyPort,
+      proxyAuth: config.proxyAuth
     }
   };
 
-  if (config.proxy_scheme === 'https') {
-    if (!config.base_uri || config.base_uri.startsWith('https')) {
+  if (config.proxyScheme === 'https') {
+    if (!config.baseUri || config.baseUri.startsWith('https')) {
      return tunnel.httpsOverHttps(options);
     } else {
       return tunnel.httpOverHttps(options);
     }
-  } else if (!config.base_uri || config.base_uri.startsWith('https')) {
+  } else if (!config.baseUri || config.baseUri.startsWith('https')) {
     return tunnel.httpsOverHttp(options);
   } else {
     return tunnel.httpOverHttp(options);
@@ -337,7 +320,7 @@ function create_proxy_agent(config) {
 }
 
 
-function sanitize_user(u) {
+function sanitizeUser(u) {
   if (!u) {
     return;
   }

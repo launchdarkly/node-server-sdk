@@ -1,3 +1,5 @@
+var messages = require('./messages');
+
 /**
  * The UserFilter object transforms user objects into objects suitable to be sent as JSON to
  * the server, hiding any private user attributes.
@@ -6,13 +8,13 @@
  **/
 function UserFilter(config) {
   var filter = {};
-  var allAttributesPrivate = config.all_attributes_private;
-  var privateAttributeNames = config.private_attribute_names || [];
+  const allAttributesPrivate = config.allAttributesPrivate;
+  const privateAttributeNames = config.privateAttributeNames || [];
   var ignoreAttrs = { key: true, custom: true, anonymous: true };
   var allowedTopLevelAttrs = { key: true, secondary: true, ip: true, country: true, email: true,
         firstName: true, lastName: true, avatar: true, name: true, anonymous: true, custom: true };
 
-  filter.filter_user = function(user) {
+  filter.filterUser = function(user) {
     var allPrivateAttrs = {};
     var userPrivateAttrs = user.privateAttributeNames || [];
     

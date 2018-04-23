@@ -8,11 +8,15 @@ describe('EventProcessor', function() {
   var eventsUri = 'http://example.com';
   var sdkKey = 'SDK_KEY';
   var defaultConfig = {
-    events_uri: eventsUri,
+    eventsUri: eventsUri,
     capacity: 100,
-    flush_interval: 30,
-    user_keys_capacity: 1000,
-    user_keys_flush_interval: 300
+    flushInterval: 30,
+    userKeysCapacity: 1000,
+    userKeysFlushInterval: 300,
+    logger: {
+      debug: jest.fn(),
+      warn: jest.fn()
+    }
   };
   var user = { key: 'userKey', name: 'Red' };
   var filteredUser = { key: 'userKey', privateAttrs: [ 'name' ] };
@@ -23,7 +27,7 @@ describe('EventProcessor', function() {
     }
   });
 
-  function flush_and_get_request(options, cb) {
+  function flushAndGetRequest(options, cb) {
     var callback = cb || options;
     options = cb ? options : {};
     var requestBody;
@@ -43,17 +47,17 @@ describe('EventProcessor', function() {
       });
   }
 
-  function headers_with_date(timestamp) {
+  function headersWithDate(timestamp) {
     return { date: new Date(timestamp).toUTCString() };
   }
 
-  function check_index_event(e, source, user) {
+  function checkIndexEvent(e, source, user) {
     expect(e.kind).toEqual('index');
     expect(e.creationDate).toEqual(source.creationDate);
     expect(e.user).toEqual(user);
   }
 
-  function check_feature_event(e, source, debug, inlineUser) {
+  function checkFeatureEvent(e, source, debug, inlineUser) {
     expect(e.kind).toEqual(debug ? 'debug' : 'feature');
     expect(e.creationDate).toEqual(source.creationDate);
     expect(e.key).toEqual(source.key);
@@ -67,7 +71,7 @@ describe('EventProcessor', function() {
     }
   }
 
-  function check_custom_event(e, source, inlineUser) {
+  function checkCustomEvent(e, source, inlineUser) {
     expect(e.kind).toEqual('custom');
     expect(e.creationDate).toEqual(source.creationDate);
     expect(e.key).toEqual(source.key);
@@ -79,16 +83,16 @@ describe('EventProcessor', function() {
     }
   }
 
-  function check_summary_event(e) {
+  function checkSummaryEvent(e) {
     expect(e.kind).toEqual('summary');
   }
 
   it('queues identify event', function(done) {
     ep = EventProcessor(sdkKey, defaultConfig);
     var e = { kind: 'identify', creationDate: 1000, user: user };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
-    flush_and_get_request(function(output) {
+    flushAndGetRequest(function(output) {
       expect(output).toEqual([{
         kind: 'identify',
         creationDate: 1000,
@@ -99,12 +103,12 @@ describe('EventProcessor', function() {
   });
 
   it('filters user in identify event', function(done) {
-    var config = Object.assign({}, defaultConfig, { all_attributes_private: true });
+    var config = Object.assign({}, defaultConfig, { allAttributesPrivate: true });
     ep = EventProcessor(sdkKey, config);
     var e = { kind: 'identify', creationDate: 1000, user: user };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
-    flush_and_get_request(function(output) {
+    flushAndGetRequest(function(output) {
       expect(output).toEqual([{
         kind: 'identify',
         creationDate: 1000,
@@ -118,75 +122,75 @@ describe('EventProcessor', function() {
     ep = EventProcessor(sdkKey, defaultConfig);
     var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
       version: 11, variation: 1, value: 'value', trackEvents: true };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
-    flush_and_get_request(function(output) {
+    flushAndGetRequest(function(output) {
       expect(output.length).toEqual(3);
-      check_index_event(output[0], e, user);
-      check_feature_event(output[1], e, false);
-      check_summary_event(output[2]);
+      checkIndexEvent(output[0], e, user);
+      checkFeatureEvent(output[1], e, false);
+      checkSummaryEvent(output[2]);
       done();
     });
   });
 
   it('filters user in index event', function(done) {
-    var config = Object.assign({}, defaultConfig, { all_attributes_private: true });
+    var config = Object.assign({}, defaultConfig, { allAttributesPrivate: true });
     ep = EventProcessor(sdkKey, config);
     var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
       version: 11, variation: 1, value: 'value', trackEvents: true };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
-    flush_and_get_request(function(output) {
+    flushAndGetRequest(function(output) {
       expect(output.length).toEqual(3);
-      check_index_event(output[0], e, filteredUser);
-      check_feature_event(output[1], e, false);
-      check_summary_event(output[2]);
+      checkIndexEvent(output[0], e, filteredUser);
+      checkFeatureEvent(output[1], e, false);
+      checkSummaryEvent(output[2]);
       done();
     });
   });
 
   it('can include inline user in feature event', function(done) {
-    var config = Object.assign({}, defaultConfig, { inline_users_in_events: true });
+    var config = Object.assign({}, defaultConfig, { inlineUsersInEvents: true });
     ep = EventProcessor(sdkKey, config);
     var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
       version: 11, variation: 1, value: 'value', trackEvents: true };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
-    flush_and_get_request(function(output) {
+    flushAndGetRequest(function(output) {
       expect(output.length).toEqual(2);
-      check_feature_event(output[0], e, false, user);
-      check_summary_event(output[1]);
+      checkFeatureEvent(output[0], e, false, user);
+      checkSummaryEvent(output[1]);
       done();
     });
   });
 
   it('filters user in feature event', function(done) {
-    var config = Object.assign({}, defaultConfig, { all_attributes_private: true,
-      inline_users_in_events: true });
+    var config = Object.assign({}, defaultConfig, { allAttributesPrivate: true,
+      inlineUsersInEvents: true });
     ep = EventProcessor(sdkKey, config);
     var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
       version: 11, variation: 1, value: 'value', trackEvents: true };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
-    flush_and_get_request(function(output) {
+    flushAndGetRequest(function(output) {
       expect(output.length).toEqual(2);
-      check_feature_event(output[0], e, false, filteredUser);
-      check_summary_event(output[1]);
+      checkFeatureEvent(output[0], e, false, filteredUser);
+      checkSummaryEvent(output[1]);
       done();
     });
   });
 
-  it('still generates index event if inline_users is true but feature event is not tracked', function(done) {
-    var config = Object.assign({}, defaultConfig, { inline_users_in_events: true });
+  it('still generates index event if inlineUsers is true but feature event is not tracked', function(done) {
+    var config = Object.assign({}, defaultConfig, { inlineUsersInEvents: true });
     ep = EventProcessor(sdkKey, config);
     var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
       version: 11, variation: 1, value: 'value', trackEvents: false };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
-    flush_and_get_request(function(output) {
+    flushAndGetRequest(function(output) {
       expect(output.length).toEqual(2);
-      check_index_event(output[0], e, user);
-      check_summary_event(output[1]);
+      checkIndexEvent(output[0], e, user);
+      checkSummaryEvent(output[1]);
       done();
     });
   });
@@ -196,13 +200,13 @@ describe('EventProcessor', function() {
     var futureTime = new Date().getTime() + 1000000;
     var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
       version: 11, variation: 1, value: 'value', trackEvents: false, debugEventsUntilDate: futureTime };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
-    flush_and_get_request(function(output) {
+    flushAndGetRequest(function(output) {
       expect(output.length).toEqual(3);
-      check_index_event(output[0], e, user);
-      check_feature_event(output[1], e, true, user);
-      check_summary_event(output[2]);
+      checkIndexEvent(output[0], e, user);
+      checkFeatureEvent(output[1], e, true, user);
+      checkSummaryEvent(output[2]);
       done();
     });
   });
@@ -212,14 +216,14 @@ describe('EventProcessor', function() {
     var futureTime = new Date().getTime() + 1000000;
     var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
       version: 11, variation: 1, value: 'value', trackEvents: true, debugEventsUntilDate: futureTime };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
-    flush_and_get_request(function(output) {
+    flushAndGetRequest(function(output) {
       expect(output.length).toEqual(4);
-      check_index_event(output[0], e, user);
-      check_feature_event(output[1], e, false);
-      check_feature_event(output[2], e, true, user);
-      check_summary_event(output[3]);
+      checkIndexEvent(output[0], e, user);
+      checkFeatureEvent(output[1], e, false);
+      checkFeatureEvent(output[2], e, true, user);
+      checkSummaryEvent(output[3]);
       done();
     });
   });
@@ -231,20 +235,20 @@ describe('EventProcessor', function() {
     var serverTime = new Date().getTime() - 20000;
 
     // Send and flush an event we don't care about, just to set the last server time
-    ep.send_event({ kind: 'identify', user: { key: 'otherUser' } });
-    flush_and_get_request({ status: 200, headers: headers_with_date(serverTime) }, function() {
+    ep.sendEvent({ kind: 'identify', user: { key: 'otherUser' } });
+    flushAndGetRequest({ status: 200, headers: headersWithDate(serverTime) }, function() {
       // Now send an event with debug mode on, with a "debug until" time that is further in
       // the future than the server time, but in the past compared to the client.
       var debugUntil = serverTime + 1000;
       var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
         version: 11, variation: 1, value: 'value', trackEvents: false, debugEventsUntilDate: debugUntil };
-      ep.send_event(e);
+      ep.sendEvent(e);
 
       // Should get a summary event only, not a full feature event
-      flush_and_get_request(function(output) {
+      flushAndGetRequest(function(output) {
         expect(output.length).toEqual(2);
-        check_index_event(output[0], e, user);
-        check_summary_event(output[1]);
+        checkIndexEvent(output[0], e, user);
+        checkSummaryEvent(output[1]);
         done();
       });
     });
@@ -257,20 +261,20 @@ describe('EventProcessor', function() {
     var serverTime = new Date().getTime() + 20000;
 
     // Send and flush an event we don't care about, just to set the last server time
-    ep.send_event({ kind: 'identify', user: { key: 'otherUser' } });
-    flush_and_get_request({ status: 200, headers: headers_with_date(serverTime) }, function() {
+    ep.sendEvent({ kind: 'identify', user: { key: 'otherUser' } });
+    flushAndGetRequest({ status: 200, headers: headersWithDate(serverTime) }, function() {
       // Now send an event with debug mode on, with a "debug until" time that is further in
       // the future than the client time, but in the past compared to the server.
       var debugUntil = serverTime - 1000;
       var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
         version: 11, variation: 1, value: 'value', trackEvents: false, debugEventsUntilDate: debugUntil };
-      ep.send_event(e);
+      ep.sendEvent(e);
 
       // Should get a summary event only, not a full feature event
-      flush_and_get_request(function(output) {
+      flushAndGetRequest(function(output) {
         expect(output.length).toEqual(2);
-        check_index_event(output[0], e, user);
-        check_summary_event(output[1]);
+        checkIndexEvent(output[0], e, user);
+        checkSummaryEvent(output[1]);
         done();
       });
     });
@@ -282,15 +286,15 @@ describe('EventProcessor', function() {
       version: 11, variation: 1, value: 'value', trackEvents: true };
     var e2 = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey2',
       version: 11, variation: 1, value: 'value', trackEvents: true };
-    ep.send_event(e1);
-    ep.send_event(e2);
+    ep.sendEvent(e1);
+    ep.sendEvent(e2);
 
-    flush_and_get_request(function(output) {
+    flushAndGetRequest(function(output) {
       expect(output.length).toEqual(4);
-      check_index_event(output[0], e1, user);
-      check_feature_event(output[1], e1, false);
-      check_feature_event(output[2], e2, false);
-      check_summary_event(output[3]);
+      checkIndexEvent(output[0], e1, user);
+      checkFeatureEvent(output[1], e1, false);
+      checkFeatureEvent(output[2], e2, false);
+      checkSummaryEvent(output[3]);
       done();
     });
   });
@@ -301,14 +305,14 @@ describe('EventProcessor', function() {
       version: 11, variation: 1, value: 'value1', default: 'default1', trackEvents: false };
     var e2 = { kind: 'feature', creationDate: 2000, user: user, key: 'flagkey2',
       version: 22, variation: 1, value: 'value2', default: 'default2', trackEvents: false };
-    ep.send_event(e1);
-    ep.send_event(e2);
+    ep.sendEvent(e1);
+    ep.sendEvent(e2);
 
-    flush_and_get_request(function(output) {
+    flushAndGetRequest(function(output) {
       expect(output.length).toEqual(2);
-      check_index_event(output[0], e1, user);
+      checkIndexEvent(output[0], e1, user);
       var se = output[1];
-      check_summary_event(se);
+      checkSummaryEvent(se);
       expect(se.startDate).toEqual(1000);
       expect(se.endDate).toEqual(2000);
       expect(se.features).toEqual({
@@ -329,41 +333,41 @@ describe('EventProcessor', function() {
     ep = EventProcessor(sdkKey, defaultConfig);
     var e = { kind: 'custom', creationDate: 1000, user: user, key: 'eventkey',
       data: { thing: 'stuff' } };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
-    flush_and_get_request(function(output) {
+    flushAndGetRequest(function(output) {
       expect(output.length).toEqual(2);
-      check_index_event(output[0], e, user);
-      check_custom_event(output[1], e);
+      checkIndexEvent(output[0], e, user);
+      checkCustomEvent(output[1], e);
       done();
     });
   });
 
   it('can include inline user in custom event', function(done) {
-    var config = Object.assign({}, defaultConfig, { inline_users_in_events: true });
+    var config = Object.assign({}, defaultConfig, { inlineUsersInEvents: true });
     ep = EventProcessor(sdkKey, config);
     var e = { kind: 'custom', creationDate: 1000, user: user, key: 'eventkey',
       data: { thing: 'stuff' } };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
-    flush_and_get_request(function(output) {
+    flushAndGetRequest(function(output) {
       expect(output.length).toEqual(1);
-      check_custom_event(output[0], e, user);
+      checkCustomEvent(output[0], e, user);
       done();
     });
   });
 
   it('filters user in custom event', function(done) {
-    var config = Object.assign({}, defaultConfig, { all_attributes_private: true,
-      inline_users_in_events: true });
+    var config = Object.assign({}, defaultConfig, { allAttributesPrivate: true,
+      inlineUsersInEvents: true });
     ep = EventProcessor(sdkKey, config);
     var e = { kind: 'custom', creationDate: 1000, user: user, key: 'eventkey',
       data: { thing: 'stuff' } };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
-    flush_and_get_request(function(output) {
+    flushAndGetRequest(function(output) {
       expect(output.length).toEqual(1);
-      check_custom_event(output[0], e, filteredUser);
+      checkCustomEvent(output[0], e, filteredUser);
       done();
     });
   });
@@ -379,9 +383,9 @@ describe('EventProcessor', function() {
   it('sends SDK key', function(done) {
     ep = EventProcessor(sdkKey, defaultConfig);
     var e = { kind: 'identify', creationDate: 1000, user: user };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
-    flush_and_get_request(function(requestBody, requestHeaders) {
+    flushAndGetRequest(function(requestBody, requestHeaders) {
       expect(requestHeaders['authorization']).toEqual(sdkKey);
       done();
     });
@@ -390,12 +394,12 @@ describe('EventProcessor', function() {
   it('stops sending events after a 401 error', function(done) {
     ep = EventProcessor(sdkKey, defaultConfig);
     var e = { kind: 'identify', creationDate: 1000, user: user };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
-    flush_and_get_request({ status: 401 }, function(body, headers, error) {
+    flushAndGetRequest({ status: 401 }, function(body, headers, error) {
       expect(error.message).toContain("status code 401");
 
-      ep.send_event(e);
+      ep.sendEvent(e);
 
       ep.flush().then(
         // no HTTP request should have been done here - Nock will error out if there was one
@@ -410,7 +414,7 @@ describe('EventProcessor', function() {
   it('retries once after a 5xx error', function(done) {
     ep = EventProcessor(sdkKey, defaultConfig);
     var e = { kind: 'identify', creationDate: 1000, user: user };
-    ep.send_event(e);
+    ep.sendEvent(e);
 
     nock(eventsUri).post('/bulk').reply(503);
     nock(eventsUri).post('/bulk').reply(503);

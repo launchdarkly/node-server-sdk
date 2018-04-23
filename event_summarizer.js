@@ -6,7 +6,7 @@ function EventSummarizer(config) {
       endDate = 0,
       counters = {};
   
-  es.summarize_event = function(event) {
+  es.summarizeEvent = function(event) {
     if (event.kind === 'feature') {
       var counterKey = event.key + ':' + (event.variation || '') + (event.version || '');
       var counterVal = counters[counterKey];
@@ -30,7 +30,7 @@ function EventSummarizer(config) {
     }
   }
 
-  es.get_summary = function() {
+  es.getSummary = function() {
     var flagsOut = {};
     for (var i in counters) {
       var c = counters[i];
@@ -60,7 +60,7 @@ function EventSummarizer(config) {
     };
   }
 
-  es.clear_summary = function() {
+  es.clearSummary = function() {
     startDate = 0;
     endDate = 0;
     counters = {};
