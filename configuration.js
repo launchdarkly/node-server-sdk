@@ -52,6 +52,18 @@ module.exports = (function() {
     });
   }
 
+  function applyDefaults(config, defaults) {
+    // This works differently from Object.assign() in that it will *not* override a default value
+    // if the provided value is explicitly set to null.
+    var ret = Object.assign({}, config);
+    Object.keys(defaults).forEach(function(name) {
+      if (ret[name] === undefined || ret[name] === null) {
+        ret[name] = defaults[name];
+      }
+    });
+    return ret;
+  }
+
   function canonicalizeUri(uri) {
     return uri.replace(/\/+$/, "");
   }
@@ -75,7 +87,7 @@ module.exports = (function() {
     
     checkDeprecatedOptions(config);
 
-    config = Object.assign({}, defaults, config);
+    config = applyDefaults(config, defaults);
 
     config.baseUri = canonicalizeUri(config.baseUri);
     config.streamUri = canonicalizeUri(config.streamUri);

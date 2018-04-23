@@ -2,8 +2,16 @@ var configuration = require('../configuration');
 
 describe('configuration', function() {
   function checkDefault(name, value) {
-    var config = configuration.validate({});
-    expect(config[name]).toEqual(value);
+    it('applies defaults correctly for "' + name + "'", function() {
+      var configWithUnspecifiedValue = {};
+      expect(configuration.validate(configWithUnspecifiedValue)[name]).toEqual(value);
+      var configWithNullValue = {};
+      configWithNullValue[name] = null;
+      expect(configuration.validate(configWithNullValue)[name]).toEqual(value);
+      var configWithSpecifiedValue = {};
+      configWithSpecifiedValue[name] = 'value';
+      expect(configuration.validate(configWithSpecifiedValue)[name]).toEqual('value');
+    });
   }
 
   checkDefault('sendEvents', true);
