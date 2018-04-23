@@ -144,7 +144,7 @@ var newClient = function(sdkKey, config) {
 
       if (!initComplete) {
         config.featureStore.initialized(function(storeInited) {
-          if (config.featureStore.initialized()) {
+          if (storeInited) {
             config.logger.warn("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using last known values from feature store")
             variationInternal(key, user, defaultVal, resolve, reject);
           } else {
