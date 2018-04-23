@@ -5,11 +5,10 @@ var UserFilter = require('./user_filter');
 var errors = require('./errors');
 var wrapPromiseCallback = require('./utils/wrapPromiseCallback');
 
-function EventProcessor(sdk_key, config, error_reporter, request_client) {
+function EventProcessor(sdk_key, config, error_reporter) {
   var ep = {};
 
-  var makeRequest = request_client || request,
-      userFilter = UserFilter(config),
+  var userFilter = UserFilter(config),
       summarizer = EventSummarizer(config),
       userKeysCache = LRUCache(config.user_keys_capacity || 1000),
       queue = [],
@@ -160,40 +159,59 @@ function EventProcessor(sdk_key, config, error_reporter, request_client) {
 
       config.logger && config.logger.debug("Flushing %d events", worklist.length);
 
-      makeRequest({
-        method: "POST",
-        url: config.events_uri + '/bulk',
-        headers: {
-          'Authorization': sdk_key,
-          'User-Agent': config.user_agent,
-          'X-LaunchDarkly-Event-Schema': '2'
-        },
-        json: true,
-        body: worklist,
-        timeout: config.timeout * 1000,
-        agent: config.proxy_agent
-      }).on('response', function(resp, body) {
-        if (resp.headers['date']) {
-          var date = Date.parse(resp.headers['date']);
-          if (date) {
-            lastKnownPastTime = date;
-          }
-        }
-        if (resp.statusCode > 204) {
-          var err = new errors.LDUnexpectedResponseError("Unexpected status code " + resp.statusCode + "; events may not have been processed",
-            resp.statusCode);
-          error_reporter && error_reporter(err);
-          reject(err);
-          if (resp.statusCode === 401) {
-            var err1 = new errors.LDInvalidSDKKeyError("Received 401 error, no further events will be posted since SDK key is invalid");
-            error_reporter && error_reporter(err1);
-            shutdown = true;
-          }
-        } else {
-          resolve(resp, body);
-        }
-      }).on('error', reject);
+      tryPostingEvents(worklist, resolve, reject, true);
     }.bind(this)), callback);
+  }
+
+  function tryPostingEvents(events, resolve, reject, canRetry) {
+    var retryOrReject = function(err) {
+      if (canRetry) {
+        config.logger && config.logger.warn("Will retry posting events after 1 second");
+        setTimeout(function() {
+          tryPostingEvents(events, resolve, reject, false);
+        }, 1000);
+      } else {
+        reject(err);
+      }
+    }
+
+    request({
+      method: "POST",
+      url: config.events_uri + '/bulk',
+      headers: {
+        'Authorization': sdk_key,
+        'User-Agent': config.user_agent,
+        'X-LaunchDarkly-Event-Schema': '2'
+      },
+      json: true,
+      body: events,
+      timeout: config.timeout * 1000,
+      agent: config.proxy_agent
+    }).on('response', function(resp, body) {
+      if (resp.headers['date']) {
+        var date = Date.parse(resp.headers['date']);
+        if (date) {
+          lastKnownPastTime = date;
+        }
+      }
+      if (resp.statusCode > 204) {
+        var err = new errors.LDUnexpectedResponseError("Unexpected status code " + resp.statusCode + "; events may not have been processed",
+          resp.statusCode);
+        error_reporter && error_reporter(err);
+        if (resp.statusCode === 401) {
+          reject(err);
+          var err1 = new errors.LDInvalidSDKKeyError("Received 401 error, no further events will be posted since SDK key is invalid");
+          error_reporter && error_reporter(err1);
+          shutdown = true;
+        } else if (resp.statusCode >= 500) {
+          retryOrReject(err);
+        }
+      } else {
+        resolve(resp, body);
+      }
+    }).on('error', function(err) {
+      retryOrReject(err);
+    });
   }
 
   ep.close = function() {

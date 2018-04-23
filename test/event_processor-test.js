@@ -406,4 +406,20 @@ describe('EventProcessor', function() {
         });
     });
   });
+
+  it('retries once after a 5xx error', function(done) {
+    ep = EventProcessor(sdkKey, defaultConfig);
+    var e = { kind: 'identify', creationDate: 1000, user: user };
+    ep.send_event(e);
+
+    nock(eventsUri).post('/bulk').reply(503);
+    nock(eventsUri).post('/bulk').reply(503);
+    // since we only queued two responses, Nock will throw an error if it gets a third.
+    ep.flush().then(
+      function() {},
+      function(err) {
+        expect(err.message).toContain('Unexpected status code 503');
+        done();
+      });
+  });
 });
