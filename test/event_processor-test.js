@@ -96,6 +96,7 @@ describe('EventProcessor', function() {
       expect(output).toEqual([{
         kind: 'identify',
         creationDate: 1000,
+        key: user.key,
         user: user
       }]);
       done();
@@ -112,6 +113,7 @@ describe('EventProcessor', function() {
       expect(output).toEqual([{
         kind: 'identify',
         creationDate: 1000,
+        key: user.key,
         user: filteredUser
       }]);
       done();
