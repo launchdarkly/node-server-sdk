@@ -7,9 +7,25 @@ describe('LDClient', function() {
 
   var logger = {};
 
+  var eventProcessor = {
+    events: [],
+    sendEvent: function(event) {
+      eventProcessor.events.push(event);
+    },
+    flush: function(callback) {
+      if (callback) {
+        setImmediate(callback);
+      } else {
+        return Promise.resolve(null);
+      }
+    },
+    close: function() {}
+  };
+
   beforeEach(function() {
     logger.info = jest.fn();
     logger.warn = jest.fn();
+    eventProcessor.events = [];
   });
 
   it('should trigger the ready event in offline mode', function() {
@@ -83,25 +99,133 @@ describe('LDClient', function() {
       baseUri: dummyUri,
       streamUri: dummyUri,
       eventsUri: dummyUri,
-      featureStore: store
+      featureStore: store,
+      eventProcessor: eventProcessor
     });
   }
 
   it('evaluates a flag with variation()', function(done) {
     var flag = {
-      key: 'feature',
+      key: 'flagkey',
       version: 1,
       on: true,
       targets: [],
       fallthrough: { variation: 1 },
-      variations: ['a', 'b']
+      variations: ['a', 'b'],
+      trackEvents: true
     };
-    var client = createOnlineClientWithFlags({ feature: flag });
+    var client = createOnlineClientWithFlags({ flagkey: flag });
     var user = { key: 'user' };
     // Deliberately not waiting for ready event; the update processor is irrelevant for this test
     client.variation(flag.key, user, 'c', function(err, result) {
       expect(err).toBeNull();
       expect(result).toEqual('b');
+      done();
+    });
+  });
+
+  it('generates an event for an existing feature', function(done) {
+    var flag = {
+      key: 'flagkey',
+      version: 1,
+      on: true,
+      targets: [],
+      fallthrough: { variation: 1 },
+      variations: ['a', 'b'],
+      trackEvents: true
+    };
+    var client = createOnlineClientWithFlags({ flagkey: flag });
+    var user = { key: 'user' };
+    client.variation(flag.key, user, 'c', function(err, result) {
+      expect(eventProcessor.events).toHaveLength(1);
+      var e = eventProcessor.events[0];
+      expect(e).toMatchObject({
+        kind: 'feature',
+        key: 'flagkey',
+        version: 1,
+        user: user,
+        variation: 1,
+        value: 'b',
+        default: 'c',
+        trackEvents: true
+      });
+      done();
+    });
+  });
+
+  it('generates an event for an unknown feature', function(done) {
+    var client = createOnlineClientWithFlags({});
+    var user = { key: 'user' };
+    client.variation('flagkey', user, 'c', function(err, result) {
+      expect(eventProcessor.events).toHaveLength(1);
+      var e = eventProcessor.events[0];
+      expect(e).toMatchObject({
+        kind: 'feature',
+        key: 'flagkey',
+        version: null,
+        user: user,
+        variation: null,
+        value: 'c',
+        default: 'c',
+        trackEvents: null
+      });
+      done();
+    });
+  });
+
+  it('generates an event for an existing feature even if user key is missing', function(done) {
+    var flag = {
+      key: 'flagkey',
+      version: 1,
+      on: true,
+      targets: [],
+      fallthrough: { variation: 1 },
+      variations: ['a', 'b'],
+      trackEvents: true
+    };
+    var client = createOnlineClientWithFlags({ flagkey: flag });
+    var user = { name: 'Bob' };
+    client.variation(flag.key, user, 'c', function(err, result) {
+      expect(eventProcessor.events).toHaveLength(1);
+      var e = eventProcessor.events[0];
+      expect(e).toMatchObject({
+        kind: 'feature',
+        key: 'flagkey',
+        version: 1,
+        user: user,
+        variation: null,
+        value: 'c',
+        default: 'c',
+        trackEvents: true
+      });
+      done();
+    });
+  });
+
+  it('generates an event for an existing feature even if user is null', function(done) {
+    var flag = {
+      key: 'flagkey',
+      version: 1,
+      on: true,
+      targets: [],
+      fallthrough: { variation: 1 },
+      variations: ['a', 'b'],
+      trackEvents: true
+    };
+    var client = createOnlineClientWithFlags({ flagkey: flag });
+    client.variation(flag.key, null, 'c', function(err, result) {
+      expect(eventProcessor.events).toHaveLength(1);
+      var e = eventProcessor.events[0];
+      expect(e).toMatchObject({
+        kind: 'feature',
+        key: 'flagkey',
+        version: 1,
+        user: null,
+        variation: null,
+        value: 'c',
+        default: 'c',
+        trackEvents: true
+      });
       done();
     });
   });

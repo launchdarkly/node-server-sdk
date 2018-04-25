@@ -61,10 +61,14 @@ var newClient = function(sdkKey, config) {
 
   var maybeReportError = createErrorReporter(client, config.logger);
 
-  if (config.offline || !config.sendEvents) {
-    eventProcessor = NullEventProcessor();
+  if (config.eventProcessor) {
+    eventProcessor = config.eventProcessor;
   } else {
-    eventProcessor = EventProcessor(sdkKey, config, maybeReportError);
+    if (config.offline || !config.sendEvents) {
+      eventProcessor = NullEventProcessor();
+    } else {
+      eventProcessor = EventProcessor(sdkKey, config, maybeReportError);
+    }
   }
 
   if (!sdkKey && !config.offline) {
@@ -131,14 +135,7 @@ var newClient = function(sdkKey, config) {
         return resolve(defaultVal);
       }
 
-      else if (!user) {
-        variationErr = new errors.LDClientError('No user specified. Returning default value.');
-        maybeReportError(variationErr);
-        sendFlagEvent(key, null, user, null, defaultVal, defaultVal);
-        return resolve(defaultVal);
-      }
-      
-      else if (user.key === "") {
+      else if (user && user.key === "") {
         config.logger.warn("User key is blank. Flag evaluation will proceed, but the user will not be stored in LaunchDarkly");
       }
 
@@ -154,6 +151,7 @@ var newClient = function(sdkKey, config) {
             return resolve(defaultVal);
           }
         });
+        return;
       }
 
       variationInternal(key, user, defaultVal, resolve, reject);
@@ -162,6 +160,13 @@ var newClient = function(sdkKey, config) {
 
   function variationInternal(key, user, defaultVal, resolve, reject) {
     config.featureStore.get(dataKind.features, key, function(flag) {
+      if (!user) {
+        variationErr = new errors.LDClientError('No user specified. Returning default value.');
+        maybeReportError(variationErr);
+        sendFlagEvent(key, flag, user, null, defaultVal, defaultVal);
+        return resolve(defaultVal);
+      }
+      
       evaluate.evaluate(flag, user, config.featureStore, function(err, variation, value, events) {
         var i;
         var version = flag ? flag.version : null;
