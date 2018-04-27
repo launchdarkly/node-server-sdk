@@ -7,21 +7,21 @@ workflows:
       - oldest-long-term-support-release
       - current-release
 
-jobs:
-  node-template: &node-template
-    steps:
-      - checkout
-      - run: echo "Node version:" `node --version`
-      - run: npm install
-      - run:
-          command: npm test
-          environment:
-            JEST_JUNIT_OUTPUT: "reports/junit/js-test-results.xml"
-      - store_test_results:
-          path: reports/junit
-      - store_artifacts:
-          path: reports/junit
+node-template: &node-template
+  steps:
+    - checkout
+    - run: echo "Node version:" `node --version`
+    - run: npm install
+    - run:
+        command: npm test
+        environment:
+          JEST_JUNIT_OUTPUT: "reports/junit/js-test-results.xml"
+    - store_test_results:
+        path: reports/junit
+    - store_artifacts:
+        path: reports/junit
 
+jobs:
   oldest-long-term-support-release:
     <<: *node-template
     docker:
