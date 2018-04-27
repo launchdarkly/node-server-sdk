@@ -1,11 +1,17 @@
 version: 2
+
+workflows:
+  version: 2
+  test:
+    jobs:
+      - oldest-long-term-support-release
+      - current-release
+
 jobs:
-  build:
-    docker:
-      - image: circleci/node:6
-      - image: redis
+  node-template: &node-template
     steps:
       - checkout
+      - run: echo "Node version:" `node --version`
       - run: npm install
       - run:
           command: npm test
@@ -15,3 +21,15 @@ jobs:
           path: reports/junit
       - store_artifacts:
           path: reports/junit
+
+  oldest-long-term-support-release:
+    <<: *node-template
+    docker:
+      - image: circleci/node:6
+      - image: redis
+
+  current-release:
+    <<: *node-template
+    docker:
+      - image: circleci/node:latest
+      - image: redis
