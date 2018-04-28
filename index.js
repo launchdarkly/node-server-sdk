@@ -38,7 +38,15 @@ function NullEventProcessor() {
       return wrapPromiseCallback(Promise.resolve(), callback);
     },
     close: function() {}
-  }
+  };
+}
+
+function NullUpdateProcessor() {
+  return {
+    start: function(callback) {
+      setImmediate(callback, null);
+    }
+  };
 }
 
 var newClient = function(sdkKey, config) {
@@ -75,7 +83,11 @@ var newClient = function(sdkKey, config) {
     throw new Error("You must configure the client with an SDK key");
   }
 
-  if (!config.useLdd && !config.offline) {
+  if (config.updateProcessor) {
+    updateProcessor = config.updateProcessor;
+  } else if (config.useLdd || config.offline) {
+    updateProcessor = NullUpdateProcessor();
+  } else {
     requestor = Requestor(sdkKey, config);
 
     if (config.stream) {
@@ -86,28 +98,23 @@ var newClient = function(sdkKey, config) {
       config.logger.warn("You should only disable the streaming API if instructed to do so by LaunchDarkly support");
       updateProcessor = PollingProcessor(config, requestor);
     }
-    updateProcessor.start(function(err) {
-      if (err) {
-        var error;
-        if ((err.status && err.status === 401) || (err.code && err.code === 401)) {
-          error = new Error("Authentication failed. Double check your SDK key.");
-        } else {
-          error = err;
-        }
-
-        maybeReportError(error);
-      } else if (!initComplete) {
-        initComplete = true;
-        client.emit('ready');
+  }
+  updateProcessor.start(function(err) {
+    if (err) {
+      var error;
+      if ((err.status && err.status === 401) || (err.code && err.code === 401)) {
+        error = new Error("Authentication failed. Double check your SDK key.");
+      } else {
+        error = err;
       }
-    });
-  } else {
-    process.nextTick(function() {
+
+      maybeReportError(error);
+    } else if (!initComplete) {
       initComplete = true;
       client.emit('ready');
-    });
-  }
-
+    }
+  });
+  
   client.initialized = function() {
     return initComplete;
   };
