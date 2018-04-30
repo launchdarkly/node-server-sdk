@@ -48,11 +48,16 @@ function EventProcessor(sdkKey, config, errorReporter) {
           kind: debug ? 'debug' : 'feature',
           creationDate: event.creationDate,
           key: event.key,
-          version: event.version,
           value: event.value,
           default: event.default,
           prereqOf: event.prereqOf
         };
+        if (event.variation !== undefined && event.variation !== null) {
+          out.variation = event.variation;
+        }
+        if (event.version) {
+          out.version = event.version;
+        }
         if (config.inlineUsersInEvents || debug) {
           out.user = userFilter.filterUser(event.user);
         } else {

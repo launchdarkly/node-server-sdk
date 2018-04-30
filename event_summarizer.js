@@ -17,6 +17,7 @@ function EventSummarizer(config) {
           count: 1,
           key: event.key,
           version: event.version,
+          variation: event.variation,
           value: event.value,
           default: event.default
         };
@@ -46,6 +47,9 @@ function EventSummarizer(config) {
         value: c.value,
         count: c.count
       };
+      if (c.variation !== undefined && c.variation !== null) {
+        counterOut.variation = c.variation;
+      }
       if (c.version) {
         counterOut.version = c.version;
       } else {

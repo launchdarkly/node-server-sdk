@@ -56,13 +56,13 @@ describe('EventSummarizer', function() {
       key1: {
         default: 111,
         counters: [
-          { value: 100, version: 11, count: 2 },
-          { value: 200, version: 11, count: 1 }
+          { variation: 1, value: 100, version: 11, count: 2 },
+          { variation: 2, value: 200, version: 11, count: 1 }
         ]
       },
       key2: {
         default: 222,
-        counters: [ { value: 999, version: 22, count: 1 }]
+        counters: [ { variation: 1, value: 999, version: 22, count: 1 }]
       },
       badkey: {
         default: 333,
