@@ -187,7 +187,7 @@ function EventProcessor(sdkKey, config, errorReporter) {
       headers: {
         'Authorization': sdkKey,
         'User-Agent': config.userAgent,
-        'X-LaunchDarkly-Event-Schema': '2'
+        'X-LaunchDarkly-Event-Schema': '3'
       },
       json: true,
       body: events,
