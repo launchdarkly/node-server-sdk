@@ -22,18 +22,22 @@ describe('LDClient', function() {
     close: function() {}
   };
 
+  var updateProcessor = {
+    start: function(callback) {
+      setImmediate(callback, null);
+    }
+  };
+
   beforeEach(function() {
     logger.info = jest.fn();
     logger.warn = jest.fn();
     eventProcessor.events = [];
   });
 
-  it('should trigger the ready event in offline mode', function() {
+  it('should trigger the ready event in offline mode', function(done) {
     var client = LDClient.init('sdk_key', {offline: true});
-    var callback = jest.fn();
-    client.on('ready', callback);
-    process.nextTick(function() {
-      expect(callback).toHaveBeenCalled();
+    client.on('ready', function() {
+      done();
     });
   });
 
@@ -96,11 +100,9 @@ describe('LDClient', function() {
     allData[dataKind.features.namespace] = flagsMap;
     store.init(allData);
     return LDClient.init('secret', {
-      baseUri: dummyUri,
-      streamUri: dummyUri,
-      eventsUri: dummyUri,
       featureStore: store,
-      eventProcessor: eventProcessor
+      eventProcessor: eventProcessor,
+      updateProcessor: updateProcessor
     });
   }
 
@@ -116,11 +118,12 @@ describe('LDClient', function() {
     };
     var client = createOnlineClientWithFlags({ flagkey: flag });
     var user = { key: 'user' };
-    // Deliberately not waiting for ready event; the update processor is irrelevant for this test
-    client.variation(flag.key, user, 'c', function(err, result) {
-      expect(err).toBeNull();
-      expect(result).toEqual('b');
-      done();
+    client.on('ready', function() {
+      client.variation(flag.key, user, 'c', function(err, result) {
+        expect(err).toBeNull();
+        expect(result).toEqual('b');
+        done();
+      });
     });
   });
 
@@ -136,40 +139,44 @@ describe('LDClient', function() {
     };
     var client = createOnlineClientWithFlags({ flagkey: flag });
     var user = { key: 'user' };
-    client.variation(flag.key, user, 'c', function(err, result) {
-      expect(eventProcessor.events).toHaveLength(1);
-      var e = eventProcessor.events[0];
-      expect(e).toMatchObject({
-        kind: 'feature',
-        key: 'flagkey',
-        version: 1,
-        user: user,
-        variation: 1,
-        value: 'b',
-        default: 'c',
-        trackEvents: true
+    client.on('ready', function() {
+      client.variation(flag.key, user, 'c', function(err, result) {
+        expect(eventProcessor.events).toHaveLength(1);
+        var e = eventProcessor.events[0];
+        expect(e).toMatchObject({
+          kind: 'feature',
+          key: 'flagkey',
+          version: 1,
+          user: user,
+          variation: 1,
+          value: 'b',
+          default: 'c',
+          trackEvents: true
+        });
+        done();
       });
-      done();
     });
   });
 
   it('generates an event for an unknown feature', function(done) {
     var client = createOnlineClientWithFlags({});
     var user = { key: 'user' };
-    client.variation('flagkey', user, 'c', function(err, result) {
-      expect(eventProcessor.events).toHaveLength(1);
-      var e = eventProcessor.events[0];
-      expect(e).toMatchObject({
-        kind: 'feature',
-        key: 'flagkey',
-        version: null,
-        user: user,
-        variation: null,
-        value: 'c',
-        default: 'c',
-        trackEvents: null
+    client.on('ready', function() {
+      client.variation('flagkey', user, 'c', function(err, result) {
+        expect(eventProcessor.events).toHaveLength(1);
+        var e = eventProcessor.events[0];
+        expect(e).toMatchObject({
+          kind: 'feature',
+          key: 'flagkey',
+          version: null,
+          user: user,
+          variation: null,
+          value: 'c',
+          default: 'c',
+          trackEvents: null
+        });
+        done();
       });
-      done();
     });
   });
 
@@ -185,20 +192,22 @@ describe('LDClient', function() {
     };
     var client = createOnlineClientWithFlags({ flagkey: flag });
     var user = { name: 'Bob' };
-    client.variation(flag.key, user, 'c', function(err, result) {
-      expect(eventProcessor.events).toHaveLength(1);
-      var e = eventProcessor.events[0];
-      expect(e).toMatchObject({
-        kind: 'feature',
-        key: 'flagkey',
-        version: 1,
-        user: user,
-        variation: null,
-        value: 'c',
-        default: 'c',
-        trackEvents: true
+    client.on('ready', function() {
+      client.variation(flag.key, user, 'c', function(err, result) {
+        expect(eventProcessor.events).toHaveLength(1);
+        var e = eventProcessor.events[0];
+        expect(e).toMatchObject({
+          kind: 'feature',
+          key: 'flagkey',
+          version: 1,
+          user: user,
+          variation: null,
+          value: 'c',
+          default: 'c',
+          trackEvents: true
+        });
+        done();
       });
-      done();
     });
   });
 
@@ -213,20 +222,22 @@ describe('LDClient', function() {
       trackEvents: true
     };
     var client = createOnlineClientWithFlags({ flagkey: flag });
-    client.variation(flag.key, null, 'c', function(err, result) {
-      expect(eventProcessor.events).toHaveLength(1);
-      var e = eventProcessor.events[0];
-      expect(e).toMatchObject({
-        kind: 'feature',
-        key: 'flagkey',
-        version: 1,
-        user: null,
-        variation: null,
-        value: 'c',
-        default: 'c',
-        trackEvents: true
+    client.on('ready', function() {
+      client.variation(flag.key, null, 'c', function(err, result) {
+        expect(eventProcessor.events).toHaveLength(1);
+        var e = eventProcessor.events[0];
+        expect(e).toMatchObject({
+          kind: 'feature',
+          key: 'flagkey',
+          version: 1,
+          user: null,
+          variation: null,
+          value: 'c',
+          default: 'c',
+          trackEvents: true
+        });
+        done();
       });
-      done();
     });
   });
 
@@ -241,10 +252,12 @@ describe('LDClient', function() {
     };
     var client = createOnlineClientWithFlags({ feature: flag });
     var user = { key: 'user' };
-    client.allFlags(user, function(err, results) {
-      expect(err).toBeNull();
-      expect(results).toEqual({feature: 'b'});
-      done();
+    client.on('ready', function() {
+      client.allFlags(user, function(err, results) {
+        expect(err).toBeNull();
+        expect(results).toEqual({feature: 'b'});
+        done();
+      });
     });
   });
 
@@ -261,10 +274,12 @@ describe('LDClient', function() {
       flags[key] = flag;
     }
     var client = createOnlineClientWithFlags(flags);
-    client.allFlags({key: 'user'}, function(err, result) {
-      expect(err).toEqual(null);
-      expect(Object.keys(result).length).toEqual(flagCount);
-      done();
+    client.on('ready', function() {
+      client.allFlags({key: 'user'}, function(err, result) {
+        expect(err).toEqual(null);
+        expect(Object.keys(result).length).toEqual(flagCount);
+        done();
+      });
     });
   });
 });
