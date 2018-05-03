@@ -282,4 +282,31 @@ describe('LDClient', function() {
       });
     });
   });
+
+  describe('waitUntilReady()', function () {
+    it('should resolve waitUntilReady() when ready', function(done) {
+      var client = LDClient.init('secret', {offline: true});
+      var callback = jest.fn();
+
+      client.waitUntilReady().then(callback)
+        .then(() => {
+          expect(callback).toHaveBeenCalled();
+          done();
+        }).catch(done.error)
+    });
+
+    it('should resolve waitUntilReady() even if the client is already ready', function(done) {
+      var client = LDClient.init('secret', {offline: true});
+      var callback = jest.fn();
+
+      client.waitUntilReady()
+        .then(() => {
+          client.waitUntilReady().then(callback)
+            .then(() => {
+              expect(callback).toHaveBeenCalled();
+              done();
+            }).catch(done.error)
+        }).catch(done.error)
+    });
+  });
 });
