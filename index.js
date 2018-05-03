@@ -121,6 +121,7 @@ var new_client = function(sdk_key, config) {
   }
 
   client.waitUntilReady = function() {
+    if (init_complete) return Promise.resolve()
     return new Promise(function(resolve) {
       client.once('ready', resolve);
     });
