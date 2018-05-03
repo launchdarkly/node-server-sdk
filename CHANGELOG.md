@@ -2,6 +2,10 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [4.0.5] - 2018-05-03
+### Fixed
+- The waitUntilReady Promise will now resolve even after the ready event was emitted — thanks @dylanjha
+
 ## [4.0.4] - 2018-04-17
 ### Fixed
 - Fixed a bug that could cause a call stack overflow when calling `all_flags` with a very large number of flags, or evaluating a flag with a very large number of rules. This should no longer happen no matter how many flags or rules there are.
