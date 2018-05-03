@@ -120,7 +120,7 @@ var newClient = function(sdkKey, config) {
   };
 
   client.waitUntilReady = function() {
-    if (init_complete){
+    if (initComplete) {
       return Promise.resolve();
     }
     
