@@ -39,6 +39,7 @@
     "node": ">= 0.8.x"
   },
   "devDependencies": {
+    "hoek": "4.2.1",
     "jest": "22.4.3",
     "jest-junit": "3.6.0",
     "nock": "9.2.3"
