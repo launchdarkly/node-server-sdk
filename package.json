@@ -24,6 +24,7 @@
   "dependencies": {
     "async": "2.6.0",
     "crypto": "0.0.3",
+    "hoek": "4.2.1",
     "lrucache": "^1.0.3",
     "node-cache": "^3.2.1",
     "node-sha1": "0.0.1",
@@ -39,7 +40,6 @@
     "node": ">= 0.8.x"
   },
   "devDependencies": {
-    "hoek": "4.2.1",
     "jest": "22.4.3",
     "jest-junit": "3.6.0",
     "nock": "9.2.3"
