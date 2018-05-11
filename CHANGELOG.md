@@ -2,6 +2,21 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.0.0] - 2018-05-10
+
+### Changed:
+- To reduce the network bandwidth used for analytics events, feature request events are now sent as counters rather than individual events, and user details are now sent only at intervals rather than in each event. These behaviors can be modified through the LaunchDarkly UI and with the new configuration option `inlineUsersInEvents`. For more details, see [Analytics Data Stream Reference](https://docs.launchdarkly.com/v2.0/docs/analytics-data-stream-reference).
+- Pending analytics events are now flushed if 1. the configured `flush_interval` elapses or 2. you explicitly call `flush()`. Previously, if the number of events exceeded the configured capacity it would also trigger a flush; now, the client will simply drop events until the next timed or explicit flush occurs. This makes the Node SDK consistent with the other SDKs, and prevents unbounded use of network resources if you are generating analytics events rapidly.
+- When sending analytics events, if there is a connection error or an HTTP 5xx response, the client will try to send the events again one more time after a one-second delay.
+- In every function that takes an optional callback parameter, if you provide a callback, the function will not return a promise; a promise will be returned only if you omit the callback. Previously, it would always return a promise which would be resolved/rejected at the same time that the callback (if any) was called; this caused problems if you had not registered an error handler for the promise.
+
+### Fixed:
+- Removed a dependency on `hoek` v4.2.0, which had a [security flaw](https://nodesecurity.io/advisories/566); now uses 4.2.1 instead.
+
+### Deprecated:
+- All function and property names that used underscores are now deprecated; please use their camelCase equivalent instead (e.g. `allFlags` instead of `all_flags`). The deprecated names will still work for now, but will trigger a warning message in the log.
+
+
 ## [4.0.5] - 2018-05-03
 ### Fixed
 - The waitUntilReady Promise will now resolve even after the ready event was emitted — thanks @dylanjha
