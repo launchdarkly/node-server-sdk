@@ -7,15 +7,15 @@ var redis = require('redis'),
 var noop = function(){};
 
 
-function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
+function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
 
-  var client = redis.createClient(redis_opts),
+  var client = redis.createClient(redisOpts),
       store = {},
-      items_prefix = (prefix || "launchdarkly") + ":",
-      cache = cache_ttl ? new NodeCache({ stdTTL: cache_ttl}) : null,
+      itemsPrefix = (prefix || "launchdarkly") + ":",
+      cache = cacheTTL ? new NodeCache({ stdTTL: cacheTTL}) : null,
       updateQueue = [],
       inited = false,
-      checked_init = false;
+      checkedInit = false;
 
   logger = (logger ||
     new winston.Logger({
@@ -51,21 +51,21 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
   // Allow driver programs to exit, even if the Redis socket is active
   client.unref();
 
-  function items_key(kind) {
-    return items_prefix + kind.namespace;
+  function itemsKey(kind) {
+    return itemsPrefix + kind.namespace;
   }
 
-  function cache_key(kind, key) {
+  function cacheKey(kind, key) {
     return kind.namespace + ":" + key;
   }
 
   // A helper that performs a get with the redis client
-  function do_get(kind, key, cb) {
+  function doGet(kind, key, cb) {
     var item;
     cb = cb || noop;
 
-    if (cache_ttl) {
-      item = cache.get(cache_key(kind, key));
+    if (cacheTTL) {
+      item = cache.get(cacheKey(kind, key));
       if (item) {
         cb(item);
         return;
@@ -78,7 +78,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
       return;
     }
 
-    client.hget(items_key(kind), key, function(err, obj) {
+    client.hget(itemsKey(kind), key, function(err, obj) {
       if (err) {
         logger.error("Error fetching key " + key + " from Redis in '" + kind.namespace + "'", err);
         cb(null);
@@ -117,7 +117,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
 
   store.get = function(kind, key, cb) {
     cb = cb || noop;
-    do_get(kind, key, function(item) {
+    doGet(kind, key, function(item) {
       if (item && !item.deleted) {
         cb(item);
       } else {
@@ -134,7 +134,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
       return;
     }
 
-    client.hgetall(items_key(kind), function(err, obj) {
+    client.hgetall(itemsKey(kind), function(err, obj) {
       if (err) {
         logger.error("Error fetching '" + kind.namespace + "'' from Redis", err);
         cb(null);
@@ -162,14 +162,14 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
   store._init = function(allData, cb) {
     var multi = client.multi();
 
-    if (cache_ttl) {
+    if (cacheTTL) {
       cache.flushAll();
     }
 
     for (var kindNamespace in allData) {
       if (Object.hasOwnProperty.call(allData, kindNamespace)) {
         var kind = dataKind[kindNamespace];
-        var baseKey = items_key(kind);
+        var baseKey = itemsKey(kind);
         var items = allData[kindNamespace];
         var stringified = {};
         multi.del(baseKey);
@@ -177,8 +177,8 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
           if (Object.hasOwnProperty.call(items, key)) {
             stringified[key] = JSON.stringify(items[key]);
           }
-          if (cache_ttl) {
-            cache.set(cache_key(kind, key), items[key]);
+          if (cacheTTL) {
+            cache.set(cacheKey(kind, key), items[key]);
           }
         }
         // Redis does not allow hmset() with an empty object
@@ -226,17 +226,17 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
   }
 
   function updateItemWithVersioning(kind, newItem, cb, resultFn) {
-    client.watch(items_key(kind));
+    client.watch(itemsKey(kind));
     var multi = client.multi();
     // test_transaction_hook is instrumentation, set only by the unit tests
     var prepare = store.test_transaction_hook || function(prepareCb) { prepareCb(); };
     prepare(function() {
-      do_get(kind, newItem.key, function(oldItem) {
+      doGet(kind, newItem.key, function(oldItem) {
         if (oldItem && oldItem.version >= newItem.version) {
           multi.discard();
           cb();
         } else {
-          multi.hset(items_key(kind), newItem.key, JSON.stringify(newItem));
+          multi.hset(itemsKey(kind), newItem.key, JSON.stringify(newItem));
           multi.exec(function(err, replies) {
             if (!err && replies === null) {
               // This means the EXEC failed because someone modified the watched key
@@ -244,8 +244,8 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
               updateItemWithVersioning(kind, newItem, cb, resultFn);
             } else {
               resultFn(err);
-              if (!err && cache_ttl) {
-                cache.set(cache_key(kind, newItem.key), newItem);
+              if (!err && cacheTTL) {
+                cache.set(cacheKey(kind, newItem.key), newItem);
               }
               cb();
             }
@@ -261,18 +261,18 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
       // Once we've determined that we're initialized, we can never become uninitialized again
       cb(true);
     }
-    else if (checked_init) {
+    else if (checkedInit) {
       // We don't want to hit Redis for this question more than once; if we've already checked there
       // and it wasn't populated, we'll continue to say we're uninited until init() has been called
       cb(false);
     }
     else {
       var inited = false;
-      client.exists(items_key(dataKind.features), function(err, obj) {
+      client.exists(itemsKey(dataKind.features), function(err, obj) {
         if (!err && obj) {
           inited = true;
         }
-        checked_init = true;
+        checkedInit = true;
         cb(inited);
       });
     }
@@ -280,7 +280,7 @@ function RedisFeatureStore(redis_opts, cache_ttl, prefix, logger) {
 
   store.close = function() {
     client.quit();
-    if (cache_ttl) {
+    if (cacheTTL) {
       cache.close();
     }
   };

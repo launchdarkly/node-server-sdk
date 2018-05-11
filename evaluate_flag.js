@@ -11,50 +11,38 @@ var noop = function(){};
 function evaluate(flag, user, featureStore, cb) {
   cb = cb || noop;
   if (!user || user.key === null || user.key === undefined) {
-    cb(null, null, null);
+    cb(null, null, null, null);
     return;
   }
 
   if (!flag) {
-    cb(null, null, null);
+    cb(null, null, null, null);
     return;
   }
 
   if (!flag.on) {
     // Return the off variation if defined and valid
-    if (flag.offVariation != null) {
-      cb(null, get_variation(flag, flag.offVariation), null);
-    }
-    // Otherwise, return the default variation
-    else {
-      cb(null, null, null);
-    }
+    cb(null, flag.offVariation, getVariation(flag, flag.offVariation), null);
     return;
   }
 
-  eval_internal(flag, user, featureStore, [], function(err, result, events) {
+  evalInternal(flag, user, featureStore, [], function(err, variation, value, events) {
     if (err) {
-      cb(err, result, events);
+      cb(err, variation, value, events);
       return;
     }
 
-    if (result === null) {
+    if (variation === null) {
       // Return the off variation if defined and valid
-      if (flag.offVariation != null) {
-        cb(null, get_variation(flag, flag.offVariation), events);
-      }
-      // Otherwise, return the default variation
-      else {
-        cb(null, null, events);
-      }
+      cb(null, flag.offVariation, getVariation(flag, flag.offVariation), events);
     } else {
-      cb(err, result, events);
+      cb(err, variation, value, events);
     }
   });
   return;
 }
 
-function eval_internal(flag, user, featureStore, events, cb) {
+function evalInternal(flag, user, featureStore, events, cb) {
   // Evaluate prerequisites, if any
   if (flag.prerequisites) {
     async.mapSeries(flag.prerequisites, 
@@ -66,12 +54,11 @@ function eval_internal(flag, user, featureStore, events, cb) {
             callback(new Error("Unsatisfied prerequisite"), null);
             return;
           }
-          eval_internal(f, user, featureStore, events, function(err, value) {
+          evalInternal(f, user, featureStore, events, function(err, variation, value) {
             // If there was an error, the value is null, the variation index is out of range, 
             // or the value does not match the indexed variation the prerequisite is not satisfied
-            var variation = get_variation(f, prereq.variation);
-            events.push(create_flag_event(f.key, user, value, null, f.version, flag.key));
-            if (err || value === null || variation === null || value != variation) {
+            events.push(createFlagEvent(f.key, f, user, variation, value, null, flag.key));
+            if (err || value === null || variation != prereq.variation) {
               callback(new Error("Unsatisfied prerequisite"), null)
             } else { 
               // The prerequisite was satisfied
@@ -84,16 +71,16 @@ function eval_internal(flag, user, featureStore, events, cb) {
         // If the error is that prerequisites weren't satisfied, we don't return an error,
         // because we want to serve the 'offVariation'
         if (err) {
-          cb(null, null, events);
+          cb(null, null, null, events);
           return;
         } 
-        evalRules(flag, user, featureStore, function(e, variation) {
-          cb(e, variation, events);
+        evalRules(flag, user, featureStore, function(e, variation, value) {
+          cb(e, variation, value, events);
         });
       })
   } else {
-    evalRules(flag, user, featureStore, function(e, variation) {
-      cb(e, variation, events);
+    evalRules(flag, user, featureStore, function(e, variation, value) {
+      cb(e, variation, value, events);
     });
   }
 }
@@ -113,8 +100,9 @@ function evalRules(flag, user, featureStore, cb) {
 
     for (j = 0; j < target.values.length; j++) {
       if (user.key === target.values[j]) {
-        variation = get_variation(flag, target.variation);
-        cb(variation === null ? new Error("Undefined variation for flag " + flag.key) : null, variation);
+        value = getVariation(flag, target.variation);
+        cb(value === null ? new Error("Undefined variation for flag " + flag.key) : null,
+          target.variation, value);
         return;
       }
     }
@@ -122,7 +110,7 @@ function evalRules(flag, user, featureStore, cb) {
 
   async.mapSeries(flag.rules,
     function(rule, callback) {
-      rule_match_user(rule, user, featureStore, function(matched) {
+      ruleMatchUser(rule, user, featureStore, function(matched) {
         setImmediate(callback, matched ? rule : null, null);
       });
     },
@@ -131,18 +119,18 @@ function evalRules(flag, user, featureStore, cb) {
       // about the first match, and mapSeries terminates on the first "error")
       if (err) {
         var rule = err;
-        variation = variation_for_user(rule, user, flag);
-        cb(variation === null ? new Error("Undefined variation for flag " + flag.key) : null, variation);
+        variation = variationForUser(rule, user, flag);
       } else {
         // no rule matched; check the fallthrough
-        variation = variation_for_user(flag.fallthrough, user, flag);
-        cb(variation === null ? new Error("Undefined variation for flag " + flag.key) : null, variation);
+        variation = variationForUser(flag.fallthrough, user, flag);
       }
+      cb(variation === null ? new Error("Undefined variation for flag " + flag.key) : null,
+          variation, getVariation(flag, variation));
     }
   );
 }
 
-function rule_match_user(r, user, featureStore, cb) {
+function ruleMatchUser(r, user, featureStore, cb) {
   var i;
 
   if (!r.clauses) {
@@ -152,7 +140,7 @@ function rule_match_user(r, user, featureStore, cb) {
   // A rule matches if all its clauses match
   async.mapSeries(r.clauses,
     function(clause, callback) {
-      clause_match_user(clause, user, featureStore, function(matched) {
+      clauseMatchUser(clause, user, featureStore, function(matched) {
         // on the first clause that does *not* match, we raise an "error" to stop the loop
         setImmediate(callback, matched ? null : clause, null);
       });
@@ -163,12 +151,12 @@ function rule_match_user(r, user, featureStore, cb) {
   );
 }
 
-function clause_match_user(c, user, featureStore, cb) {
+function clauseMatchUser(c, user, featureStore, cb) {
   if (c.op == 'segmentMatch') {
     async.mapSeries(c.values,
       function(value, callback) {
         featureStore.get(dataKind.segments, value, function(segment) {
-          if (segment && segment_match_user(segment, user)) {
+          if (segment && segmentMatchUser(segment, user)) {
             // on the first segment that matches, we raise an "error" to stop the loop
             callback(segment, null);
           } else {
@@ -178,20 +166,20 @@ function clause_match_user(c, user, featureStore, cb) {
       },
       function(err, results) {
         // an "error" indicates that a segment *did* match
-        cb(maybe_negate(c, !!err));
+        cb(maybeNegate(c, !!err));
       }
     );
   } else {
-    cb(clause_match_user_no_segments(c, user));
+    cb(clauseMatchUserNoSegments(c, user));
   }
 }
 
-function clause_match_user_no_segments(c, user) {
+function clauseMatchUserNoSegments(c, user) {
   var uValue;
   var matchFn;
   var i;
 
-  uValue = user_value(user, c.attribute);
+  uValue = userValue(user, c.attribute);
 
   if (uValue === null || uValue === undefined) {
     return false;
@@ -202,17 +190,17 @@ function clause_match_user_no_segments(c, user) {
   // The user's value is an array
   if (Array === uValue.constructor) {
     for (i = 0; i < uValue.length; i++) {
-      if (match_any(matchFn, uValue[i], c.values)) {
-        return maybe_negate(c, true);
+      if (matchAny(matchFn, uValue[i], c.values)) {
+        return maybeNegate(c, true);
       }
     }
-    return maybe_negate(c, false);
+    return maybeNegate(c, false);
   }
 
-  return maybe_negate(c, match_any(matchFn, uValue, c.values));
+  return maybeNegate(c, matchAny(matchFn, uValue, c.values));
 }
 
-function segment_match_user(segment, user) {
+function segmentMatchUser(segment, user) {
   if (user.key) {
     if ((segment.included || []).indexOf(user.key) >= 0) {
       return true;
@@ -221,7 +209,7 @@ function segment_match_user(segment, user) {
       return false;
     }
     for (var i = 0; i < (segment.rules || []).length; i++) {
-      if (segment_rule_match_user(segment.rules[i], user, segment.key, segment.salt)) {
+      if (segmentRuleMatchUser(segment.rules[i], user, segment.key, segment.salt)) {
         return true;
       }
     }
@@ -229,9 +217,9 @@ function segment_match_user(segment, user) {
   return false;
 }
 
-function segment_rule_match_user(rule, user, segmentKey, salt) {
+function segmentRuleMatchUser(rule, user, segmentKey, salt) {
   for (var i = 0; i < (rule.clauses || []).length; i++) {
-    if (!clause_match_user_no_segments(rule.clauses[i], user)) {
+    if (!clauseMatchUserNoSegments(rule.clauses[i], user)) {
       return false;
     }
   }
@@ -242,12 +230,12 @@ function segment_rule_match_user(rule, user, segmentKey, salt) {
   }
 
   // All of the clauses are met. See if the user buckets in
-  var bucket = bucket_user(user, segmentKey, rule.bucketBy || "key", salt);
+  var bucket = bucketUser(user, segmentKey, rule.bucketBy || "key", salt);
   var weight = rule.weight / 100000.0;
   return bucket < weight;
 }
 
-function maybe_negate(c, b) {
+function maybeNegate(c, b) {
   if (c.negate) {
     return !b;
   } else {
@@ -255,7 +243,7 @@ function maybe_negate(c, b) {
   }
 }
 
-function match_any(matchFn, value, values) {
+function matchAny(matchFn, value, values) {
   var i = 0;
 
   for (i = 0; i < values.length; i++) {
@@ -269,8 +257,8 @@ function match_any(matchFn, value, values) {
 
 // Given an index, return the variation value, or null if 
 // the index is invalid
-function get_variation(flag, index) {
-  if (index >= flag.variations.length) {
+function getVariation(flag, index) {
+  if (index === null || index === undefined || index >= flag.variations.length) {
     return null;
   } else {
     return flag.variations[index];
@@ -279,7 +267,7 @@ function get_variation(flag, index) {
 
 // Given a variation or rollout 'r', select
 // the variation for the given user
-function variation_for_user(r, user, flag) {
+function variationForUser(r, user, flag) {
   var bucketBy;
   var bucket;
   var sum = 0;
@@ -287,17 +275,17 @@ function variation_for_user(r, user, flag) {
   var variation;
   if (r.variation != null) {
     // This represets a fixed variation; return it
-    return get_variation(flag, r.variation);
+    return r.variation;
   } else if (r.rollout != null) {
     // This represents a percentage rollout. Assume 
     // we're rolling out by key
     bucketBy = r.rollout.bucketBy != null ? r.rollout.bucketBy : "key";
-    bucket = bucket_user(user, flag.key, bucketBy, flag.salt);
+    bucket = bucketUser(user, flag.key, bucketBy, flag.salt);
     for (i = 0; i < r.rollout.variations.length; i++) {
       variate = r.rollout.variations[i];
       sum += variate.weight / 100000.0;
       if (bucket < sum) {
-        return get_variation(flag, variate.variation);
+        return variate.variation;
       }
     }
   }
@@ -307,7 +295,7 @@ function variation_for_user(r, user, flag) {
 
 // Fetch an attribute value from a user object. Automatically
 // navigates into the custom array when necessary
-function user_value(user, attr) {
+function userValue(user, attr) {
   if (builtins.indexOf(attr) >= 0 && user.hasOwnProperty(attr)) {
     return user[attr];
   } 
@@ -318,11 +306,11 @@ function user_value(user, attr) {
 }
 
 // Compute a percentile for a user
-function bucket_user(user, key, attr, salt) {
+function bucketUser(user, key, attr, salt) {
   var uValue;
   var idHash;
 
-  idHash = bucketable_string_value(user_value(user, attr));
+  idHash = bucketableStringValue(userValue(user, attr));
 
   if (idHash === null) {
     return 0;
@@ -339,7 +327,7 @@ function bucket_user(user, key, attr, salt) {
   return result;
 }
 
-function bucketable_string_value(value) {
+function bucketableStringValue(value) {
   if (typeof(value) === 'string') {
     return value;
   }
@@ -349,17 +337,20 @@ function bucketable_string_value(value) {
   return null;
 }
 
-function create_flag_event(key, user, value, default_val, version, prereqOf) {
+function createFlagEvent(key, flag, user, variation, value, defaultVal, prereqOf) {
   return {
     "kind": "feature",
     "key": key,
     "user": user,
+    "variation": variation,
     "value": value,
-    "default": default_val,
+    "default": defaultVal,
     "creationDate": new Date().getTime(),
-    "version": version,
-    "prereqOf": prereqOf
+    "version": flag ? flag.version : null,
+    "prereqOf": prereqOf,
+    "trackEvents": flag ? flag.trackEvents : null,
+    "debugEventsUntilDate": flag ? flag.debugEventsUntilDate : null
   };
 }
 
-module.exports = {evaluate: evaluate, bucket_user: bucket_user, create_flag_event: create_flag_event};
+module.exports = {evaluate: evaluate, bucketUser: bucketUser, createFlagEvent: createFlagEvent};

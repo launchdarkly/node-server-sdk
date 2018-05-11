@@ -45,7 +45,7 @@ function InMemoryFeatureStore() {
 
   store.init = function(allData, cb) {
     this.allData = allData;
-    this.init_called = true;
+    this.initCalled = true;
     callbackResult(cb);
   }
 
@@ -89,7 +89,7 @@ function InMemoryFeatureStore() {
   }
 
   store.initialized = function(cb) {
-    callbackResult(cb, this.init_called === true);
+    callbackResult(cb, this.initCalled === true);
   }
 
   store.close = function() {

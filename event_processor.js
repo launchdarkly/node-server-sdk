@@ -1,0 +1,238 @@
+var LRUCache = require('lrucache');
+var request = require('request');
+var EventSummarizer = require('./event_summarizer');
+var UserFilter = require('./user_filter');
+var errors = require('./errors');
+var wrapPromiseCallback = require('./utils/wrapPromiseCallback');
+
+function EventProcessor(sdkKey, config, errorReporter) {
+  var ep = {};
+
+  var userFilter = UserFilter(config),
+      summarizer = EventSummarizer(config),
+      userKeysCache = LRUCache(config.userKeysCapacity),
+      queue = [],
+      lastKnownPastTime = 0,
+      exceededCapacity = false,
+      shutdown = false,
+      flushTimer,
+      flushUsersTimer;
+
+  function enqueue(event) {
+    if (queue.length < config.capacity) {
+      queue.push(event);
+      exceededCapacity = false;
+    } else {
+      if (!exceededCapacity) {
+        exceededCapacity = true;
+        config.logger.warn("Exceeded event queue capacity. Increase capacity to avoid dropping events.");
+      }
+    }
+  }
+
+  function shouldDebugEvent(event) {
+    if (event.debugEventsUntilDate) {
+      if (event.debugEventsUntilDate > lastKnownPastTime &&
+        event.debugEventsUntilDate > new Date().getTime()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function makeOutputEvent(event) {
+    switch (event.kind) {
+      case 'feature':
+        debug = !!event.debug;
+        var out = {
+          kind: debug ? 'debug' : 'feature',
+          creationDate: event.creationDate,
+          key: event.key,
+          value: event.value,
+          default: event.default,
+          prereqOf: event.prereqOf
+        };
+        if (event.variation !== undefined && event.variation !== null) {
+          out.variation = event.variation;
+        }
+        if (event.version) {
+          out.version = event.version;
+        }
+        if (config.inlineUsersInEvents || debug) {
+          out.user = userFilter.filterUser(event.user);
+        } else {
+          out.userKey = event.user && event.user.key;
+        }
+        return out;
+      case 'identify':
+        return {
+          kind: 'identify',
+          creationDate: event.creationDate,
+          key: event.user && event.user.key,
+          user: userFilter.filterUser(event.user)
+        };
+      case 'custom':
+        var out = {
+          kind: 'custom',
+          creationDate: event.creationDate,
+          key: event.key,
+          data: event.data
+        };
+        if (config.inlineUsersInEvents) {
+          out.user = userFilter.filterUser(event.user);
+        } else {
+          out.userKey = event.user && event.user.key;
+        }
+        return out;
+      default:
+        return event;
+    }
+  }
+
+  ep.sendEvent = function(event) {
+    var addIndexEvent = false,
+        addFullEvent = false,
+        addDebugEvent = false;
+
+    if (shutdown) {
+      return;
+    }
+    config.logger.debug("Sending event", JSON.stringify(event));
+
+    // Always record the event in the summarizer.
+    summarizer.summarizeEvent(event);
+
+    // Decide whether to add the event to the payload. Feature events may be added twice, once for
+    // the event (if tracked) and once for debugging.
+    if (event.kind === 'feature') {
+      addFullEvent = event.trackEvents;
+      addDebugEvent = shouldDebugEvent(event);
+    } else {
+      addFullEvent = true;
+    }
+
+    // For each user we haven't seen before, we add an index event - unless this is already
+    // an identify event for that user.
+    if (!addFullEvent || !config.inlineUsersInEvents) {
+      if (event.user && !userKeysCache.get(event.user.key)) {
+        userKeysCache.set(event.user.key, true);
+        if (event.kind != 'identify') {
+          addIndexEvent = true;
+        }
+      }
+    }
+
+    if (addIndexEvent) {
+      enqueue({
+        kind: 'index',
+        creationDate: event.creationDate,
+        user: userFilter.filterUser(event.user)
+      });
+    }
+    if (addFullEvent) {
+      enqueue(makeOutputEvent(event));
+    }
+    if (addDebugEvent) {
+      var debugEvent = Object.assign({}, event, { debug: true });
+      enqueue(makeOutputEvent(debugEvent));
+    }
+  }
+
+  ep.flush = function(callback) {
+    return wrapPromiseCallback(new Promise(function(resolve, reject) {
+      var worklist;
+      var summary;
+      
+      if (shutdown) {
+        var err = new errors.LDInvalidSDKKeyError("Events cannot be posted because SDK key is invalid");
+        reject(err);
+        return;
+      }
+
+      worklist = queue;
+      queue = [];
+      summary = summarizer.getSummary();
+      summarizer.clearSummary();
+      if (Object.keys(summary.features).length) {
+        summary.kind = 'summary';
+        worklist.push(summary);
+      }
+
+      if (!worklist.length) {
+        resolve();
+        return;
+      }
+
+      config.logger.debug("Flushing %d events", worklist.length);
+
+      tryPostingEvents(worklist, resolve, reject, true);
+    }.bind(this)), callback);
+  }
+
+  function tryPostingEvents(events, resolve, reject, canRetry) {
+    var retryOrReject = function(err) {
+      if (canRetry) {
+        config.logger && config.logger.warn("Will retry posting events after 1 second");
+        setTimeout(function() {
+          tryPostingEvents(events, resolve, reject, false);
+        }, 1000);
+      } else {
+        reject(err);
+      }
+    }
+
+    request({
+      method: "POST",
+      url: config.eventsUri + '/bulk',
+      headers: {
+        'Authorization': sdkKey,
+        'User-Agent': config.userAgent,
+        'X-LaunchDarkly-Event-Schema': '3'
+      },
+      json: true,
+      body: events,
+      timeout: config.timeout * 1000,
+      agent: config.proxyAgent
+    }).on('response', function(resp, body) {
+      if (resp.headers['date']) {
+        var date = Date.parse(resp.headers['date']);
+        if (date) {
+          lastKnownPastTime = date;
+        }
+      }
+      if (resp.statusCode > 204) {
+        var err = new errors.LDUnexpectedResponseError("Unexpected status code " + resp.statusCode + "; events may not have been processed",
+          resp.statusCode);
+        errorReporter && errorReporter(err);
+        if (resp.statusCode === 401) {
+          reject(err);
+          var err1 = new errors.LDInvalidSDKKeyError("Received 401 error, no further events will be posted since SDK key is invalid");
+          errorReporter && errorReporter(err1);
+          shutdown = true;
+        } else if (resp.statusCode >= 500) {
+          retryOrReject(err);
+        }
+      } else {
+        resolve(resp, body);
+      }
+    }).on('error', function(err) {
+      retryOrReject(err);
+    });
+  }
+
+  ep.close = function() {
+    clearInterval(flushTimer);
+    clearInterval(flushUsersTimer);
+  }
+
+  flushTimer = setInterval(function() {
+      ep.flush();
+    }, config.flushInterval * 1000);
+  flushUsersTimer = setInterval(function() {
+      userKeysCache.removeAll();
+    }, config.userKeysFlushInterval * 1000);
+
+  return ep;
+}
+
+module.exports = EventProcessor;

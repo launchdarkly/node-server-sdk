@@ -1,31 +1,20 @@
+var messages = require('./messages');
+
 /**
- * The EventSerializer object transforms the internal representation of events into objects suitable to be sent
- * as JSON to the server. This includes hiding any private user attributes.
+ * The UserFilter object transforms user objects into objects suitable to be sent as JSON to
+ * the server, hiding any private user attributes.
  *
  * @param {Object} the LaunchDarkly client configuration object
  **/
-function EventSerializer(config) {
-  var serializer = {};
-  var allAttributesPrivate = config.all_attributes_private;
-  var privateAttributeNames = config.private_attribute_names || [];
+function UserFilter(config) {
+  var filter = {};
+  const allAttributesPrivate = config.allAttributesPrivate;
+  const privateAttributeNames = config.privateAttributeNames || [];
   var ignoreAttrs = { key: true, custom: true, anonymous: true };
   var allowedTopLevelAttrs = { key: true, secondary: true, ip: true, country: true, email: true,
         firstName: true, lastName: true, avatar: true, name: true, anonymous: true, custom: true };
 
-  serializer.serialize_events = function(events) {
-    return events.map(serialize_event);
-  }
-
-  function serialize_event(event) {
-    return Object.keys(event).map(function(key) {
-        return [key, (key === 'user') ? filter_user(event[key]) : event[key]];
-      }).reduce(function(acc, p) {
-        acc[p[0]] = p[1];
-        return acc;
-      }, {});
-  }
-
-  function filter_user(user) {
+  filter.filterUser = function(user) {
     var allPrivateAttrs = {};
     var userPrivateAttrs = user.privateAttributeNames || [];
     
@@ -63,7 +52,7 @@ function EventSerializer(config) {
     return filteredProps;
   }
 
-  return serializer;
+  return filter;
 }
 
-module.exports = EventSerializer;
+module.exports = UserFilter;

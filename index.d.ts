@@ -44,7 +44,7 @@ declare module "ldclient-node" {
      * This is used for enterprise customers with their own LaunchDarkly instances.
      * Most users should use the default value.
      */
-    base_uri?: string;
+    baseUri?: string;
 
     /**
      * The stream uri for the LaunchDarkly server.
@@ -52,7 +52,7 @@ declare module "ldclient-node" {
      * This is used for enterprise customers with their own LaunchDarkly instances.
      * Most users should use the default value.
      */
-    stream_uri?: string;
+    streamUri?: string;
 
     /**
      * The events uri for the LaunchDarkly server.
@@ -60,7 +60,7 @@ declare module "ldclient-node" {
      * This is used for enterprise customers with their own LaunchDarkly instances.
      * Most users should use the default value.
      */
-    events_uri?: string;
+    eventsUri?: string;
 
     /**
      * In seconds, controls the request timeout to LaunchDarkly.
@@ -85,34 +85,34 @@ declare module "ldclient-node" {
      *
      * The SDK provides an in memory feature store as well as a redis feature store.
      */
-    feature_store?: LDFeatureStore;
+    featureStore?: LDFeatureStore;
 
     /**
      * In seconds, controls how long LaunchDarkly buffers events before sending them back to our server.
      */
-    flush_interval?: number;
+    flushInterval?: number;
 
     /**
      * In seconds, controls the time between polling requests.
      */
-    poll_interval?: number;
+    pollInterval?: number;
 
     /**
      * Allows you to specify a host for an optional HTTP proxy.
      */
-    proxy_host?: string;
+    proxyHost?: string;
 
     /**
      * Allows you to specify a port for an optional HTTP proxy.
      * Both the host and port must be specified to enable proxy support.
      */
-    proxy_port?: string;
+    proxyPort?: string;
 
     /**
      * Allows you to specify basic authentication parameters for an optional HTTP proxy.
      * Usually of the form username:password.
      */
-    proxy_auth?: string;
+    proxyAuth?: string;
 
     /**
      * Whether the client should be initialized in offline mode.
@@ -127,12 +127,12 @@ declare module "ldclient-node" {
     /**
      * Whether to rely on LDD for feature updates.
      */
-    use_ldd?: boolean;
+    useLdd?: boolean;
 
     /**
      * Whether to send events back to LaunchDarkly
     */
-    send_events?: boolean;
+    sendEvents?: boolean;
   }
 
   /**
@@ -380,7 +380,7 @@ declare module "ldclient-node" {
      *   The node style callback to receive the variation result.
      * @returns a Promise containing the set of all flag values for a user
      */
-    all_flags: (user: LDUser, callback?: (err: any, res: LDFlagSet) => void) => Promise<LDFlagSet>;
+    allFlags: (user: LDUser, callback?: (err: any, res: LDFlagSet) => void) => Promise<LDFlagSet>;
 
     /**
      *
@@ -393,7 +393,7 @@ declare module "ldclient-node" {
      *
      * @returns The hash.
      */
-    secure_mode_hash: (user: LDUser) => string;
+    secureModeHash: (user: LDUser) => string;
 
     /**
      * Close the update processor as well as the attached feature store.
@@ -405,7 +405,7 @@ declare module "ldclient-node" {
      *
      * @returns Whether the client is configured in offline mode.
      */
-    is_offline: () => boolean;
+    isOffline: () => boolean;
 
     /**
      * Track page events to use in goals or A/B tests.
@@ -440,7 +440,7 @@ declare module "ldclient-node" {
      * Flush the queue
      *
      * Internally, the LaunchDarkly SDK keeps an event queue for track and identify calls.
-     * These are flushed periodically (see configuration option: flush_interval)
+     * These are flushed periodically (see configuration option: flushInterval)
      * and when the queue size limit (see configuration option: capacity) is reached.
      * 
      * @returns a Promise which resolves once flushing is finished
