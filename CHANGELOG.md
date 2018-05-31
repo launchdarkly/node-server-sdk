@@ -2,6 +2,14 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.0.1] - 2018-05-31
+
+### Fixed:
+- Fixed a bug that caused summary events to combine two different counters: a) flag evaluations that produced the flag's first variation, and b) counts for flag evaluations that fell through to the default value.
+
+### Removed:
+- Removed debug-level logging that was listing every analytics event.
+
 ## [5.0.0] - 2018-05-10
 
 ### Changed:

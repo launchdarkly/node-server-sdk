@@ -97,7 +97,6 @@ function EventProcessor(sdkKey, config, errorReporter) {
     if (shutdown) {
       return;
     }
-    config.logger.debug("Sending event", JSON.stringify(event));
 
     // Always record the event in the summarizer.
     summarizer.summarizeEvent(event);
