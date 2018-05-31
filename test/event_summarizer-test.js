@@ -71,4 +71,30 @@ describe('EventSummarizer', function() {
     };
     expect(data.features).toEqual(expectedFeatures);
   });
+
+  it('distinguishes between zero and null/undefined in feature variation', function() {
+    var es = EventSummarizer();
+    var event1 = { kind: 'feature', creationDate: 1000, key: 'key1', version: 11, user: user,
+      variation: 0, value: 100, default: 111 };
+    var event2 = { kind: 'feature', creationDate: 1000, key: 'key1', version: 11, user: user,
+      variation: null, value: 111, default: 111 };
+    var event3 = { kind: 'feature', creationDate: 1000, key: 'key1', version: 11, user: user,
+      /* variation undefined */ value: 111, default: 111 };
+    es.summarizeEvent(event1);
+    es.summarizeEvent(event2);
+    es.summarizeEvent(event3);
+    var data = es.getSummary();
+
+    data.features.key1.counters.sort(function(a, b) { return a.value - b.value; });
+    var expectedFeatures = {
+      key1: {
+        default: 111,
+        counters: [
+          { variation: 0, value: 100, version: 11, count: 1 },
+          { value: 111, version: 11, count: 2 }
+        ]
+      }
+    };
+    expect(data.features).toEqual(expectedFeatures);
+  });
 });
