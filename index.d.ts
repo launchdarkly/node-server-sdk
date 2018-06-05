@@ -133,6 +133,39 @@ declare module "ldclient-node" {
      * Whether to send events back to LaunchDarkly
     */
     sendEvents?: boolean;
+
+    /**
+     * Whether all user attributes (except the user key) should be marked as
+     * private, and not sent to LaunchDarkly.
+     *
+     * Defaults to false.
+     */
+    allAttributesPrivate?: boolean;
+
+    /**
+     * The names of user attributes that should be marked as private, and not sent
+     * to LaunchDarkly.
+     *
+     * Must be a list of strings. Defaults to empty list.
+     */
+    privateAttributeNames?: Array<string>;
+
+    /**
+     * The number of user keys that the event processor can remember at any one time,
+     * so that duplicate user details will not be sent in analytics events.
+     *
+     * Defaults to 1000.
+     */
+    userKeysCapacity?: number;
+
+    /**
+     * The interval (in seconds) at which the event processor will reset its set of
+     * known user keys.
+     *
+     * Defaults to 300.
+     */
+    userKeysFlushInterval?: number;
+
   }
 
   /**
