@@ -2,6 +2,12 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.0.2] - 2018-06-15
+
+### Fixed:
+- Removed an indirect dependency on an old version of the `querystringify` module, which had a [security flaw](https://github.com/unshiftio/querystringify/pull/19). ([#97](https://github.com/launchdarkly/node-client/issues/97))
+- Updated TypeScript definitions for client options. (Thanks, [stepanataccolade](https://github.com/launchdarkly/node-client/pull/95#pullrequestreview-126088214)!)
+
 ## [5.0.1] - 2018-05-31
 
 ### Fixed:
