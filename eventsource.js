@@ -1,7 +1,6 @@
 // taken from https://github.com/aslakhellesoy/eventsource-node/blob/v0.1.6/package.json
 
-var original = require('original')
-  , parse = require('url').parse
+var parse = require('url').parse
   , events = require('events')
   , https = require('https')
   , http = require('http')
@@ -206,8 +205,8 @@ function EventSource(url, eventSourceInitDict) {
         var type = eventName || 'message';
         _emit(type, new MessageEvent(type, {
           data: data.slice(0, -1), // remove trailing newline
-          lastEventId: lastEventId,
-          origin: original(url)
+          lastEventId: lastEventId
+          //origin: original(url)  // we're not using this - removed it so we can drop the dependency on "original"
         }));
         data = '';
       }
