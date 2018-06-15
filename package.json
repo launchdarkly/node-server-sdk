@@ -28,7 +28,6 @@
     "lrucache": "^1.0.3",
     "node-cache": "^3.2.1",
     "node-sha1": "0.0.1",
-    "original": "~0.0.8",
     "redis": "^2.6.0-2",
     "request": "2.85.0",
     "request-etag": "^2.0.3",
