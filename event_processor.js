@@ -3,6 +3,7 @@ var request = require('request');
 var EventSummarizer = require('./event_summarizer');
 var UserFilter = require('./user_filter');
 var errors = require('./errors');
+var messages = require('./messages');
 var wrapPromiseCallback = require('./utils/wrapPromiseCallback');
 
 function EventProcessor(sdkKey, config, errorReporter) {
@@ -200,15 +201,12 @@ function EventProcessor(sdkKey, config, errorReporter) {
         }
       }
       if (resp.statusCode > 204) {
-        var err = new errors.LDUnexpectedResponseError("Unexpected status code " + resp.statusCode + "; events may not have been processed",
-          resp.statusCode);
+        var err = new errors.LDUnexpectedResponseError(messages.httpErrorMessage(resp.statusCode, 'event posting', 'some events were dropped'));
         errorReporter && errorReporter(err);
-        if (resp.statusCode === 401) {
+        if (!errors.isHttpErrorRecoverable(resp.statusCode)) {
           reject(err);
-          var err1 = new errors.LDInvalidSDKKeyError("Received 401 error, no further events will be posted since SDK key is invalid");
-          errorReporter && errorReporter(err1);
           shutdown = true;
-        } else if (resp.statusCode >= 500) {
+        } else {
           retryOrReject(err);
         }
       } else {

@@ -17,3 +17,10 @@ exports.LDStreamingError = createCustomError('LaunchDarklyStreamingError');
 exports.LDUnexpectedResponseError = createCustomError('LaunchDarklyUnexpectedResponseError');
 exports.LDInvalidSDKKeyError = createCustomError('LaunchDarklyInvalidSDKKeyError');
 exports.LDClientError = createCustomError('LaunchDarklyClientError');
+
+exports.isHttpErrorRecoverable = function(status) {
+  if (status >= 400 && status < 500) {
+    return status == 408 == 429;
+  }
+  return true;
+}

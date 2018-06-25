@@ -25,6 +25,7 @@ describe('EventProcessor', function() {
     if (ep) {
       ep.close();
     }
+    nock.cleanAll();
   });
 
   function flushAndGetRequest(options, cb) {
@@ -394,13 +395,13 @@ describe('EventProcessor', function() {
     });
   });
 
-  it('stops sending events after a 401 error', function(done) {
+  function verifyUnrecoverableHttpError(done, status) {
     ep = EventProcessor(sdkKey, defaultConfig);
     var e = { kind: 'identify', creationDate: 1000, user: user };
     ep.sendEvent(e);
 
-    flushAndGetRequest({ status: 401 }, function(body, headers, error) {
-      expect(error.message).toContain("status code 401");
+    flushAndGetRequest({ status: status }, function(body, headers, error) {
+      expect(error.message).toContain("error " + status);
 
       ep.sendEvent(e);
 
@@ -412,21 +413,41 @@ describe('EventProcessor', function() {
           done();
         });
     });
-  });
+  }
 
-  it('retries once after a 5xx error', function(done) {
+  function verifyRecoverableHttpError(done, status) {
     ep = EventProcessor(sdkKey, defaultConfig);
     var e = { kind: 'identify', creationDate: 1000, user: user };
     ep.sendEvent(e);
 
-    nock(eventsUri).post('/bulk').reply(503);
-    nock(eventsUri).post('/bulk').reply(503);
+    nock(eventsUri).post('/bulk').reply(status);
+    nock(eventsUri).post('/bulk').reply(status);
     // since we only queued two responses, Nock will throw an error if it gets a third.
     ep.flush().then(
       function() {},
       function(err) {
-        expect(err.message).toContain('Unexpected status code 503');
+        expect(err.message).toContain('error ' + status);
         done();
       });
+  }
+
+  it('stops sending events after a 401 error', function(done) {
+    verifyUnrecoverableHttpError(done, 401);
+  });
+
+  it('stops sending events after a 403 error', function(done) {
+    verifyUnrecoverableHttpError(done, 403);
+  });
+
+  it('retries after a 408 error', function(done) {
+    verifyRecoverableHttpError(done, 408);
+  });
+
+  it('retries after a 429 error', function(done) {
+    verifyRecoverableHttpError(done, 429);
+  });
+
+  it('retries after a 503 error', function(done) {
+    verifyRecoverableHttpError(done, 503);
   });
 });

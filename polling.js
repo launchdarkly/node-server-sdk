@@ -1,4 +1,5 @@
 var errors = require('./errors');
+var messages = require('./messages');
 var dataKind = require('./versioned_data_kind');
 
 function PollingProcessor(config, requestor) {
@@ -22,8 +23,8 @@ function PollingProcessor(config, requestor) {
       sleepFor = Math.max(config.pollInterval * 1000 - elapsed, 0);
       config.logger.debug("Elapsed: %d ms, sleeping for %d ms", elapsed, sleepFor);
       if (err) {
-        cb(new errors.LDPollingError('Failed to fetch all feature flags: ' + (err.message || JSON.stringify(err))), err.status);
-        if (err.status === 401) {
+        cb(new errors.LDPollingError(messages.httpErrorMessage(err.status, 'polling request', 'will retry')));
+        if (!errors.isHttpErrorRecoverable(err.status)) {
           config.logger.error('Received 401 error, no further polling requests will be made since SDK key is invalid');
         } else {
           // Recursively call poll after the appropriate delay
