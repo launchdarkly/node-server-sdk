@@ -4,7 +4,9 @@ var parse = require('url').parse
   , events = require('events')
   , https = require('https')
   , http = require('http')
-  , util = require('util');
+  , util = require('util')
+  , errors = require('./errors')
+  , messages = require('./messages');
 
 function isPlainObject(obj) {
   return Object.getPrototypeOf(obj) === Object.prototype;
@@ -104,18 +106,15 @@ function EventSource(url, eventSourceInitDict) {
       }
 
       if (res.statusCode !== 200) {
-        // reconnect after an error, unless it's a 401
-        if (res.statusCode === 401) {
+        // reconnect after an error, unless it's an unrecoverable error
+        _emit('error', new Event('error', {
+          message: messages.httpErrorMessage(res.statusCode, 'streaming connection', 'will retry'),
+          status: res.statusCode
+        }));
+
+        if (!errors.isHttpErrorRecoverable(res.statusCode)) {
           readyState = EventSource.CLOSED;
-          _emit('error', new Event('error', {
-              message: 'Received 401 error, no further streaming connection will be made since SDK key is invalid',
-              status: 401
-          }));
         } else {
-          _emit('error', new Event('error', {
-            message: 'Streaming connection returned status code: ' + res.statusCode,
-            status: res.statusCode
-          }));
           backoffDelay = Math.min(backoffDelay * 2, 15000);
           setTimeout(connect, backoffDelay);
         }
