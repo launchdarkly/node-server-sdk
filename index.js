@@ -124,6 +124,8 @@ var newClient = function(sdkKey, config) {
   };
 
   client.waitUntilReady = function() {
+    config.logger.warn(messages.deprecated("waitUntilReady", "waitForInitialization"));
+
     if (initComplete) {
       return Promise.resolve();
     }
