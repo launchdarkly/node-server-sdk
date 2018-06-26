@@ -2,6 +2,20 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.1.0] - 2018-06-26
+
+### Added:
+- The new event `"failed"` will fire if client initialization failed due to any of the unrecoverable errors described below. If you prefer to use Promises, there is a new method `waitForInitialization()`, which behaves exactly like `waitUntilReady()` except that its Promise will be rejected if the "failed" event fires. (For backward compatibility, the Promise returned by `waitUntilReady()` will never be rejected.) ([#96](https://github.com/launchdarkly/node-client/issues/96))
+
+### Changed:
+- The client now treats most HTTP 4xx errors as unrecoverable: that is, after receiving such an error, it will not make any more HTTP requests for the lifetime of the client instance, in effect taking the client offline. This is because such errors indicate either a configuration problem (invalid SDK key) or a bug, which is not likely to resolve without a restart or an upgrade. This does not apply if the error is 400, 408, 429, or any 5xx error.
+
+### Fixed:
+- Fixed a bug that would cause a null reference error if you called `close()` on an offline client. (Thanks, [dylanlingelbach](https://github.com/launchdarkly/node-client/pull/100)!)
+
+### Deprecated:
+- The `waitUntilReady()` method is now deprecated in favor of `waitForInitialization()` (see above).
+
 ## [5.0.2] - 2018-06-15
 
 ### Fixed:

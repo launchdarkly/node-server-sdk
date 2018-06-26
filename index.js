@@ -53,6 +53,7 @@ function NullUpdateProcessor() {
 var newClient = function(sdkKey, config) {
   var client = new EventEmitter(),
       initComplete = false,
+      failure,
       queue = [],
       requestor,
       updateProcessor,
@@ -110,6 +111,8 @@ var newClient = function(sdkKey, config) {
       }
 
       maybeReportError(error);
+      client.emit('failed', error);
+      failure = error;
     } else if (!initComplete) {
       initComplete = true;
       client.emit('ready');
@@ -121,12 +124,28 @@ var newClient = function(sdkKey, config) {
   };
 
   client.waitUntilReady = function() {
+    config.logger.warn(messages.deprecated("waitUntilReady", "waitForInitialization"));
+
     if (initComplete) {
       return Promise.resolve();
     }
     
     return new Promise(function(resolve) {
       client.once('ready', resolve);
+    });
+  };
+
+  client.waitForInitialization = function() {
+    if (initComplete) {
+      return Promise.resolve();
+    }
+    if (failure) {
+      return Promise.reject(failure);
+    }
+    
+    return new Promise(function(resolve, reject) {
+      client.once('ready', resolve);
+      client.once('failed', reject);
     });
   };
 

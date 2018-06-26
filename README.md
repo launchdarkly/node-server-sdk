@@ -3,6 +3,11 @@ LaunchDarkly SDK for Node.js
 
 [![Circle CI](https://circleci.com/gh/launchdarkly/node-client/tree/master.svg?style=svg)](https://circleci.com/gh/launchdarkly/node-client/tree/master)
 
+Supported Node versions
+-----------------------
+
+This version of the LaunchDarkly SDK has been tested with Node versions 6.14 and up.
+
 Quick setup
 -----------
 
