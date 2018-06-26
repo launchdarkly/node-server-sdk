@@ -284,6 +284,12 @@ describe('LDClient', function() {
     });
   });
 
+  it('should not crash when closing an offline client', function(done) {
+    var client = LDClient.init('sdk_key', {offline: true});
+    expect(() => client.close()).not.toThrow();
+    done();
+  });
+
   describe('waitUntilReady()', function () {
     it('should resolve waitUntilReady() when ready', function(done) {
       var client = LDClient.init('secret', {offline: true});
