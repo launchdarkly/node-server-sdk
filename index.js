@@ -45,7 +45,8 @@ function NullUpdateProcessor() {
   return {
     start: function(callback) {
       setImmediate(callback, null);
-    }
+    },
+    close: function() {}
   };
 }
 
