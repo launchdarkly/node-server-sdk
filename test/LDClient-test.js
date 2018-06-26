@@ -24,7 +24,7 @@ describe('LDClient', function() {
 
   var updateProcessor = {
     start: function(callback) {
-      setImmediate(callback, null);
+      setImmediate(callback, updateProcessor.error);
     }
   };
 
@@ -32,6 +32,7 @@ describe('LDClient', function() {
     logger.info = jest.fn();
     logger.warn = jest.fn();
     eventProcessor.events = [];
+    updateProcessor.error = null;
   });
 
   it('should trigger the ready event in offline mode', function(done) {
@@ -309,4 +310,54 @@ describe('LDClient', function() {
         }).catch(done.error)
     });
   });
+
+  describe('waitForInitialization()', function () {
+    it('should resolve when ready', function(done) {
+      var callback = jest.fn();
+      var client = createOnlineClientWithFlags({});
+
+      client.waitForInitialization().then(callback)
+        .then(() => {
+          expect(callback).toHaveBeenCalled();
+          done();
+        }).catch(done.error)
+    });
+
+    it('should resolve even if the client is already ready', function(done) {
+      var callback = jest.fn();
+      var client = createOnlineClientWithFlags({});
+
+      client.waitForInitialization()
+        .then(() => {
+          client.waitForInitialization().then(callback)
+            .then(() => {
+              expect(callback).toHaveBeenCalled();
+              done();
+            }).catch(done.error)
+        }).catch(done.error)
+    });
+
+    it('should be rejected if initialization fails', function(done) {
+      updateProcessor.error = { status: 403 };
+      var client = createOnlineClientWithFlags({});
+
+      client.waitForInitialization()
+        .catch(err => {
+          expect(err).toEqual(updateProcessor.error);
+          done();
+        });
+    });
+  });
+
+  describe('failed event', function() {
+    it('should be fired if initialization fails', function(done) {
+      updateProcessor.error = { status: 403 };
+      var client = createOnlineClientWithFlags({});
+
+      client.on('failed', err => {
+        expect(err).toEqual(updateProcessor.error);
+        done();
+      });
+    });
+  })
 });
