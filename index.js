@@ -236,8 +236,13 @@ var newClient = function(sdkKey, config) {
       sanitizeUser(user);
       var results = {};
 
-      if (this.isOffline() || !user) {
+      if (this.isOffline()) {
         config.logger.info("allFlags() called in offline mode. Returning empty map.");
+        return resolve({});
+      }
+
+      if (!user) {
+        config.logger.info("allFlags() called without user. Returning empty map.");
         return resolve({});
       }
 
