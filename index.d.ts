@@ -16,7 +16,6 @@ declare module 'ldclient-node' {
     export const LDClientError: ErrorConstructor;
     export const LDUnexpectedResponseError: ErrorConstructor;
     export const LDInvalidSDKKeyError: ErrorConstructor;
-    export function isHttpErrorRecoverable(status: number): boolean;
   }
 
   /**
@@ -390,7 +389,7 @@ declare module 'ldclient-node' {
   }
 
   /**
-   * The LaunchDarkly client feature flag requetor
+   * The LaunchDarkly client feature flag requestor
    *
    * The client uses this internally to retrieve feature
    * flags from LaunchDarkly.
