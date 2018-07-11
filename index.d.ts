@@ -6,19 +6,33 @@
  * Documentation: http://docs.launchdarkly.com/docs/node-sdk-reference
  */
 
-declare module "ldclient-node" {
+declare module 'ldclient-node' {
   import { EventEmitter } from 'events';
-  
+  import { ClientOpts } from 'redis';
+
   namespace errors {
     export const LDPollingError: ErrorConstructor;
     export const LDStreamingError: ErrorConstructor;
     export const LDClientError: ErrorConstructor;
+    export const LDUnexpectedResponseError: ErrorConstructor;
+    export const LDInvalidSDKKeyError: ErrorConstructor;
+    export function isHttpErrorRecoverable(status: number): boolean;
   }
 
   /**
    * The LaunchDarkly static global.
    */
   export function init(key: string, options?: LDOptions): LDClient;
+
+  /**
+   * Create a feature flag store backed by a Redis instance
+   */
+  export function RedisFeatureStore(
+    redisOpts: ClientOpts,
+    cacheTTL: number,
+    prefix: string,
+    logger: LDLogger | object
+  ): LDFeatureStore;
 
   /**
    * The types of values a feature flag can have.
@@ -31,7 +45,7 @@ declare module "ldclient-node" {
    * A map of feature flags from their keys to their values.
    */
   export type LDFlagSet = {
-    [key: string]: LDFlagValue,
+    [key: string]: LDFlagValue;
   };
 
   /**
@@ -78,7 +92,6 @@ declare module "ldclient-node" {
      * This can be a custom logger or an instance of winston.Logger
      */
     logger?: LDLogger | object;
-
 
     /**
      * Feature store used by the LaunchDarkly client, defaults to in memory storage.
@@ -131,7 +144,7 @@ declare module "ldclient-node" {
 
     /**
      * Whether to send events back to LaunchDarkly
-    */
+     */
     sendEvents?: boolean;
 
     /**
@@ -165,7 +178,6 @@ declare module "ldclient-node" {
      * Defaults to 300.
      */
     userKeysFlushInterval?: number;
-
   }
 
   /**
@@ -230,7 +242,11 @@ declare module "ldclient-node" {
      * Any additional attributes associated with the user.
      */
     custom?: {
-      [key: string]: string | boolean | number | Array<string | boolean | number>,
+      [key: string]:
+        | string
+        | boolean
+        | number
+        | Array<string | boolean | number>;
     };
   }
 
@@ -358,10 +374,8 @@ declare module "ldclient-node" {
     /**
      * Close the feature store.
      *
-     * @returns
-     *  The store instance.
      */
-    close: () => LDFeatureStore;
+    close: () => void;
   }
 
   /**
@@ -412,12 +426,22 @@ declare module "ldclient-node" {
      *
      * @param callback
      *   The callback to receive the variation result.
-     * 
+     *
      * @returns a Promise containing the flag value
      */
-    variation: (key: string, user: LDUser, defaultValue: LDFlagValue, callback?: (err: any, res: LDFlagValue) => void) => Promise<LDFlagValue>;
+    variation: (
+      key: string,
+      user: LDUser,
+      defaultValue: LDFlagValue,
+      callback?: (err: any, res: LDFlagValue) => void
+    ) => Promise<LDFlagValue>;
 
-    toggle: (key: string, user: LDUser, defaultValue: LDFlagValue, callback?: (err: any, res: LDFlagValue) => void) => Promise<LDFlagValue>;
+    toggle: (
+      key: string,
+      user: LDUser,
+      defaultValue: LDFlagValue,
+      callback?: (err: any, res: LDFlagValue) => void
+    ) => Promise<LDFlagValue>;
 
     /**
      * Retrieves the set of all flag values for a user.
@@ -429,7 +453,10 @@ declare module "ldclient-node" {
      *   The node style callback to receive the variation result.
      * @returns a Promise containing the set of all flag values for a user
      */
-    allFlags: (user: LDUser, callback?: (err: any, res: LDFlagSet) => void) => Promise<LDFlagSet>;
+    allFlags: (
+      user: LDUser,
+      callback?: (err: any, res: LDFlagSet) => void
+    ) => Promise<LDFlagSet>;
 
     /**
      *
@@ -448,7 +475,6 @@ declare module "ldclient-node" {
      * Close the update processor as well as the attached feature store.
      */
     close: () => void;
-
 
     /**
      *
@@ -491,7 +517,7 @@ declare module "ldclient-node" {
      * Internally, the LaunchDarkly SDK keeps an event queue for track and identify calls.
      * These are flushed periodically (see configuration option: flushInterval)
      * and when the queue size limit (see configuration option: capacity) is reached.
-     * 
+     *
      * @returns a Promise which resolves once flushing is finished
      */
     flush: (callback?: (err: any, res: boolean) => void) => Promise<void>;
