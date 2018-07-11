@@ -379,6 +379,32 @@ declare module 'ldclient-node' {
   }
 
   /**
+   * The LaunchDarkly client stream processor
+   *
+   * The client uses this internally to retrieve updates from LaunchDarkly.
+   */
+  export interface LDStreamProcessor {
+    start: (fn?: (err?: any) => void) => void;
+    stop: () => void;
+    close: () => void;
+  }
+
+  /**
+   * The LaunchDarkly client feature flag requetor
+   *
+   * The client uses this internally to retrieve feature
+   * flags from LaunchDarkly.
+   */
+  export interface LDFeatureRequestor {
+    requestObject: (
+      kind: any,
+      key: string,
+      cb: (err: any, body: any) => void
+    ) => void;
+    requestAllData: (cb: (err: any, body: any) => void) => void;
+  }
+
+  /**
    * The LaunchDarkly client's instance interface.
    *
    * @see http://docs.launchdarkly.com/docs/js-sdk-reference
@@ -522,4 +548,32 @@ declare module 'ldclient-node' {
      */
     flush: (callback?: (err: any, res: boolean) => void) => Promise<void>;
   }
+}
+
+declare module 'ldclient-node/streaming' {
+  import {
+    LDOptions,
+    LDFeatureRequestor,
+    LDStreamProcessor
+  } from 'ldclient-node';
+
+  function StreamProcessor(
+    sdkKey: string,
+    options: LDOptions,
+    requestor: LDFeatureRequestor
+  ): LDStreamProcessor;
+  export = StreamProcessor;
+}
+declare module 'ldclient-node/requestor' {
+  import { LDOptions, LDFeatureRequestor } from 'ldclient-node';
+
+  function Requestor(sdkKey: string, options: LDOptions): LDFeatureRequestor;
+  export = Requestor;
+}
+
+declare module 'ldclient-node/feature_store' {
+  import { LDFeatureStore } from 'ldclient-node';
+
+  function InMemoryFeatureStore(): LDFeatureStore;
+  export = InMemoryFeatureStore;
 }
