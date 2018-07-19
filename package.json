@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/launchdarkly/node-client",
   "dependencies": {
+    "@types/redis": "2.8.6",
     "async": "2.6.0",
     "crypto": "0.0.3",
     "hoek": "4.2.1",
