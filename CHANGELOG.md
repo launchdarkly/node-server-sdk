@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.1.1] - 2018-07-19
+
+### Fixed:
+- Now outputs a more descriptive log message if `allFlags` is called with a null user object. (Thanks, [jbatchelor-atlassian](https://github.com/launchdarkly/node-client/pull/103)!)
+- Added TypeScript definitions for some previously undefined types.
+- Updated `request` package dependency to `2.87.0`, to avoid a [security vulnerability](https://snyk.io/vuln/npm:cryptiles:20180710) in a package used by `request`.
+
 ## [5.1.0] - 2018-06-26
 
 ### Added:
