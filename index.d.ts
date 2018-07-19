@@ -6,19 +6,32 @@
  * Documentation: http://docs.launchdarkly.com/docs/node-sdk-reference
  */
 
-declare module "ldclient-node" {
+declare module 'ldclient-node' {
   import { EventEmitter } from 'events';
-  
+  import { ClientOpts } from 'redis';
+
   namespace errors {
     export const LDPollingError: ErrorConstructor;
     export const LDStreamingError: ErrorConstructor;
     export const LDClientError: ErrorConstructor;
+    export const LDUnexpectedResponseError: ErrorConstructor;
+    export const LDInvalidSDKKeyError: ErrorConstructor;
   }
 
   /**
    * The LaunchDarkly static global.
    */
   export function init(key: string, options?: LDOptions): LDClient;
+
+  /**
+   * Create a feature flag store backed by a Redis instance
+   */
+  export function RedisFeatureStore(
+    redisOpts: ClientOpts,
+    cacheTTL: number,
+    prefix: string,
+    logger: LDLogger | object
+  ): LDFeatureStore;
 
   /**
    * The types of values a feature flag can have.
@@ -31,7 +44,7 @@ declare module "ldclient-node" {
    * A map of feature flags from their keys to their values.
    */
   export type LDFlagSet = {
-    [key: string]: LDFlagValue,
+    [key: string]: LDFlagValue;
   };
 
   /**
@@ -78,7 +91,6 @@ declare module "ldclient-node" {
      * This can be a custom logger or an instance of winston.Logger
      */
     logger?: LDLogger | object;
-
 
     /**
      * Feature store used by the LaunchDarkly client, defaults to in memory storage.
@@ -131,7 +143,7 @@ declare module "ldclient-node" {
 
     /**
      * Whether to send events back to LaunchDarkly
-    */
+     */
     sendEvents?: boolean;
 
     /**
@@ -165,7 +177,6 @@ declare module "ldclient-node" {
      * Defaults to 300.
      */
     userKeysFlushInterval?: number;
-
   }
 
   /**
@@ -230,7 +241,11 @@ declare module "ldclient-node" {
      * Any additional attributes associated with the user.
      */
     custom?: {
-      [key: string]: string | boolean | number | Array<string | boolean | number>,
+      [key: string]:
+        | string
+        | boolean
+        | number
+        | Array<string | boolean | number>;
     };
   }
 
@@ -358,10 +373,34 @@ declare module "ldclient-node" {
     /**
      * Close the feature store.
      *
-     * @returns
-     *  The store instance.
      */
-    close: () => LDFeatureStore;
+    close: () => void;
+  }
+
+  /**
+   * The LaunchDarkly client stream processor
+   *
+   * The client uses this internally to retrieve updates from LaunchDarkly.
+   */
+  export interface LDStreamProcessor {
+    start: (fn?: (err?: any) => void) => void;
+    stop: () => void;
+    close: () => void;
+  }
+
+  /**
+   * The LaunchDarkly client feature flag requestor
+   *
+   * The client uses this internally to retrieve feature
+   * flags from LaunchDarkly.
+   */
+  export interface LDFeatureRequestor {
+    requestObject: (
+      kind: any,
+      key: string,
+      cb: (err: any, body: any) => void
+    ) => void;
+    requestAllData: (cb: (err: any, body: any) => void) => void;
   }
 
   /**
@@ -412,12 +451,22 @@ declare module "ldclient-node" {
      *
      * @param callback
      *   The callback to receive the variation result.
-     * 
+     *
      * @returns a Promise containing the flag value
      */
-    variation: (key: string, user: LDUser, defaultValue: LDFlagValue, callback?: (err: any, res: LDFlagValue) => void) => Promise<LDFlagValue>;
+    variation: (
+      key: string,
+      user: LDUser,
+      defaultValue: LDFlagValue,
+      callback?: (err: any, res: LDFlagValue) => void
+    ) => Promise<LDFlagValue>;
 
-    toggle: (key: string, user: LDUser, defaultValue: LDFlagValue, callback?: (err: any, res: LDFlagValue) => void) => Promise<LDFlagValue>;
+    toggle: (
+      key: string,
+      user: LDUser,
+      defaultValue: LDFlagValue,
+      callback?: (err: any, res: LDFlagValue) => void
+    ) => Promise<LDFlagValue>;
 
     /**
      * Retrieves the set of all flag values for a user.
@@ -429,7 +478,10 @@ declare module "ldclient-node" {
      *   The node style callback to receive the variation result.
      * @returns a Promise containing the set of all flag values for a user
      */
-    allFlags: (user: LDUser, callback?: (err: any, res: LDFlagSet) => void) => Promise<LDFlagSet>;
+    allFlags: (
+      user: LDUser,
+      callback?: (err: any, res: LDFlagSet) => void
+    ) => Promise<LDFlagSet>;
 
     /**
      *
@@ -448,7 +500,6 @@ declare module "ldclient-node" {
      * Close the update processor as well as the attached feature store.
      */
     close: () => void;
-
 
     /**
      *
@@ -491,9 +542,37 @@ declare module "ldclient-node" {
      * Internally, the LaunchDarkly SDK keeps an event queue for track and identify calls.
      * These are flushed periodically (see configuration option: flushInterval)
      * and when the queue size limit (see configuration option: capacity) is reached.
-     * 
+     *
      * @returns a Promise which resolves once flushing is finished
      */
     flush: (callback?: (err: any, res: boolean) => void) => Promise<void>;
   }
+}
+
+declare module 'ldclient-node/streaming' {
+  import {
+    LDOptions,
+    LDFeatureRequestor,
+    LDStreamProcessor
+  } from 'ldclient-node';
+
+  function StreamProcessor(
+    sdkKey: string,
+    options: LDOptions,
+    requestor: LDFeatureRequestor
+  ): LDStreamProcessor;
+  export = StreamProcessor;
+}
+declare module 'ldclient-node/requestor' {
+  import { LDOptions, LDFeatureRequestor } from 'ldclient-node';
+
+  function Requestor(sdkKey: string, options: LDOptions): LDFeatureRequestor;
+  export = Requestor;
+}
+
+declare module 'ldclient-node/feature_store' {
+  import { LDFeatureStore } from 'ldclient-node';
+
+  function InMemoryFeatureStore(): LDFeatureStore;
+  export = InMemoryFeatureStore;
 }
