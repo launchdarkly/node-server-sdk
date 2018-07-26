@@ -2,6 +2,11 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.1.2] - 2018-07-26
+
+### Removed:
+- Removed a dependency on the deprecated [`crypto`](https://www.npmjs.com/package/crypto) module. ([#92](https://github.com/launchdarkly/node-client/issues/92))
+
 ## [5.1.1] - 2018-07-19
 
 ### Fixed:
