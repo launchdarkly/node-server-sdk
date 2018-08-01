@@ -144,7 +144,7 @@ var newClient = function(sdkKey, config) {
     }
 
     return new Promise(function(resolve, reject) {
-      client.once('ready', resolve);
+      client.once('ready', function() { resolve(client) });
       client.once('failed', reject);
     });
   };
