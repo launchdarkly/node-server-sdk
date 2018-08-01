@@ -429,11 +429,12 @@ declare module 'ldclient-node' {
     /**
      * Returns a Promise that will be resolved if the client successfully initializes, or
      * rejected if client initialization has irrevocably failed (for instance, if it detects
-     * that the SDK key is invalid). The sucess and failure cases can also be detected by listening
+     * that the SDK key is invalid). The success and failure cases can also be detected by listening
      * for the events "ready" and "failed".
-     * @returns a Promise containing the initialization state of the client
+     * @returns a Promise containing the initialization state of the client; if successful, the resolved
+     * value is the same client object
      */
-    waitForInitialization: () => Promise<void>;
+    waitForInitialization: () => Promise<LDClient>;
 
     /**
      * Retrieves a flag's value.
