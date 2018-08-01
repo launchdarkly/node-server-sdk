@@ -2,6 +2,15 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.2.0] - 2018-08-01
+
+### Changed:
+- The promise from `waitForInitialization()`, if successful, now resolves with a value: the client. Previously, it resolved with no value. (Thanks, [rmanalan](https://github.com/launchdarkly/node-client/pull/106)!)
+
+### Fixed:
+
+- Receiving an HTTP 400 error from LaunchDarkly should not make the client give up on sending any more requests to LaunchDarkly (unlike a 401 or 403).
+
 ## [5.1.2] - 2018-07-26
 
 ### Removed:
