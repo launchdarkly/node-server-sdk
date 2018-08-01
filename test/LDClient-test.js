@@ -325,6 +325,7 @@ describe('LDClient', function() {
       client.waitForInitialization().then(callback)
         .then(() => {
           expect(callback).toHaveBeenCalled();
+          expect(callback.mock.calls[0][0]).toBe(client);
           done();
         }).catch(done.error)
     });
@@ -338,6 +339,7 @@ describe('LDClient', function() {
           client.waitForInitialization().then(callback)
             .then(() => {
               expect(callback).toHaveBeenCalled();
+              expect(callback.mock.calls[0][0]).toBe(client);
               done();
             }).catch(done.error)
         }).catch(done.error)

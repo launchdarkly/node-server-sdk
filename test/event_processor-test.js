@@ -417,8 +417,8 @@ describe('EventProcessor', function() {
 
   function verifyRecoverableHttpError(done, status) {
     ep = EventProcessor(sdkKey, defaultConfig);
-    var e = { kind: 'identify', creationDate: 1000, user: user };
-    ep.sendEvent(e);
+    var e0 = { kind: 'identify', creationDate: 1000, user: user };
+    ep.sendEvent(e0);
 
     nock(eventsUri).post('/bulk').reply(status);
     nock(eventsUri).post('/bulk').reply(status);
@@ -427,9 +427,23 @@ describe('EventProcessor', function() {
       function() {},
       function(err) {
         expect(err.message).toContain('error ' + status);
-        done();
+
+        var e1 = { kind: 'identify', creationDate: 1001, user: user };
+        ep.sendEvent(e1);
+
+        // this second event should go through
+        flushAndGetRequest(function(output) {
+          expect(output.length).toEqual(1);
+          expect(output[0].creationDate).toEqual(1001);
+      
+          done();
+        });
       });
   }
+
+  it('retries after a 400 error', function(done) {
+    verifyRecoverableHttpError(done, 400);
+  });
 
   it('stops sending events after a 401 error', function(done) {
     verifyUnrecoverableHttpError(done, 401);
