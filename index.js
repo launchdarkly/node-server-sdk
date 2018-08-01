@@ -118,7 +118,7 @@ var newClient = function(sdkKey, config) {
       client.emit('ready');
     }
   });
-  
+
   client.initialized = function() {
     return initComplete;
   };
@@ -129,7 +129,7 @@ var newClient = function(sdkKey, config) {
     if (initComplete) {
       return Promise.resolve();
     }
-    
+
     return new Promise(function(resolve) {
       client.once('ready', resolve);
     });
@@ -137,12 +137,12 @@ var newClient = function(sdkKey, config) {
 
   client.waitForInitialization = function() {
     if (initComplete) {
-      return Promise.resolve();
+      return Promise.resolve(client);
     }
     if (failure) {
       return Promise.reject(failure);
     }
-    
+
     return new Promise(function(resolve, reject) {
       client.once('ready', resolve);
       client.once('failed', reject);
@@ -197,7 +197,7 @@ var newClient = function(sdkKey, config) {
         sendFlagEvent(key, flag, user, null, defaultVal, defaultVal);
         return resolve(defaultVal);
       }
-      
+
       evaluate.evaluate(flag, user, config.featureStore, function(err, variation, value, events) {
         var i;
         var version = flag ? flag.version : null;
@@ -221,7 +221,7 @@ var newClient = function(sdkKey, config) {
         } else {
           sendFlagEvent(key, flag, user, variation, value, defaultVal);
           return resolve(value);
-        }               
+        }
       });
     });
   }
@@ -321,7 +321,7 @@ var newClient = function(sdkKey, config) {
       return client[newName].apply(client, arguments);
     };
   }
-  
+
   deprecatedMethod('all_flags', 'allFlags');
   deprecatedMethod('is_offline', 'isOffline');
   deprecatedMethod('secure_mode_hash', 'secureModeHash');
