@@ -302,21 +302,27 @@ declare module 'ldclient-node' {
     /**
      * Get a flag's value.
      *
+     * @param kind
+     *  The type of data to be accessed
+     *
      * @param key
      *  The flag key
      *
      * @param callback
      *  Will be called with the resulting flag.
      */
-    get: (key: string, callback: (res: LDFlagValue) => void) => void;
+    get: (kind: object, key: string, callback: (res: LDFlagValue) => void) => void;
 
     /**
      * Get all flags.
      *
+     * @param kind
+     *  The type of data to be accessed
+     *
      * @param callback
      *  Will be called with the resulting flag set.
      */
-    all: (callback: (res: LDFlagSet) => void) => void;
+    all: (kind: object, callback: (res: LDFlagSet) => void) => void;
 
     /**
      * Initialize the store.
@@ -332,6 +338,9 @@ declare module 'ldclient-node' {
     /**
      * Delete a key from the store.
      *
+     * @param kind
+     *  The type of data to be accessed
+     *
      * @param key
      *  The flag key.
      *
@@ -342,10 +351,13 @@ declare module 'ldclient-node' {
      * @param callback
      *  Will be called when the delete operation is complete.
      */
-    delete: (key: string, version: string, callback?: () => void) => void;
+    delete: (kind: object, key: string, version: string, callback?: () => void) => void;
 
     /**
      * Upsert a flag to the store.
+     *
+     * @param kind
+     *  The type of data to be accessed
      *
      * @param key
      *  The flag key.
@@ -356,7 +368,7 @@ declare module 'ldclient-node' {
      * @param callback
      *  Will be called after the upsert operation is complete.
      */
-    upsert: (key: string, flag: LDFlagValue, callback?: () => void) => void;
+    upsert: (kind: object, key: string, flag: LDFlagValue, callback?: () => void) => void;
 
     /**
      * Is the store initialized?
