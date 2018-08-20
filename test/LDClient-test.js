@@ -29,8 +29,10 @@ describe('LDClient', function() {
   };
 
   beforeEach(function() {
+    logger.debug = jest.fn();
     logger.info = jest.fn();
     logger.warn = jest.fn();
+    logger.error = jest.fn();
     eventProcessor.events = [];
     updateProcessor.error = null;
   });
@@ -115,7 +117,8 @@ describe('LDClient', function() {
     return LDClient.init('secret', {
       featureStore: store,
       eventProcessor: eventProcessor,
-      updateProcessor: updateProcessor
+      updateProcessor: updateProcessor,
+      logger: logger
     });
   }
 
@@ -269,6 +272,7 @@ describe('LDClient', function() {
       client.allFlags(user, function(err, results) {
         expect(err).toBeNull();
         expect(results).toEqual({feature: 'b'});
+        expect(logger.warn).toHaveBeenCalledTimes(1); // deprecation warning
         done();
       });
     });

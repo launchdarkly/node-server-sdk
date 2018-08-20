@@ -233,6 +233,7 @@ var newClient = function(sdkKey, config) {
   }
 
   client.allFlags = function(user, callback) {
+    config.logger.warn("allFlags() is deprecated. Call 'allFlagsState' instead and call toJson() on the result");
     return wrapPromiseCallback(
       client.allFlagsState(user).then(function(state) {
         return state.allValues();
