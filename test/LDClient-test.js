@@ -83,6 +83,18 @@ describe('LDClient', function() {
     });
   });
 
+  it('returns empty state for allFlagsState in offline mode and logs a message', function(done) {
+    var client = LDClient.init('secret', {offline: true, logger: logger});
+    client.on('ready', function() {
+      client.allFlagsState({key: 'user'}, function(err, state) {
+        expect(state.valid).toEqual(false);
+        expect(state.allValues()).toEqual({});
+        expect(logger.info).toHaveBeenCalledTimes(1);
+        done();
+      });
+    });
+  });
+
   it('allows deprecated method all_flags', function(done) {
     var client = LDClient.init('secret', {offline: true, logger: logger});
     client.on('ready', function() {
@@ -257,6 +269,41 @@ describe('LDClient', function() {
       client.allFlags(user, function(err, results) {
         expect(err).toBeNull();
         expect(results).toEqual({feature: 'b'});
+        done();
+      });
+    });
+  });
+
+  it('captures flag state with allFlagsState()', function(done) {
+    var flag = {
+      key: 'feature',
+      version: 100,
+      on: true,
+      targets: [],
+      fallthrough: { variation: 1 },
+      variations: ['a', 'b'],
+      trackEvents: true,
+      debugEventsUntilDate: 1000
+    };
+    var client = createOnlineClientWithFlags({ feature: flag });
+    var user = { key: 'user' };
+    client.on('ready', function() {
+      client.allFlagsState(user, function(err, state) {
+        expect(err).toBeNull();
+        expect(state.valid).toEqual(true);
+        expect(state.allValues()).toEqual({feature: 'b'});
+        expect(state.getFlagValue('feature')).toEqual('b');
+        expect(state.toJson()).toEqual({
+          feature: 'b',
+          $flagsState: {
+            feature: {
+              version: 100,
+              variation: 1,
+              trackEvents: true,
+              debugEventsUntilDate: 1000
+            }
+          }
+        });
         done();
       });
     });
