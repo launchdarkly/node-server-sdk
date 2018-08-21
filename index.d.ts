@@ -523,7 +523,7 @@ declare module 'ldclient-node' {
     /**
      * Retrieves the set of all flag values for a user.
      *
-     * This method is deprecated; user allFlagsState() instead. Current versions of the client-side
+     * This method is deprecated; use allFlagsState() instead. Current versions of the client-side
      * SDK will not generate analytics events correctly if you pass the result of allFlags().
      *
      * @param user
@@ -542,7 +542,8 @@ declare module 'ldclient-node' {
      * method does not send analytics events back to LaunchDarkly.
      *
      * The most common use case for this method is to bootstrap a set of client-side
-     * feature flags from a back-end service.
+     * feature flags from a back-end service. Call the toJSON() method of the returned object
+     * to convert it to the data structure used by the client-side SDK.
      *
      * @param user The end user requesting the feature flags.
      * @param callback The node-style callback to receive the state result.
