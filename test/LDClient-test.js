@@ -306,7 +306,8 @@ describe('LDClient', function() {
               trackEvents: true,
               debugEventsUntilDate: 1000
             }
-          }
+          },
+          $valid: true
         });
         done();
       });

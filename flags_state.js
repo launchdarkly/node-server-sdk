@@ -25,7 +25,7 @@ function FlagsStateBuilder(valid) {
       allValues: function() { return flagValues; },
       getFlagValue: function(key) { return flagValues[key]; },
       toJSON: function() {
-        return Object.assign({}, flagValues, { $flagsState: flagMetadata });
+        return Object.assign({}, flagValues, { $flagsState: flagMetadata, $valid: valid });
       }
     };
   }
