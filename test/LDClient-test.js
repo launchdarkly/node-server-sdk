@@ -297,7 +297,7 @@ describe('LDClient', function() {
         expect(state.valid).toEqual(true);
         expect(state.allValues()).toEqual({feature: 'b'});
         expect(state.getFlagValue('feature')).toEqual('b');
-        expect(state.toJson()).toEqual({
+        expect(state.toJSON()).toEqual({
           feature: 'b',
           $flagsState: {
             feature: {
