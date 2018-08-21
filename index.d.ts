@@ -80,7 +80,7 @@ declare module 'ldclient-node' {
      * the Javascript SDK. Use this method if you are passing data to the front end in
      * order to "bootstrap" the JavaScript client.
      *
-     * Do nto rely on the exact shape of this data, as it may change in future to support
+     * Do not rely on the exact shape of this data, as it may change in future to support
      * the needs of the JavaScript client.
      */
     toJson: () => object;
