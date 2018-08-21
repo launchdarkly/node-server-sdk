@@ -83,7 +83,7 @@ declare module 'ldclient-node' {
      * Do not rely on the exact shape of this data, as it may change in future to support
      * the needs of the JavaScript client.
      */
-    toJson: () => object;
+    toJSON: () => object;
   };
 
   /**
