@@ -88,7 +88,7 @@ describe('LDClient', function() {
   it('returns empty state for allFlagsState in offline mode and logs a message', function(done) {
     var client = LDClient.init('secret', {offline: true, logger: logger});
     client.on('ready', function() {
-      client.allFlagsState({key: 'user'}, function(err, state) {
+      client.allFlagsState({key: 'user'}, {}, function(err, state) {
         expect(state.valid).toEqual(false);
         expect(state.allValues()).toEqual({});
         expect(logger.info).toHaveBeenCalledTimes(1);
@@ -292,7 +292,7 @@ describe('LDClient', function() {
     var client = createOnlineClientWithFlags({ feature: flag });
     var user = { key: 'user' };
     client.on('ready', function() {
-      client.allFlagsState(user, function(err, state) {
+      client.allFlagsState(user, {}, function(err, state) {
         expect(err).toBeNull();
         expect(state.valid).toEqual(true);
         expect(state.allValues()).toEqual({feature: 'b'});
@@ -309,6 +309,25 @@ describe('LDClient', function() {
           },
           $valid: true
         });
+        done();
+      });
+    });
+  });
+
+  it('can filter for only client-side flags with allFlagsState()', function(done) {
+    var flag1 = { key: 'server-side-1', on: false, offVariation: 0, variations: ['a'], clientSide: false };
+    var flag2 = { key: 'server-side-2', on: false, offVariation: 0, variations: ['b'], clientSide: false };
+    var flag3 = { key: 'client-side-1', on: false, offVariation: 0, variations: ['value1'], clientSide: true };
+    var flag4 = { key: 'client-side-2', on: false, offVariation: 0, variations: ['value2'], clientSide: true };
+    var client = createOnlineClientWithFlags({
+      'server-side-1': flag1, 'server-side-2': flag2, 'client-side-1': flag3, 'client-side-2': flag4
+    });
+    var user = { key: 'user' };
+    client.on('ready', function() {
+      client.allFlagsState(user, { clientSideOnly: true }, function(err, state) {
+        expect(err).toBeNull();
+        expect(state.valid).toEqual(true);
+        expect(state.allValues()).toEqual({ 'client-side-1': 'value1', 'client-side-2': 'value2' });
         done();
       });
     });

@@ -455,6 +455,16 @@ declare module 'ldclient-node' {
   }
 
   /**
+   * Optional settings that can be passed to LDClient.allFlagsState().
+   */
+  export type LDFlagsStateOptions = {
+    /**
+     * True if the state should include only flags that have been marked for use with the
+     * client-side SDK. By default, all flags are included.
+    clientSideOnly?: boolean;
+  };
+
+  /**
    * The LaunchDarkly client's instance interface.
    *
    * @see http://docs.launchdarkly.com/docs/js-sdk-reference
@@ -546,11 +556,14 @@ declare module 'ldclient-node' {
      * to convert it to the data structure used by the client-side SDK.
      *
      * @param user The end user requesting the feature flags.
+     * @param options Optional object with properties that determine how the state is computed;
+     *   set `clientSideOnly: true` to include only client-side-enabled flags
      * @param callback The node-style callback to receive the state result.
      * @returns a Promise containing the state object
      */
     allFlagsState: (
       user: LDUser,
+      options?: LDFlagsStateOptions,
       callback?: (err: any, res: LDFlagsState) => void
     ) => Promise<LDFlagsState>;
 
