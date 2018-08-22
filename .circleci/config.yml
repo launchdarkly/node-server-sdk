@@ -16,6 +16,7 @@ node-template: &node-template
         command: npm test
         environment:
           JEST_JUNIT_OUTPUT: "reports/junit/js-test-results.xml"
+    - run: npm audit
     - store_test_results:
         path: reports/junit
     - store_artifacts:
