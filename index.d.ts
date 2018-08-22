@@ -461,6 +461,7 @@ declare module 'ldclient-node' {
     /**
      * True if the state should include only flags that have been marked for use with the
      * client-side SDK. By default, all flags are included.
+     */
     clientSideOnly?: boolean;
   };
 
