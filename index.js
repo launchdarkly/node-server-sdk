@@ -241,7 +241,8 @@ var newClient = function(sdkKey, config) {
       callback);
   }
 
-  client.allFlagsState = function(user, callback) {
+  client.allFlagsState = function(user, options, callback) {
+    options = options || {};
     return wrapPromiseCallback(new Promise(function(resolve, reject) {
       sanitizeUser(user);
       
@@ -256,13 +257,18 @@ var newClient = function(sdkKey, config) {
       }
 
       var builder = FlagsStateBuilder(true);
+      var clientOnly = options.clientSideOnly;
       config.featureStore.all(dataKind.features, function(flags) {
         async.forEachOf(flags, function(flag, key, iterateeCb) {
-          // At the moment, we don't send any events here
-          evaluate.evaluate(flag, user, config.featureStore, function(err, variation, value, events) {
-            builder.addFlag(flag, value, variation);
+          if (clientOnly && !flag.clientSide) {
             setImmediate(iterateeCb);
-          })
+          } else {
+            // At the moment, we don't send any events here
+            evaluate.evaluate(flag, user, config.featureStore, function(err, variation, value, events) {
+              builder.addFlag(flag, value, variation);
+              setImmediate(iterateeCb);
+            });
+          }
         }, function(err) {
           return err ? reject(err) : resolve(builder.build());
         });
