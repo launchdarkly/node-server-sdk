@@ -47,7 +47,7 @@ function EventSummarizer(config) {
         };
         flagsOut[c.key] = flag;
       }
-      counterOut = {
+      var counterOut = {
         value: c.value,
         count: c.count
       };
