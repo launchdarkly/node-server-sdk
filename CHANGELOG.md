@@ -2,6 +2,12 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.2.1] - 2018-08-22
+
+### Fixed:
+- Type definitions for `LDFeatureStore` are now correct.
+- Fixed an accidental global variable reference in `event_summarizer.js`. (Thanks, [jwenzler](https://github.com/launchdarkly/node-client/pull/111#pullrequestreview-148668257)!)
+
 ## [5.2.0] - 2018-08-01
 
 ### Changed:
