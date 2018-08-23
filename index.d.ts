@@ -67,6 +67,13 @@ declare module 'ldclient-node' {
     getFlagValue: (key: string) => LDFlagValue;
 
     /**
+     * Returns the evaluation reason for a feature flag at the time the state was recorded.
+     * It will be null if reasons were not recorded, or if there was no such flag.
+     * @param key the flag key
+     */
+    getFlagReason: (key: string) => LDEvaluationReason;
+    
+    /**
      * Returns a map of feature flag keys to values. If a flag would have evaluated to the
      * default value, its value will be null.
      *
