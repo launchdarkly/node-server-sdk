@@ -8,90 +8,95 @@ var builtins = ['key', 'ip', 'country', 'email', 'firstName', 'lastName', 'avata
 
 var noop = function(){};
 
+// Callback receives (err, detail, events) where detail has the properties "value", "variationIndex", and "reason";
+// detail will never be null even if there's an error.
 function evaluate(flag, user, featureStore, cb) {
   cb = cb || noop;
   if (!user || user.key === null || user.key === undefined) {
-    cb(null, null, null, null);
+    cb(null, errorResult('USER_NOT_SPECIFIED'), []);
     return;
   }
 
   if (!flag) {
-    cb(null, null, null, null);
+    cb(null, errorResult('FLAG_NOT_FOUND'), []);
     return;
   }
 
-  if (!flag.on) {
-    // Return the off variation if defined and valid
-    cb(null, flag.offVariation, getVariation(flag, flag.offVariation), null);
-    return;
-  }
-
-  evalInternal(flag, user, featureStore, [], function(err, variation, value, events) {
-    if (err) {
-      cb(err, variation, value, events);
-      return;
-    }
-
-    if (variation === null) {
-      // Return the off variation if defined and valid
-      cb(null, flag.offVariation, getVariation(flag, flag.offVariation), events);
-    } else {
-      cb(err, variation, value, events);
-    }
+  var events = [];
+  evalInternal(flag, user, featureStore, events, function(err, detail) {
+    cb(err, detail, events);
   });
-  return;
 }
 
 function evalInternal(flag, user, featureStore, events, cb) {
-  // Evaluate prerequisites, if any
+  // If flag is off, return the off variation
+  if (!flag.on) {
+    getOffResult(flag, { kind: 'OFF' }, function(err, detail) {
+      cb(err, detail);
+    });
+    return;
+  }
+
+  checkPrerequisites(flag, user, featureStore, events, function(err, failureReason) {
+    if (err != null || failureReason != null) {
+      getOffResult(flag, failureReason, cb);
+    } else {
+      evalRules(flag, user, featureStore, cb);
+    }
+  });
+}
+
+// Callback receives (err, reason) where reason is null if successful, or a "prerequisite failed" reason
+function checkPrerequisites(flag, user, featureStore, events, cb) {
   if (flag.prerequisites) {
     async.mapSeries(flag.prerequisites, 
       function(prereq, callback) {
         featureStore.get(dataKind.features, prereq.key, function(f) {
           // If the flag does not exist in the store or is not on, the prerequisite
           // is not satisfied
-          if (!f || !f.on) {
-            callback(new Error("Unsatisfied prerequisite"), null);
+          if (!f) {
+            callback({ key: prereq.key, err: new Error("Could not retrieve prerequisite feature flag \"" + prereq.key + "\"") });
             return;
           }
-          evalInternal(f, user, featureStore, events, function(err, variation, value) {
+          if (!f.on) {
+            callback({ key: prereq.key });
+            return;
+          }
+          evalInternal(f, user, featureStore, events, function(err, detail) {
             // If there was an error, the value is null, the variation index is out of range, 
             // or the value does not match the indexed variation the prerequisite is not satisfied
-            events.push(createFlagEvent(f.key, f, user, variation, value, null, flag.key));
-            if (err || value === null || variation != prereq.variation) {
-              callback(new Error("Unsatisfied prerequisite"), null)
+            events.push(createFlagEvent(f.key, f, user, detail, null, flag.key, true));
+            if (err) {
+              callback({ key: prereq.key, err: err });
+            } else if (detail.variationIndex != prereq.variation) {
+              callback({ key: prereq.key });
             } else { 
               // The prerequisite was satisfied
-              callback(null, null);
+              callback(null);
             }
           });          
         });
       }, 
-      function(err, results) {
-        // If the error is that prerequisites weren't satisfied, we don't return an error,
-        // because we want to serve the 'offVariation'
-        if (err) {
-          cb(null, null, null, events);
-          return;
-        } 
-        evalRules(flag, user, featureStore, function(e, variation, value) {
-          cb(e, variation, value, events);
-        });
-      })
+      function(errInfo) {
+        if (errInfo) {
+          cb(errInfo.err, { 'kind': 'PREREQUISITE_FAILED', 'prerequisiteKey': errInfo.key });
+        } else {
+          cb(null, null);
+        }
+      });
   } else {
-    evalRules(flag, user, featureStore, function(e, variation, value) {
-      cb(e, variation, value, events);
-    });
+    cb(null, null);
   }
 }
 
+// Callback receives (err, detail)
 function evalRules(flag, user, featureStore, cb) {
   var i, j;
   var target;
   var variation;
   var rule;
   // Check target matches
-  for (i = 0; i < flag.targets.length; i++) {
+  for (i = 0; i < (flag.targets || []).length; i++) {
     target = flag.targets[i];
 
     if (!target.values) {
@@ -100,32 +105,30 @@ function evalRules(flag, user, featureStore, cb) {
 
     for (j = 0; j < target.values.length; j++) {
       if (user.key === target.values[j]) {
-        value = getVariation(flag, target.variation);
-        cb(value === null ? new Error("Undefined variation for flag " + flag.key) : null,
-          target.variation, value);
+        getVariation(flag, target.variation, { kind: 'TARGET_MATCH' }, cb);
         return;
       }
     }
   }
 
-  async.mapSeries(flag.rules,
+  i = 0;
+  async.mapSeries(flag.rules || [],
     function(rule, callback) {
       ruleMatchUser(rule, user, featureStore, function(matched) {
-        setImmediate(callback, matched ? rule : null, null);
+        var match = matched ? { index: i, rule: rule } : null;
+        setImmediate(callback, match, null);
       });
     },
     function(err, results) {
       // we use the "error" value to indicate that a rule was successfully matched (since we only care
       // about the first match, and mapSeries terminates on the first "error")
       if (err) {
-        var rule = err;
-        variation = variationForUser(rule, user, flag);
+        var reason = { kind: 'RULE_MATCH', ruleIndex: err.index, ruleId: err.rule.id };
+        getResultForVariationOrRollout(err.rule, user, flag, reason, cb);
       } else {
         // no rule matched; check the fallthrough
-        variation = variationForUser(flag.fallthrough, user, flag);
+        getResultForVariationOrRollout(flag.fallthrough, user, flag, { kind: 'FALLTHROUGH' }, cb);
       }
-      cb(variation === null ? new Error("Undefined variation for flag " + flag.key) : null,
-          variation, getVariation(flag, variation));
     }
   );
 }
@@ -255,14 +258,37 @@ function matchAny(matchFn, value, values) {
   return false;
 }
 
-// Given an index, return the variation value, or null if 
-// the index is invalid
-function getVariation(flag, index) {
-  if (index === null || index === undefined || index >= flag.variations.length) {
-    return null;
+function getVariation(flag, index, reason, cb) {
+  if (index === null || index === undefined || index < 0 || index >= flag.variations.length) {
+    cb(new Error('Invalid variation index in flag', errResult('MALFORMED_FLAG')));
   } else {
-    return flag.variations[index];
+    cb(null, { value: flag.variations[index], variationIndex: index, reason: reason });
   }
+}
+
+function getOffResult(flag, reason, cb) {
+  if (flag.offVariation === null || flag.offVariation === undefined) {
+    cb(null, { value: null, variationIndex: null, reason: reason });
+  } else {
+    getVariation(flag, flag.offVariation, reason, cb);
+  }
+}
+
+function getResultForVariationOrRollout(r, user, flag, reason, cb) {
+  if (!r) {
+    cb(new Error('Fallthrough variation undefined'), errResult('MALFORMED_FLAG'));
+  } else {
+    var index = variationForUser(r, user, flag);
+    if (index === null) {
+      cb(new Error('Variation/rollout object with no variation or rollout'), errResult('MALFORMED_FLAG'));
+    } else {
+      getVariation(flag, index, reason, cb);
+    }
+  }
+}
+
+function errorResult(errorKind) {
+  return { value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: errorKind }};
 }
 
 // Given a variation or rollout 'r', select
@@ -337,13 +363,13 @@ function bucketableStringValue(value) {
   return null;
 }
 
-function createFlagEvent(key, flag, user, variation, value, defaultVal, prereqOf) {
-  return {
+function createFlagEvent(key, flag, user, detail, defaultVal, prereqOf, includeReason) {
+  var e = {
     "kind": "feature",
     "key": key,
     "user": user,
-    "variation": variation,
-    "value": value,
+    "variation": detail.variationIndex,
+    "value": detail.value,
     "default": defaultVal,
     "creationDate": new Date().getTime(),
     "version": flag ? flag.version : null,
@@ -351,6 +377,10 @@ function createFlagEvent(key, flag, user, variation, value, defaultVal, prereqOf
     "trackEvents": flag ? flag.trackEvents : null,
     "debugEventsUntilDate": flag ? flag.debugEventsUntilDate : null
   };
+  if (includeReason) {
+    e['reason'] = detail.reason;
+  }
+  return e;
 }
 
 module.exports = {evaluate: evaluate, bucketUser: bucketUser, createFlagEvent: createFlagEvent};

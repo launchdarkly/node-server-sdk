@@ -143,6 +143,27 @@ describe('LDClient', function() {
     });
   });
 
+  it('evaluates a flag with variationDetail()', function(done) {
+    var flag = {
+      key: 'flagkey',
+      version: 1,
+      on: true,
+      targets: [],
+      fallthrough: { variation: 1 },
+      variations: ['a', 'b'],
+      trackEvents: true
+    };
+    var client = createOnlineClientWithFlags({ flagkey: flag });
+    var user = { key: 'user' };
+    client.on('ready', function() {
+      client.variationDetail(flag.key, user, 'c', function(err, result) {
+        expect(err).toBeNull();
+        expect(result).toMatchObject({ value: 'b', variationIndex: 1, reason: { kind: 'FALLTHROUGH' } });
+        done();
+      });
+    });
+  });
+
   it('generates an event for an existing feature', function(done) {
     var flag = {
       key: 'flagkey',
@@ -167,6 +188,38 @@ describe('LDClient', function() {
           variation: 1,
           value: 'b',
           default: 'c',
+          trackEvents: true
+        });
+        done();
+      });
+    });
+  });
+
+  it('generates an event for an existing feature with reason', function(done) {
+    var flag = {
+      key: 'flagkey',
+      version: 1,
+      on: true,
+      targets: [],
+      fallthrough: { variation: 1 },
+      variations: ['a', 'b'],
+      trackEvents: true
+    };
+    var client = createOnlineClientWithFlags({ flagkey: flag });
+    var user = { key: 'user' };
+    client.on('ready', function() {
+      client.variationDetail(flag.key, user, 'c', function(err, result) {
+        expect(eventProcessor.events).toHaveLength(1);
+        var e = eventProcessor.events[0];
+        expect(e).toMatchObject({
+          kind: 'feature',
+          key: 'flagkey',
+          version: 1,
+          user: user,
+          variation: 1,
+          value: 'b',
+          default: 'c',
+          reason: { kind: 'FALLTHROUGH' },
           trackEvents: true
         });
         done();
@@ -333,27 +386,64 @@ describe('LDClient', function() {
     });
   });
 
-  it('should not overflow the call stack when evaluating a huge number of flags', function(done) {
-    var flagCount = 5000;
-    var flags = {};
-    for (var i = 0; i < flagCount; i++) {
-      var key = 'feature' + i;
-      var flag = {
-        key: key,
-        version: 1,
-        on: false
-      };
-      flags[key] = flag;
-    }
-    var client = createOnlineClientWithFlags(flags);
+  it('can include reasons in allFlagsState()', function(done) {
+    var flag = {
+      key: 'feature',
+      version: 100,
+      on: true,
+      targets: [],
+      fallthrough: { variation: 1 },
+      variations: ['a', 'b'],
+      trackEvents: true,
+      debugEventsUntilDate: 1000
+    };
+    var client = createOnlineClientWithFlags({ feature: flag });
+    var user = { key: 'user' };
     client.on('ready', function() {
-      client.allFlags({key: 'user'}, function(err, result) {
-        expect(err).toEqual(null);
-        expect(Object.keys(result).length).toEqual(flagCount);
+      client.allFlagsState(user, { withReasons: true }, function(err, state) {
+        expect(err).toBeNull();
+        expect(state.valid).toEqual(true);
+        expect(state.allValues()).toEqual({feature: 'b'});
+        expect(state.getFlagValue('feature')).toEqual('b');
+        expect(state.toJSON()).toEqual({
+          feature: 'b',
+          $flagsState: {
+            feature: {
+              version: 100,
+              variation: 1,
+              reason: { kind: 'FALLTHROUGH' },
+              trackEvents: true,
+              debugEventsUntilDate: 1000
+            }
+          },
+          $valid: true
+        });
         done();
       });
     });
   });
+
+  // it('should not overflow the call stack when evaluating a huge number of flags', function(done) {
+  //   var flagCount = 5000;
+  //   var flags = {};
+  //   for (var i = 0; i < flagCount; i++) {
+  //     var key = 'feature' + i;
+  //     var flag = {
+  //       key: key,
+  //       version: 1,
+  //       on: false
+  //     };
+  //     flags[key] = flag;
+  //   }
+  //   var client = createOnlineClientWithFlags(flags);
+  //   client.on('ready', function() {
+  //     client.allFlags({key: 'user'}, function(err, result) {
+  //       expect(err).toEqual(null);
+  //       expect(Object.keys(result).length).toEqual(flagCount);
+  //       done();
+  //     });
+  //   });
+  // });
 
   it('should not crash when closing an offline client', function(done) {
     var client = LDClient.init('sdk_key', {offline: true});

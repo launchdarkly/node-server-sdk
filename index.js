@@ -152,54 +152,78 @@ var newClient = function(sdkKey, config) {
 
   client.variation = function(key, user, defaultVal, callback) {
     return wrapPromiseCallback(new Promise(function(resolve, reject) {
-      sanitizeUser(user);
-      var variationErr;
-
-      if (this.isOffline()) {
-        config.logger.info("Variation called in offline mode. Returning default value.");
-        return resolve(defaultVal);
-      }
-
-      else if (!key) {
-        variationErr = new errors.LDClientError('No feature flag key specified. Returning default value.');
-        maybeReportError(variationError);
-        sendFlagEvent(key, null, user, null, defaultVal, defaultVal);
-        return resolve(defaultVal);
-      }
-
-      else if (user && user.key === "") {
-        config.logger.warn("User key is blank. Flag evaluation will proceed, but the user will not be stored in LaunchDarkly");
-      }
-
-      if (!initComplete) {
-        config.featureStore.initialized(function(storeInited) {
-          if (storeInited) {
-            config.logger.warn("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using last known values from feature store")
-            variationInternal(key, user, defaultVal, resolve, reject);
-          } else {
-            variationErr = new errors.LDClientError("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using default value");
-            maybeReportError(variationErr);
-            sendFlagEvent(key, null, user, null, defaultVal, defaultVal);
-            return resolve(defaultVal);
-          }
-        });
-        return;
-      }
-
-      variationInternal(key, user, defaultVal, resolve, reject);
+      evaluateIfPossible(key, user, defaultVal, false,
+        function(detail) {
+          resolve(detail.value)
+        },
+        reject);
     }.bind(this)), callback);
+  };
+
+  client.variationDetail = function(key, user, defaultVal, callback) {
+    return wrapPromiseCallback(new Promise(function(resolve, reject) {
+      evaluateIfPossible(key, user, defaultVal, true, resolve, reject);
+    }.bind(this)), callback);
+  };
+
+  function errorResult(errorKind, defaultVal) {
+    return { value: defaultVal, variationIndex: null, reason: { kind: 'ERROR', errorKind: errorKind } };
+  };
+
+  function evaluateIfPossible(key, user, defaultVal, includeReasonsInEvents, resolve, reject) {
+    if (!initComplete) {
+      config.featureStore.initialized(function(storeInited) {
+        if (storeInited) {
+          config.logger.warn("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using last known values from feature store")
+          variationInternal(key, user, defaultVal, includeReasonsInEvents, resolve, reject);
+        } else {
+          var err = new errors.LDClientError("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using default value");
+          maybeReportError(variationErr);
+          var result = errorResult('CLIENT_NOT_READY', defaultVal);
+          sendFlagEvent(key, null, user, result, defaultVal, includeReasonsInEvents);
+          return resolve(result);
+        }
+      });
+    } else {
+      variationInternal(key, user, defaultVal, includeReasonsInEvents, resolve, reject);
+    }
   }
 
-  function variationInternal(key, user, defaultVal, resolve, reject) {
+  // resolves to a "detail" object with properties "value", "variationIndex", "reason"
+  function variationInternal(key, user, defaultVal, includeReasonsInEvents, resolve, reject) {
+    if (client.isOffline()) {
+      config.logger.info("Variation called in offline mode. Returning default value.");
+      return resolve(errorResult('CLIENT_NOT_READY', defaultVal));
+    }
+
+    else if (!key) {
+      err = new errors.LDClientError('No feature flag key specified. Returning default value.');
+      maybeReportError(variationError);
+      return resolve(errorResult('FLAG_NOT_FOUND', defaultVal));
+    }
+
+    sanitizeUser(user);
+    if (user && user.key === "") {
+      config.logger.warn("User key is blank. Flag evaluation will proceed, but the user will not be stored in LaunchDarkly");
+    }
+
     config.featureStore.get(dataKind.features, key, function(flag) {
       if (!user) {
         variationErr = new errors.LDClientError('No user specified. Returning default value.');
         maybeReportError(variationErr);
-        sendFlagEvent(key, flag, user, null, defaultVal, defaultVal);
-        return resolve(defaultVal);
+        var result = errorResult('USER_NOT_SPECIFIED', defaultVal);
+        sendFlagEvent(key, flag, user, result, defaultVal, includeReasonsInEvents);
+        return resolve(result);
       }
 
-      evaluate.evaluate(flag, user, config.featureStore, function(err, variation, value, events) {
+      if (!flag) {
+        maybeReportError(new errors.LDClientError('Unknown feature flag "' + key + '"; returning default value'));
+        var result = errorResult('FLAG_NOT_FOUND', defaultVal);
+        sendFlagEvent(key, null, user, result, defaultVal, includeReasonsInEvents);
+        return resolve(result);
+      }
+
+      evaluate.evaluate(flag, user, config.featureStore, function(err, detail, events) {
         var i;
         var version = flag ? flag.version : null;
 
@@ -211,18 +235,20 @@ var newClient = function(sdkKey, config) {
         // have already been constructed, so we just have to push them onto the queue.
         if (events) {
           for (i = 0; i < events.length; i++) {
-            eventProcessor.sendEvent(events[i]);
+            var e = events[i];
+            if (!includeReasonsInEvents) {
+              delete e['reason'];
+            }
+            eventProcessor.sendEvent(e);
           }
         }
 
-        if (value === null) {
+        if (detail.value === null) {
           config.logger.debug("Result value is null in variation");
-          sendFlagEvent(key, flag, user, null, defaultVal, defaultVal);
-          return resolve(defaultVal);
-        } else {
-          sendFlagEvent(key, flag, user, variation, value, defaultVal);
-          return resolve(value);
+          detail.value = defaultVal;
         }
+        sendFlagEvent(key, flag, user, detail, defaultVal, includeReasonsInEvents);
+        return resolve(detail);
       });
     });
   }
@@ -258,14 +284,18 @@ var newClient = function(sdkKey, config) {
 
       var builder = FlagsStateBuilder(true);
       var clientOnly = options.clientSideOnly;
+      var withReasons = options.withReasons;
       config.featureStore.all(dataKind.features, function(flags) {
         async.forEachOf(flags, function(flag, key, iterateeCb) {
           if (clientOnly && !flag.clientSide) {
             setImmediate(iterateeCb);
           } else {
             // At the moment, we don't send any events here
-            evaluate.evaluate(flag, user, config.featureStore, function(err, variation, value, events) {
-              builder.addFlag(flag, value, variation);
+            evaluate.evaluate(flag, user, config.featureStore, function(err, detail, events) {
+              if (err != null) {
+                maybeReportError(new Error('Error for feature flag "' + flag.key + '" while evaluating all flags: ' + err));
+              }
+              builder.addFlag(flag, detail.value, detail.variationIndex, withReasons ? detail.reason : null);
               setImmediate(iterateeCb);
             });
           }
@@ -322,8 +352,8 @@ var newClient = function(sdkKey, config) {
     return eventProcessor.flush(callback);
   };
 
-  function sendFlagEvent(key, flag, user, variation, value, defaultVal) {
-    var event = evaluate.createFlagEvent(key, flag, user, variation, value, defaultVal);
+  function sendFlagEvent(key, flag, user, detail, defaultVal, includeReasonsInEvents) {
+    var event = evaluate.createFlagEvent(key, flag, user, detail, defaultVal, null, includeReasonsInEvents);
     eventProcessor.sendEvent(event);
   }
 
