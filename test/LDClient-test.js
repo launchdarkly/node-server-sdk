@@ -423,27 +423,27 @@ describe('LDClient', function() {
     });
   });
 
-  // it('should not overflow the call stack when evaluating a huge number of flags', function(done) {
-  //   var flagCount = 5000;
-  //   var flags = {};
-  //   for (var i = 0; i < flagCount; i++) {
-  //     var key = 'feature' + i;
-  //     var flag = {
-  //       key: key,
-  //       version: 1,
-  //       on: false
-  //     };
-  //     flags[key] = flag;
-  //   }
-  //   var client = createOnlineClientWithFlags(flags);
-  //   client.on('ready', function() {
-  //     client.allFlags({key: 'user'}, function(err, result) {
-  //       expect(err).toEqual(null);
-  //       expect(Object.keys(result).length).toEqual(flagCount);
-  //       done();
-  //     });
-  //   });
-  // });
+  it('should not overflow the call stack when evaluating a huge number of flags', function(done) {
+    var flagCount = 5000;
+    var flags = {};
+    for (var i = 0; i < flagCount; i++) {
+      var key = 'feature' + i;
+      var flag = {
+        key: key,
+        version: 1,
+        on: false
+      };
+      flags[key] = flag;
+    }
+    var client = createOnlineClientWithFlags(flags);
+    client.on('ready', function() {
+      client.allFlags({key: 'user'}, function(err, result) {
+        expect(err).toEqual(null);
+        expect(Object.keys(result).length).toEqual(flagCount);
+        done();
+      });
+    });
+  });
 
   it('should not crash when closing an offline client', function(done) {
     var client = LDClient.init('sdk_key', {offline: true});
