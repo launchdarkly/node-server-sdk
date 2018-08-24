@@ -243,7 +243,7 @@ var newClient = function(sdkKey, config) {
           }
         }
 
-        if (detail.value === null) {
+        if (detail.variationIndex === null) {
           config.logger.debug("Result value is null in variation");
           detail.value = defaultVal;
         }
