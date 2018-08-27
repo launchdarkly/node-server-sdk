@@ -4,7 +4,7 @@ All notable changes to the LaunchDarkly Node.js SDK will be documented in this f
 
 ## [5.3.1] - 2018-08-27
 ### Fixed:
-- Calling `allFlagsState()` did not work if you omitted the optional second parameter, `options`, but did provide a `callback`.
+- Calling `allFlagsState()` did not work if you omitted the optional second parameter, `options`, but did provide a `callback`. ([#114](https://github.com/launchdarkly/node-client/issues/114))
 
 ## [5.3.0] - 2018-08-27
 ### Added:
