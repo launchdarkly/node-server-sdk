@@ -29,8 +29,10 @@ describe('LDClient', function() {
   };
 
   beforeEach(function() {
+    logger.debug = jest.fn();
     logger.info = jest.fn();
     logger.warn = jest.fn();
+    logger.error = jest.fn();
     eventProcessor.events = [];
     updateProcessor.error = null;
   });
@@ -83,6 +85,18 @@ describe('LDClient', function() {
     });
   });
 
+  it('returns empty state for allFlagsState in offline mode and logs a message', function(done) {
+    var client = LDClient.init('secret', {offline: true, logger: logger});
+    client.on('ready', function() {
+      client.allFlagsState({key: 'user'}, {}, function(err, state) {
+        expect(state.valid).toEqual(false);
+        expect(state.allValues()).toEqual({});
+        expect(logger.info).toHaveBeenCalledTimes(1);
+        done();
+      });
+    });
+  });
+
   it('allows deprecated method all_flags', function(done) {
     var client = LDClient.init('secret', {offline: true, logger: logger});
     client.on('ready', function() {
@@ -103,7 +117,8 @@ describe('LDClient', function() {
     return LDClient.init('secret', {
       featureStore: store,
       eventProcessor: eventProcessor,
-      updateProcessor: updateProcessor
+      updateProcessor: updateProcessor,
+      logger: logger
     });
   }
 
@@ -257,6 +272,62 @@ describe('LDClient', function() {
       client.allFlags(user, function(err, results) {
         expect(err).toBeNull();
         expect(results).toEqual({feature: 'b'});
+        expect(logger.warn).toHaveBeenCalledTimes(1); // deprecation warning
+        done();
+      });
+    });
+  });
+
+  it('captures flag state with allFlagsState()', function(done) {
+    var flag = {
+      key: 'feature',
+      version: 100,
+      on: true,
+      targets: [],
+      fallthrough: { variation: 1 },
+      variations: ['a', 'b'],
+      trackEvents: true,
+      debugEventsUntilDate: 1000
+    };
+    var client = createOnlineClientWithFlags({ feature: flag });
+    var user = { key: 'user' };
+    client.on('ready', function() {
+      client.allFlagsState(user, {}, function(err, state) {
+        expect(err).toBeNull();
+        expect(state.valid).toEqual(true);
+        expect(state.allValues()).toEqual({feature: 'b'});
+        expect(state.getFlagValue('feature')).toEqual('b');
+        expect(state.toJSON()).toEqual({
+          feature: 'b',
+          $flagsState: {
+            feature: {
+              version: 100,
+              variation: 1,
+              trackEvents: true,
+              debugEventsUntilDate: 1000
+            }
+          },
+          $valid: true
+        });
+        done();
+      });
+    });
+  });
+
+  it('can filter for only client-side flags with allFlagsState()', function(done) {
+    var flag1 = { key: 'server-side-1', on: false, offVariation: 0, variations: ['a'], clientSide: false };
+    var flag2 = { key: 'server-side-2', on: false, offVariation: 0, variations: ['b'], clientSide: false };
+    var flag3 = { key: 'client-side-1', on: false, offVariation: 0, variations: ['value1'], clientSide: true };
+    var flag4 = { key: 'client-side-2', on: false, offVariation: 0, variations: ['value2'], clientSide: true };
+    var client = createOnlineClientWithFlags({
+      'server-side-1': flag1, 'server-side-2': flag2, 'client-side-1': flag3, 'client-side-2': flag4
+    });
+    var user = { key: 'user' };
+    client.on('ready', function() {
+      client.allFlagsState(user, { clientSideOnly: true }, function(err, state) {
+        expect(err).toBeNull();
+        expect(state.valid).toEqual(true);
+        expect(state.allValues()).toEqual({ 'client-side-1': 'value1', 'client-side-2': 'value2' });
         done();
       });
     });

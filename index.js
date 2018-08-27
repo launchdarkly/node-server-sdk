@@ -5,6 +5,7 @@ var EventEmitter = require('events').EventEmitter;
 var EventProcessor = require('./event_processor');
 var PollingProcessor = require('./polling');
 var StreamingProcessor = require('./streaming');
+var FlagsStateBuilder = require('./flags_state');
 var configuration = require('./configuration');
 var evaluate = require('./evaluate_flag');
 var messages = require('./messages');
@@ -232,29 +233,44 @@ var newClient = function(sdkKey, config) {
   }
 
   client.allFlags = function(user, callback) {
+    config.logger.warn("allFlags() is deprecated. Call 'allFlagsState' instead and call toJSON() on the result");
+    return wrapPromiseCallback(
+      client.allFlagsState(user).then(function(state) {
+        return state.allValues();
+      }),
+      callback);
+  }
+
+  client.allFlagsState = function(user, options, callback) {
+    options = options || {};
     return wrapPromiseCallback(new Promise(function(resolve, reject) {
       sanitizeUser(user);
-      var results = {};
-
+      
       if (this.isOffline()) {
-        config.logger.info("allFlags() called in offline mode. Returning empty map.");
-        return resolve({});
+        config.logger.info("allFlagsState() called in offline mode. Returning empty state.");
+        return resolve(FlagsStateBuilder(false).build());
       }
 
       if (!user) {
-        config.logger.info("allFlags() called without user. Returning empty map.");
-        return resolve({});
+        config.logger.info("allFlagsState() called without user. Returning empty state.");
+        return resolve(FlagsStateBuilder(false).build());
       }
 
+      var builder = FlagsStateBuilder(true);
+      var clientOnly = options.clientSideOnly;
       config.featureStore.all(dataKind.features, function(flags) {
         async.forEachOf(flags, function(flag, key, iterateeCb) {
-          // At the moment, we don't send any events here
-          evaluate.evaluate(flag, user, config.featureStore, function(err, variation, value, events) {
-            results[key] = value;
+          if (clientOnly && !flag.clientSide) {
             setImmediate(iterateeCb);
-          })
+          } else {
+            // At the moment, we don't send any events here
+            evaluate.evaluate(flag, user, config.featureStore, function(err, variation, value, events) {
+              builder.addFlag(flag, value, variation);
+              setImmediate(iterateeCb);
+            });
+          }
         }, function(err) {
-          return err ? reject(err) : resolve(results);
+          return err ? reject(err) : resolve(builder.build());
         });
       });
     }.bind(this)), callback);
