@@ -333,6 +333,20 @@ describe('LDClient', function() {
     });
   });
 
+  it('can omit options parameter for allFlagsState()', function(done) {
+    var flag = { key: 'key', on: false, offVariation: 0, variations: ['value'] };
+    var client = createOnlineClientWithFlags({ 'key': flag });
+    var user = { key: 'user' };
+    client.on('ready', function() {
+      client.allFlagsState(user, function(err, state) {
+        expect(err).toBeNull();
+        expect(state.valid).toEqual(true);
+        expect(state.allValues()).toEqual({ 'key': 'value' });
+        done();
+      });
+    });
+  });
+
   it('should not overflow the call stack when evaluating a huge number of flags', function(done) {
     var flagCount = 5000;
     var flags = {};

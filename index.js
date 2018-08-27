@@ -242,7 +242,12 @@ var newClient = function(sdkKey, config) {
   }
 
   client.allFlagsState = function(user, options, callback) {
-    options = options || {};
+    if (callback === undefined && typeof(options) === 'function') {
+      callback = options;
+      options = {};
+    } else {
+      options = options || {};
+    }
     return wrapPromiseCallback(new Promise(function(resolve, reject) {
       sanitizeUser(user);
       
