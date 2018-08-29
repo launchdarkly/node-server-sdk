@@ -16,6 +16,7 @@ node-template: &node-template
         command: npm test
         environment:
           JEST_JUNIT_OUTPUT: "reports/junit/js-test-results.xml"
+    - run: tsc
     - run: |
         if [[ $CIRCLE_JOB == current-release ]]; then
           npm audit
