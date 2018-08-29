@@ -84,7 +84,7 @@ declare module 'ldclient-node' {
      * the needs of the JavaScript client.
      */
     toJSON: () => object;
-  };
+  }
 
   /**
    * LaunchDarkly initialization options.
