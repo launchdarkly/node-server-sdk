@@ -5,5 +5,9 @@
     "lib": [
       "es6"
     ]
-  }
+  },
+  "files": [
+    "index.d.ts",
+    "test-types.ts"
+  ]
 }

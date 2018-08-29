@@ -2,6 +2,10 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.3.2] - 2018-08-29
+### Fixed:
+- Fixed TypeScript syntax errors in `index.d.ts`. We are now running the TypeScript compiler in our automated builds to avoid such problems. (Thanks, [PsychicCat](https://github.com/launchdarkly/node-client/pull/116)!)
+
 ## [5.3.1] - 2018-08-27
 ### Fixed:
 - Calling `allFlagsState()` did not work if you omitted the optional second parameter, `options`, but did provide a `callback`. ([#114](https://github.com/launchdarkly/node-client/issues/114))
