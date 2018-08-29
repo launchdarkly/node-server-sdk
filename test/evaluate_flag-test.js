@@ -116,6 +116,43 @@ describe('evaluate', function() {
     });
   });
 
+  it('returns off variation and event if prerequisite is off', function(done) {
+    var flag = {
+      key: 'feature0',
+      on: true,
+      prerequisites: [{key: 'feature1', variation: 1}],
+      fallthrough: { variation: 0 },
+      offVariation: 1,
+      targets: [],
+      rules: [],
+      variations: ['a', 'b', 'c'],
+      version: 1
+    };
+    var flag1 = {
+      key: 'feature1',
+      on: false,
+      offVariation: 1,
+      // note that even though it returns the desired variation, it is still off and therefore not a match
+      fallthrough: { variation: 0 },
+      targets: [],
+      rules: [],
+      variations: ['d', 'e'],
+      version: 2
+    };
+    defineFeatures([flag, flag1], function() {
+      var user = { key: 'x' };
+      var eventsShouldBe = [
+        { kind: 'feature', key: 'feature1', variation: 1, value: 'e', version: 2, prereqOf: 'feature0' }
+      ];
+      evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+        expect(detail).toMatchObject({ value: 'b', variationIndex: 1,
+          reason: { kind: 'PREREQUISITE_FAILED', prerequisiteKey: 'feature1' } });
+        expect(events).toMatchObject(eventsShouldBe);
+        done();
+      });
+    });
+  });
+
   it('returns off variation and event if prerequisite is not met', function(done) {
     var flag = {
       key: 'feature0',

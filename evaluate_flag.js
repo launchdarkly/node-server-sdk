@@ -58,17 +58,15 @@ function checkPrerequisites(flag, user, featureStore, events, cb) {
             callback({ key: prereq.key, err: new Error("Could not retrieve prerequisite feature flag \"" + prereq.key + "\"") });
             return;
           }
-          if (!f.on) {
-            callback({ key: prereq.key });
-            return;
-          }
           evalInternal(f, user, featureStore, events, function(err, detail) {
             // If there was an error, the value is null, the variation index is out of range, 
             // or the value does not match the indexed variation the prerequisite is not satisfied
             events.push(createFlagEvent(f.key, f, user, detail, null, flag.key, true));
             if (err) {
               callback({ key: prereq.key, err: err });
-            } else if (detail.variationIndex != prereq.variation) {
+            } else if (!f.on || detail.variationIndex != prereq.variation) {
+              // Note that if the prerequisite flag is off, we don't consider it a match no matter what its
+              // off variation was. But we still evaluate it and generate an event.
               callback({ key: prereq.key });
             } else { 
               // The prerequisite was satisfied
