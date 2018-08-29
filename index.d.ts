@@ -626,7 +626,7 @@ declare module 'ldclient-node' {
       key: string,
       user: LDUser,
       defaultValue: LDFlagValue,
-      callback?: (err: ay, res: LDEvaluationDetail) => void
+      callback?: (err: any, res: LDEvaluationDetail) => void
     ) => Promise<LDEvaluationDetail>;
 
     toggle: (
