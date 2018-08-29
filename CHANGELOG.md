@@ -2,6 +2,29 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.3.2] - 2018-08-29
+### Fixed:
+- Fixed TypeScript syntax errors in `index.d.ts`. We are now running the TypeScript compiler in our automated builds to avoid such problems. (Thanks, [PsychicCat](https://github.com/launchdarkly/node-client/pull/116)!)
+
+## [5.3.1] - 2018-08-27
+### Fixed:
+- Calling `allFlagsState()` did not work if you omitted the optional second parameter, `options`, but did provide a `callback`. ([#114](https://github.com/launchdarkly/node-client/issues/114))
+
+## [5.3.0] - 2018-08-27
+### Added:
+- The new `LDClient` method `allFlagsState()` should be used instead of `allFlags()` if you are passing flag data to the front end for use with the JavaScript SDK. It preserves some flag metadata that the front end requires in order to send analytics events correctly. Versions 2.5.0 and above of the JavaScript SDK are able to use this metadata, but the output of `allFlagsState()` will still work with older versions.
+- The `allFlagsState()` method also allows you to select only client-side-enabled flags to pass to the front end, by using the option `clientSideOnly: true`.
+
+### Deprecated:
+- `LDClient.allFlags()`
+
+## [5.2.1] - 2018-08-22
+
+### Fixed:
+- Problematic dependencies flagged by `npm audit` have been fixed. Note that these were all development-only dependencies, so should not have affected any production code. ([#108](https://github.com/launchdarkly/node-client/issues/108))
+- Type definitions for `LDFeatureStore` are now correct.
+- Fixed an accidental global variable reference in `event_summarizer.js`. (Thanks, [jwenzler](https://github.com/launchdarkly/node-client/pull/111#pullrequestreview-148668257)!)
+
 ## [5.2.0] - 2018-08-01
 
 ### Changed:

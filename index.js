@@ -259,7 +259,7 @@ var newClient = function(sdkKey, config) {
   }
 
   client.allFlags = function(user, callback) {
-    config.logger.warn("allFlags() is deprecated. Call 'allFlagsState' instead and call toJson() on the result");
+    config.logger.warn("allFlags() is deprecated. Call 'allFlagsState' instead and call toJSON() on the result");
     return wrapPromiseCallback(
       client.allFlagsState(user).then(function(state) {
         return state.allValues();
@@ -268,7 +268,12 @@ var newClient = function(sdkKey, config) {
   }
 
   client.allFlagsState = function(user, options, callback) {
-    options = options || {};
+    if (callback === undefined && typeof(options) === 'function') {
+      callback = options;
+      options = {};
+    } else {
+      options = options || {};
+    }
     return wrapPromiseCallback(new Promise(function(resolve, reject) {
       sanitizeUser(user);
       
