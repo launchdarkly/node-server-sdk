@@ -4,7 +4,8 @@
   "description": "LaunchDarkly SDK for Node.js",
   "main": "index.js",
   "scripts": {
-    "test": "jest --ci --forceExit"
+    "test": "jest --ci --forceExit",
+    "check-typescript": "node_modules/typescript/bin/tsc"
   },
   "types": "./index.d.ts",
   "repository": {
