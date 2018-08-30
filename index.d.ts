@@ -53,7 +53,7 @@ declare module 'ldclient-node' {
    */
   export interface LDFlagsState {
     /**
-     * True if this object contains a valid snapshot of  feature flag state, or false if the
+     * True if this object contains a valid snapshot of feature flag state, or false if the
      * state could not be computed (for instance, because the client was offline or there
      * was no user).
      */
@@ -66,6 +66,13 @@ declare module 'ldclient-node' {
      */
     getFlagValue: (key: string) => LDFlagValue;
 
+    /**
+     * Returns the evaluation reason for a feature flag at the time the state was recorded.
+     * It will be null if reasons were not recorded, or if there was no such flag.
+     * @param key the flag key
+     */
+    getFlagReason: (key: string) => LDEvaluationReason;
+    
     /**
      * Returns a map of feature flag keys to values. If a flag would have evaluated to the
      * default value, its value will be null.
@@ -85,6 +92,74 @@ declare module 'ldclient-node' {
      */
     toJSON: () => object;
   }
+
+  /**
+   * Describes the reason that a flag evaluation produced a particular value. This is
+   * part of the LDEvaluationDetail object returned by variationDetail().
+   */
+  export type LDEvaluationReason = {
+    /**
+     * The general category of the reason:
+     *
+     * 'OFF': the flag was off and therefore returned its configured off value
+     *
+     * 'FALLTHROUGH': the flag was on but the user did not match any targets or rules
+     *
+     * 'TARGET_MATCH': the user key was specifically targeted for this flag
+     *
+     * 'RULE_MATCH': the user matched one of the flag's rules
+     *
+     * 'PREREQUISITE_FAILED': the flag was considered off because it had at least one
+     * prerequisite flag that either was off or did not return the desired variation
+     *
+     * 'ERROR': the flag could not be evaluated, e.g. because it does not exist or due
+     * to an unexpected error
+     */
+    kind: string;
+
+    /**
+     * A further description of the error condition, if the kind was 'ERROR'.
+     */
+    errorKind?: string;
+
+    /**
+     * The index of the matched rule (0 for the first), if the kind was 'RULE_MATCH'.
+     */
+    ruleIndex?: number;
+
+    /**
+     * The unique identifier of the matched rule, if the kind was 'RULE_MATCH'.
+     */
+    ruleId?: string;
+
+    /**
+     * The key of the failed prerequisite flag, if the kind was 'PREREQUISITE_FAILED'.
+     */
+    prerequisiteKey?: string;
+  };
+
+  /**
+   * An object returned by LDClient.variationDetail(), combining the result of a feature flag
+   * evaluation with information about how it was calculated.
+   */
+  export type LDEvaluationDetail = {
+    /**
+     * The result of the flag evaluation. This will be either one of the flag's variations or
+     * the default value that was passed to variationDetail().
+     */
+    value: LDFlagValue;
+
+    /**
+     * The index of the returned value within the flag's list of variations, e.g. 0 for the
+     * first variation - or null if the default value was returned.
+     */
+    variationIndex?: number;
+
+    /**
+     * An object describing the main factor that influenced the flag evaluation value.
+     */
+    reason: LDEvaluationReason;
+  };
 
   /**
    * LaunchDarkly initialization options.
@@ -523,6 +598,36 @@ declare module 'ldclient-node' {
       defaultValue: LDFlagValue,
       callback?: (err: any, res: LDFlagValue) => void
     ) => Promise<LDFlagValue>;
+
+    /**
+     * Retrieves a flag's value, along with information about how it was calculated, in the form
+     * of an LDEvaluationDetail object.
+     *
+     * The reason property of the result will also be included in analytics events, if you are
+     * capturing detailed event data for this flag.
+     *
+     * @param key
+     *   The key of the flag for which to retrieve the corresponding value.
+     * @param user
+     *   The user for the variation.
+     *
+     *   The variation call will automatically create a user in LaunchDarkly if a user with that user key doesn't exist already.
+     *
+     * @param defaultValue
+     *   The value to use if the flag is not available (for example, if the
+     *   user is offline or a flag is requested that does not exist).
+     *
+     * @param callback
+     *   The callback to receive the result.
+     *
+     * @returns a Promise containing the flag value and explanation
+     */
+    variationDetail: (
+      key: string,
+      user: LDUser,
+      defaultValue: LDFlagValue,
+      callback?: (err: any, res: LDEvaluationDetail) => void
+    ) => Promise<LDEvaluationDetail>;
 
     toggle: (
       key: string,

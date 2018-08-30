@@ -143,6 +143,86 @@ describe('LDClient', function() {
     });
   });
 
+  it('returns default from variation() for unknown flag', function(done) {
+    var client = createOnlineClientWithFlags({ });
+    var user = { key: 'user' };
+    client.on('ready', function() {
+      client.variation('flagkey', user, 'default', function(err, result) {
+        expect(err).toBeNull();
+        expect(result).toEqual('default');
+        done();
+      });
+    });
+  });
+
+  it('returns default from variation() for flag that evaluates to null', function(done) {
+    var flag = {
+      key: 'flagkey',
+      on: false,
+      offVariation: null
+    };
+    var client = createOnlineClientWithFlags({ flagkey: flag });
+    var user = { key: 'user' };
+    client.on('ready', function() {
+      client.variation(flag.key, user, 'default', function(err, result) {
+        expect(err).toBeNull();
+        expect(result).toEqual('default');
+        done();
+      });
+    });
+  });
+
+  it('evaluates a flag with variationDetail()', function(done) {
+    var flag = {
+      key: 'flagkey',
+      version: 1,
+      on: true,
+      targets: [],
+      fallthrough: { variation: 1 },
+      variations: ['a', 'b'],
+      trackEvents: true
+    };
+    var client = createOnlineClientWithFlags({ flagkey: flag });
+    var user = { key: 'user' };
+    client.on('ready', function() {
+      client.variationDetail(flag.key, user, 'c', function(err, result) {
+        expect(err).toBeNull();
+        expect(result).toMatchObject({ value: 'b', variationIndex: 1, reason: { kind: 'FALLTHROUGH' } });
+        done();
+      });
+    });
+  });
+
+  it('returns default from variationDetail() for unknown flag', function(done) {
+    var client = createOnlineClientWithFlags({ });
+    var user = { key: 'user' };
+    client.on('ready', function() {
+      client.variationDetail('flagkey', user, 'default', function(err, result) {
+        expect(err).toBeNull();
+        expect(result).toMatchObject({ value: 'default', variationIndex: null,
+          reason: { kind: 'ERROR', errorKind: 'FLAG_NOT_FOUND' } });
+        done();
+      });
+    });
+  });
+
+  it('returns default from variationDetail() for flag that evaluates to null', function(done) {
+    var flag = {
+      key: 'flagkey',
+      on: false,
+      offVariation: null
+    };
+    var client = createOnlineClientWithFlags({ flagkey: flag });
+    var user = { key: 'user' };
+    client.on('ready', function() {
+      client.variationDetail(flag.key, user, 'default', function(err, result) {
+        expect(err).toBeNull();
+        expect(result).toMatchObject({ value: 'default', variationIndex: null, reason: { kind: 'OFF' } });
+        done();
+      });
+    });
+  });
+
   it('generates an event for an existing feature', function(done) {
     var flag = {
       key: 'flagkey',
@@ -167,6 +247,38 @@ describe('LDClient', function() {
           variation: 1,
           value: 'b',
           default: 'c',
+          trackEvents: true
+        });
+        done();
+      });
+    });
+  });
+
+  it('generates an event for an existing feature with reason', function(done) {
+    var flag = {
+      key: 'flagkey',
+      version: 1,
+      on: true,
+      targets: [],
+      fallthrough: { variation: 1 },
+      variations: ['a', 'b'],
+      trackEvents: true
+    };
+    var client = createOnlineClientWithFlags({ flagkey: flag });
+    var user = { key: 'user' };
+    client.on('ready', function() {
+      client.variationDetail(flag.key, user, 'c', function(err, result) {
+        expect(eventProcessor.events).toHaveLength(1);
+        var e = eventProcessor.events[0];
+        expect(e).toMatchObject({
+          kind: 'feature',
+          key: 'flagkey',
+          version: 1,
+          user: user,
+          variation: 1,
+          value: 'b',
+          default: 'c',
+          reason: { kind: 'FALLTHROUGH' },
           trackEvents: true
         });
         done();
@@ -342,6 +454,43 @@ describe('LDClient', function() {
         expect(err).toBeNull();
         expect(state.valid).toEqual(true);
         expect(state.allValues()).toEqual({ 'key': 'value' });
+        done();
+      });
+    });
+  });
+
+  it('can include reasons in allFlagsState()', function(done) {
+    var flag = {
+      key: 'feature',
+      version: 100,
+      on: true,
+      targets: [],
+      fallthrough: { variation: 1 },
+      variations: ['a', 'b'],
+      trackEvents: true,
+      debugEventsUntilDate: 1000
+    };
+    var client = createOnlineClientWithFlags({ feature: flag });
+    var user = { key: 'user' };
+    client.on('ready', function() {
+      client.allFlagsState(user, { withReasons: true }, function(err, state) {
+        expect(err).toBeNull();
+        expect(state.valid).toEqual(true);
+        expect(state.allValues()).toEqual({feature: 'b'});
+        expect(state.getFlagValue('feature')).toEqual('b');
+        expect(state.toJSON()).toEqual({
+          feature: 'b',
+          $flagsState: {
+            feature: {
+              version: 100,
+              variation: 1,
+              reason: { kind: 'FALLTHROUGH' },
+              trackEvents: true,
+              debugEventsUntilDate: 1000
+            }
+          },
+          $valid: true
+        });
         done();
       });
     });

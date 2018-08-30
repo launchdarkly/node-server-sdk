@@ -4,7 +4,7 @@ function FlagsStateBuilder(valid) {
   var flagValues = {};
   var flagMetadata = {};
 
-  builder.addFlag = function(flag, value, variation) {
+  builder.addFlag = function(flag, value, variation, reason) {
     flagValues[flag.key] = value;
     var meta = {
       version: flag.version,
@@ -16,6 +16,9 @@ function FlagsStateBuilder(valid) {
     if (flag.debugEventsUntilDate !== undefined && flag.debugEventsUntilDate !== null) {
       meta.debugEventsUntilDate = flag.debugEventsUntilDate;
     }
+    if (reason) {
+      meta.reason = reason;
+    }
     flagMetadata[flag.key] = meta;
   };
 
@@ -24,6 +27,9 @@ function FlagsStateBuilder(valid) {
       valid: valid,
       allValues: function() { return flagValues; },
       getFlagValue: function(key) { return flagValues[key]; },
+      getFlagReason: function(key) {
+        return flagMetadata[key] ? flagMetadata[key].reason : null;
+      },
       toJSON: function() {
         return Object.assign({}, flagValues, { $flagsState: flagMetadata, $valid: valid });
       }

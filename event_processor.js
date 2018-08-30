@@ -59,6 +59,9 @@ function EventProcessor(sdkKey, config, errorReporter) {
         if (event.version) {
           out.version = event.version;
         }
+        if (event.reason) {
+          out.reason = event.reason;
+        }
         if (config.inlineUsersInEvents || debug) {
           out.user = userFilter.filterUser(event.user);
         } else {
