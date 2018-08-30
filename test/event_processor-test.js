@@ -66,6 +66,7 @@ describe('EventProcessor', function() {
     expect(e.variation).toEqual(source.variation);
     expect(e.value).toEqual(source.value);
     expect(e.default).toEqual(source.default);
+    expect(e.reason).toEqual(source.reason);
     if (inlineUser) {
       expect(e.user).toEqual(inlineUser);
     } else {
@@ -179,6 +180,22 @@ describe('EventProcessor', function() {
     flushAndGetRequest(function(output) {
       expect(output.length).toEqual(2);
       checkFeatureEvent(output[0], e, false, filteredUser);
+      checkSummaryEvent(output[1]);
+      done();
+    });
+  });
+
+  it('can include reason in feature event', function(done) {
+    var config = Object.assign({}, defaultConfig, { inlineUsersInEvents: true });
+    ep = EventProcessor(sdkKey, config);
+    var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
+      version: 11, variation: 1, value: 'value', trackEvents: true,
+      reason: { kind: 'FALLTHROUGH' } };
+    ep.sendEvent(e);
+
+    flushAndGetRequest(function(output) {
+      expect(output.length).toEqual(2);
+      checkFeatureEvent(output[0], e, false, user);
       checkSummaryEvent(output[1]);
       done();
     });
