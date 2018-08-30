@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.4.0] - 2018-08-30
+### Added:
+- The new `LDClient` method `variationDetail` allows you to evaluate a feature flag (using the same parameters as you would for `variation`) and receive more information about how the value was calculated. This information is returned in an object that contains both the result value and a "reason" object which will tell you, for instance, if the user was individually targeted for the flag or was matched by one of the flag's rules, or if the flag returned the default value due to an error.
+
+### Fixed:
+- Evaluating a prerequisite feature flag did not produce an analytics event if the prerequisite flag was off.
+
 ## [5.3.2] - 2018-08-29
 ### Fixed:
 - Fixed TypeScript syntax errors in `index.d.ts`. We are now running the TypeScript compiler in our automated builds to avoid such problems. (Thanks, [PsychicCat](https://github.com/launchdarkly/node-client/pull/116)!)
