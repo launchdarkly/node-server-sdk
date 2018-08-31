@@ -73,7 +73,7 @@ function InMemoryFeatureStore() {
     var items = this.allData[kind.namespace];
     if (!items) {
       items = {};
-      this.allData[kind] = items;
+      this.allData[kind.namespace] = items;
     }
 
     if (Object.hasOwnProperty.call(items, key)) {
