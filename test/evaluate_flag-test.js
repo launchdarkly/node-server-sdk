@@ -28,6 +28,21 @@ function evalBooleanFlag(flag, user, cb) {
   });
 }
 
+function makeFlagWithRules(rules, fallthrough) {
+  if (!fallthrough) {
+    fallthrough = { variation: 0 };
+  }
+  return {
+    key: 'feature',
+    on: true,
+    rules: rules,
+    targets: [],
+    fallthrough: fallthrough,
+    offVariation: 1,
+    variations: ['a', 'b', 'c']
+  };
+}
+
 function makeBooleanFlagWithOneClause(clause) {
   return {
       key: 'feature',
@@ -80,19 +95,94 @@ describe('evaluate', function() {
     });
   });
 
-  it('returns fallthrough if flag is on and there are no rules', function(done) {
+  it('returns error if off variation is too high', function(done) {
     var flag = {
       key: 'feature',
-      on: true,
-      rules: [],
-      targets: [],
-      offVariation: null,
+      on: false,
+      offVariation: 99,
       fallthrough: { variation: 0 },
       variations: ['a', 'b', 'c']
     };
     var user = { key: 'x' };
     evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+      expect(err).toEqual(Error('Invalid variation index in flag'));
+      expect(detail).toMatchObject({ value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: 'MALFORMED_FLAG' } });
+      expect(events).toMatchObject([]);
+      done();
+    });
+  });
+
+  it('returns error if off variation is negative', function(done) {
+    var flag = {
+      key: 'feature',
+      on: false,
+      offVariation: -1,
+      fallthrough: { variation: 0 },
+      variations: ['a', 'b', 'c']
+    };
+    var user = { key: 'x' };
+    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+      expect(err).toEqual(Error('Invalid variation index in flag'));
+      expect(detail).toMatchObject({ value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: 'MALFORMED_FLAG' } });
+      expect(events).toMatchObject([]);
+      done();
+    });
+  });
+
+  it('returns fallthrough variation if flag is on and no rules match', function(done) {
+    var rule = { id: 'id', clauses: [{ attribute: 'key', op: 'in', values: ['other'] }], variation: 2 };
+    var flag = makeFlagWithRules([rule], { variation: 0 });
+    var user = { key: 'x' };
+    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
       expect(detail).toMatchObject({ value: 'a', variationIndex: 0, reason: { kind: 'FALLTHROUGH' } });
+      expect(events).toMatchObject([]);
+      done();
+    });
+  });
+
+  it('returns error if fallthrough variation is too high', function(done) {
+    var rule = { id: 'id', clauses: [{ attribute: 'key', op: 'in', values: ['other'] }], variation: 99 };
+    var flag = makeFlagWithRules([rule], { variation: 99 });
+    var user = { key: 'x' };
+    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+      expect(err).toEqual(Error('Invalid variation index in flag'));
+      expect(detail).toMatchObject({ value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: 'MALFORMED_FLAG' }});
+      expect(events).toMatchObject([]);
+      done();
+    });
+  });
+
+  it('returns error if fallthrough variation is negative', function(done) {
+    var rule = { id: 'id', clauses: [{ attribute: 'key', op: 'in', values: ['other'] }], variation: 99 };
+    var flag = makeFlagWithRules([rule], { variation: -1 });
+    var user = { key: 'x' };
+    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+      expect(err).toEqual(Error('Invalid variation index in flag'));
+      expect(detail).toMatchObject({ value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: 'MALFORMED_FLAG' }});
+      expect(events).toMatchObject([]);
+      done();
+    });
+  });
+
+  it('returns error if fallthrough has no variation or rollout', function(done) {
+    var rule = { id: 'id', clauses: [{ attribute: 'key', op: 'in', values: ['other'] }], variation: 99 };
+    var flag = makeFlagWithRules([rule], { });
+    var user = { key: 'x' };
+    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+      expect(err).toEqual(Error('Variation/rollout object with no variation or rollout'));
+      expect(detail).toMatchObject({ value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: 'MALFORMED_FLAG' }});
+      expect(events).toMatchObject([]);
+      done();
+    });
+  });
+
+  it('returns error if fallthrough has rollout with no variations', function(done) {
+    var rule = { id: 'id', clauses: [{ attribute: 'key', op: 'in', values: ['other'] }], variation: 99 };
+    var flag = makeFlagWithRules([rule], { rollout: { variations: [] } });
+    var user = { key: 'x' };
+    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+      expect(err).toEqual(Error('Variation/rollout object with no variation or rollout'));
+      expect(detail).toMatchObject({ value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: 'MALFORMED_FLAG' }});
       expect(events).toMatchObject([]);
       done();
     });
@@ -223,31 +313,60 @@ describe('evaluate', function() {
   });
 
   it('matches user from rules', function(done) {
-    var flag = {
-      key: 'feature0',
-      on: true,
-      rules: [
-        {
-          id: 'id',
-          clauses: [
-            {
-              attribute: 'key',
-              op: 'in',
-              values: ['userkey']
-            }
-          ],
-          variation: 2
-        }
-      ],
-      targets: [],
-      fallthrough: { variation: 0 },
-      offVariation: 1,
-      variations: ['a', 'b', 'c']
-    };
+    var rule = { id: 'id', clauses: [{ attribute: 'key', op: 'in', values: ['userkey'] }], variation: 2 };
+    var flag = makeFlagWithRules([rule]);
     var user = { key: 'userkey' };
     evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
       expect(detail).toMatchObject({ value: 'c', variationIndex: 2,
         reason: { kind: 'RULE_MATCH', ruleIndex: 0, ruleId: 'id' } });
+      expect(events).toMatchObject([]);
+      done();
+    });
+  });
+
+  it('returns error if rule variation is too high', function(done) {
+    var rule = { id: 'id', clauses: [{ attribute: 'key', op: 'in', values: ['userkey'] }], variation: 99 };
+    var flag = makeFlagWithRules([rule]);
+    var user = { key: 'userkey' };
+    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+      expect(err).toEqual(Error('Invalid variation index in flag'));
+      expect(detail).toMatchObject({ value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: 'MALFORMED_FLAG' }});
+      expect(events).toMatchObject([]);
+      done();
+    });
+  });
+
+  it('returns error if rule variation is negative', function(done) {
+    var rule = { id: 'id', clauses: [{ attribute: 'key', op: 'in', values: ['userkey'] }], variation: -1 };
+    var flag = makeFlagWithRules([rule]);
+    var user = { key: 'userkey' };
+    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+      expect(err).toEqual(Error('Invalid variation index in flag'));
+      expect(detail).toMatchObject({ value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: 'MALFORMED_FLAG' }});
+      expect(events).toMatchObject([]);
+      done();
+    });
+  });
+
+  it('returns error if rule has no variation or rollout', function(done) {
+    var rule = { id: 'id', clauses: [{ attribute: 'key', op: 'in', values: ['userkey'] }] };
+    var flag = makeFlagWithRules([rule]);
+    var user = { key: 'userkey' };
+    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+      expect(err).toEqual(Error('Variation/rollout object with no variation or rollout'));
+      expect(detail).toMatchObject({ value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: 'MALFORMED_FLAG' }});
+      expect(events).toMatchObject([]);
+      done();
+    });
+  });
+
+  it('returns error if rule has rollout with no variations', function(done) {
+    var rule = { id: 'id', clauses: [{ attribute: 'key', op: 'in', values: ['userkey'] }], rollout: { variations: [] } };
+    var flag = makeFlagWithRules([rule]);
+    var user = { key: 'userkey' };
+    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+      expect(err).toEqual(Error('Variation/rollout object with no variation or rollout'));
+      expect(detail).toMatchObject({ value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: 'MALFORMED_FLAG' }});
       expect(events).toMatchObject([]);
       done();
     });
