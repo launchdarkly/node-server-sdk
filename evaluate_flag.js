@@ -258,7 +258,7 @@ function matchAny(matchFn, value, values) {
 
 function getVariation(flag, index, reason, cb) {
   if (index === null || index === undefined || index < 0 || index >= flag.variations.length) {
-    cb(new Error('Invalid variation index in flag', errResult('MALFORMED_FLAG')));
+    cb(new Error('Invalid variation index in flag'), errorResult('MALFORMED_FLAG'));
   } else {
     cb(null, { value: flag.variations[index], variationIndex: index, reason: reason });
   }
@@ -274,11 +274,11 @@ function getOffResult(flag, reason, cb) {
 
 function getResultForVariationOrRollout(r, user, flag, reason, cb) {
   if (!r) {
-    cb(new Error('Fallthrough variation undefined'), errResult('MALFORMED_FLAG'));
+    cb(new Error('Fallthrough variation undefined'), errorResult('MALFORMED_FLAG'));
   } else {
     var index = variationForUser(r, user, flag);
     if (index === null) {
-      cb(new Error('Variation/rollout object with no variation or rollout'), errResult('MALFORMED_FLAG'));
+      cb(new Error('Variation/rollout object with no variation or rollout'), errorResult('MALFORMED_FLAG'));
     } else {
       getVariation(flag, index, reason, cb);
     }
