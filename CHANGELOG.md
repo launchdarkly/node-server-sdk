@@ -2,6 +2,10 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.4.1] - 2018-09-05
+### Fixed:
+- Fixed a ReferenceError that occurred if a feature flag had invalid properties, e.g. a rule referred to a nonexistent variation index. Instead, an error will be written to the log and the flag will return the default value. ([#119](https://github.com/launchdarkly/node-client/issues/119))
+
 ## [5.4.0] - 2018-08-30
 ### Added:
 - The new `LDClient` method `variationDetail` allows you to evaluate a feature flag (using the same parameters as you would for `variation`) and receive more information about how the value was calculated. This information is returned in an object that contains both the result value and a "reason" object which will tell you, for instance, if the user was individually targeted for the flag or was matched by one of the flag's rules, or if the flag returned the default value due to an error.
