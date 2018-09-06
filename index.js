@@ -58,8 +58,7 @@ var newClient = function(sdkKey, config) {
       queue = [],
       requestor,
       updateProcessor,
-      eventProcessor,
-      flushTimer;
+      eventProcessor;
 
   config = configuration.validate(config);
 
@@ -323,7 +322,6 @@ var newClient = function(sdkKey, config) {
       updateProcessor.close();
     }
     config.featureStore.close();
-    clearInterval(flushTimer);
   }
 
   client.isOffline = function() {
@@ -362,10 +360,6 @@ var newClient = function(sdkKey, config) {
     eventProcessor.sendEvent(event);
   }
 
-  function backgroundFlush() {
-    client.flush().then(function() {}, function() {});
-  }
-
   function deprecatedMethod(oldName, newName) {
     client[oldName] = function() {
       config.logger.warn(messages.deprecated(oldName, newName));
@@ -376,8 +370,6 @@ var newClient = function(sdkKey, config) {
   deprecatedMethod('all_flags', 'allFlags');
   deprecatedMethod('is_offline', 'isOffline');
   deprecatedMethod('secure_mode_hash', 'secureModeHash');
-
-  flushTimer = setInterval(backgroundFlush, config.flushInterval * 1000);
 
   return client;
 };

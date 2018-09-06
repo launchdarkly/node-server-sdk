@@ -481,4 +481,24 @@ describe('EventProcessor', function() {
   it('retries after a 503 error', function(done) {
     verifyRecoverableHttpError(done, 503);
   });
+
+  it('swallows errors from failed background flush', function(done) {
+    // This test verifies that when a background flush fails, we don't emit an unhandled
+    // promise rejection. Jest will fail the test if we do that.
+
+    var config = Object.assign({}, defaultConfig, { flushInterval: 0.25 });
+    ep = EventProcessor(sdkKey, config);
+    ep.sendEvent({ kind: 'identify', creationDate: 1000, user: user });
+
+    var req1 = nock(eventsUri).post('/bulk').reply(500);
+    var req2 = nock(eventsUri).post('/bulk').reply(500);
+
+    // unfortunately we must wait for both the flush interval and the 1-second retry interval
+    var delay = 1500;
+    setTimeout(function() {
+        expect(req1.isDone()).toEqual(true);
+        expect(req2.isDone()).toEqual(true);
+        done();
+      }, delay);
+  });
 });
