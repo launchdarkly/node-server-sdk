@@ -226,7 +226,7 @@ function EventProcessor(sdkKey, config, errorReporter) {
   }
 
   flushTimer = setInterval(function() {
-      ep.flush();
+      ep.flush().then(function() { } , function() { });
     }, config.flushInterval * 1000);
   flushUsersTimer = setInterval(function() {
       userKeysCache.removeAll();

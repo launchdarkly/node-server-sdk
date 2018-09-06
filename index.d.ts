@@ -733,7 +733,13 @@ declare module 'ldclient-node' {
      * These are flushed periodically (see configuration option: flushInterval)
      * and when the queue size limit (see configuration option: capacity) is reached.
      *
-     * @returns a Promise which resolves once flushing is finished
+     * @param callback
+     *    A function which will be called when the flush completes; if omitted, you
+     *    will receive a Promise instead
+     *
+     * @returns a Promise which resolves once flushing is finished, if you did not
+     * provide a callback; note that it will be rejected if the HTTP request fails, so be
+     * sure to provide a rejection handler if you are not using a callback
      */
     flush: (callback?: (err: any, res: boolean) => void) => Promise<void>;
   }
