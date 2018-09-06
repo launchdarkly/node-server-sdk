@@ -2,6 +2,10 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.4.2] - 2018-09-05
+### Fixed:
+- Fixed a bug that would sometimes cause an unhandled promise rejection warning-- and, depending on your Node configuration, a crash-- if there was an HTTP error during an automatic event flush. This was a partial regression of [#85](https://github.com/launchdarkly/node-client/issues/85) which was introduced in v5.0.0, although unlike the earlier bug, it happened nondeterministically rather than for all errors.
+
 ## [5.4.1] - 2018-09-05
 ### Fixed:
 - Fixed a ReferenceError that occurred if a feature flag had invalid properties, e.g. a rule referred to a nonexistent variation index. Instead, an error will be written to the log and the flag will return the default value. ([#119](https://github.com/launchdarkly/node-client/issues/119))
