@@ -3,10 +3,12 @@ var errors = require('./errors');
 var EventSource = require('./eventsource');
 var dataKind = require('./versioned_data_kind');
 
-function StreamProcessor(sdkKey, config, requestor) {
+function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
   var processor = {},
       featureStore = config.featureStore,
       es;
+
+  eventSourceFactory = eventSourceFactory || EventSource;
 
   function getKeyFromPath(kind, path) {
     return path.startsWith(kind.streamApiPath) ? path.substring(kind.streamApiPath.length) : null;
@@ -14,7 +16,7 @@ function StreamProcessor(sdkKey, config, requestor) {
 
   processor.start = function(fn) {
     var cb = fn || function(){};
-    es = new EventSource(config.streamUri + "/all", 
+    es = eventSourceFactory(config.streamUri + "/all", 
       {
         agent: config.proxyAgent, 
         headers: {'Authorization': sdkKey,'User-Agent': config.userAgent}
@@ -24,10 +26,22 @@ function StreamProcessor(sdkKey, config, requestor) {
       cb(new errors.LDStreamingError(err.message, err.code));
     };
 
+    function reportJsonError(type, data) {
+      config.logger.error('Stream received invalid data in "' + type + '" message');
+      config.logger.debug('Invalid JSON follows: ' + data);
+      cb(new errors.LDStreamingError('Malformed JSON data in event stream'));
+    }
+
     es.addEventListener('put', function(e) {
       config.logger.debug('Received put event');
       if (e && e.data) {
-        var all = JSON.parse(e.data);
+        var all;
+        try {
+          all = JSON.parse(e.data);
+        } catch (err) {
+          reportJsonError('put', e.data);
+          return;
+        }
         var initData = {};
         initData[dataKind.features.namespace] = all.data.flags;
         initData[dataKind.segments.namespace] = all.data.segments;
@@ -42,7 +56,13 @@ function StreamProcessor(sdkKey, config, requestor) {
     es.addEventListener('patch', function(e) {
       config.logger.debug('Received patch event');
       if (e && e.data) {
-        var patch = JSON.parse(e.data);
+        var patch;
+        try {
+          patch = JSON.parse(e.data);
+        } catch (err) {
+          reportJsonError('patch', e.data);
+          return;
+        }
         for (var k in dataKind) {
           var kind = dataKind[k];
           var key = getKeyFromPath(kind, patch.path);
@@ -60,8 +80,14 @@ function StreamProcessor(sdkKey, config, requestor) {
     es.addEventListener('delete', function(e) {
       config.logger.debug('Received delete event');
       if (e && e.data) {        
-        var data = JSON.parse(e.data),
-            version = data.version;
+        var data, version;
+        try {
+          data = JSON.parse(e.data);
+        } catch (err) {
+          reportJsonError('delete', e.data);
+          return;
+        }
+        version = data.version;
         for (var k in dataKind) {
           var kind = dataKind[k];
           var key = getKeyFromPath(kind, data.path);
@@ -78,7 +104,7 @@ function StreamProcessor(sdkKey, config, requestor) {
 
     es.addEventListener('indirect/put', function(e) {
       config.logger.debug('Received indirect put event')
-      requestor.requestAllFlags(function (err, resp) {
+      requestor.requestAllData(function (err, resp) {
         if (err) {
           cb(err);
         } else {
