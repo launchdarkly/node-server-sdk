@@ -111,9 +111,21 @@ describe('LDClient', function() {
   function createOnlineClientWithFlags(flagsMap) {
     var store = InMemoryFeatureStore();
     var allData = {};
-    var dummyUri = 'bad';
     allData[dataKind.features.namespace] = flagsMap;
     store.init(allData);
+    return LDClient.init('secret', {
+      featureStore: store,
+      eventProcessor: eventProcessor,
+      updateProcessor: updateProcessor,
+      logger: logger
+    });
+  }
+
+  function createOnlineClientWithFlagsInUninitializedStore(flagsMap) {
+    var store = InMemoryFeatureStore();
+    for (var key in flagsMap) {
+      store.upsert(dataKind.features, flagsMap[key]);
+    }
     return LDClient.init('secret', {
       featureStore: store,
       eventProcessor: eventProcessor,
@@ -148,6 +160,35 @@ describe('LDClient', function() {
     var user = { key: 'user' };
     client.on('ready', function() {
       client.variation('flagkey', user, 'default', function(err, result) {
+        expect(err).toBeNull();
+        expect(result).toEqual('default');
+        done();
+      });
+    });
+  });
+
+  it('returns default from variation() if client and store are not initialized', function(done) {
+    var flag = {
+      key: 'flagkey',
+      version: 1,
+      on: false,
+      offVariation: 0,
+      variations: ['value']
+    };
+    client = createOnlineClientWithFlagsInUninitializedStore({ flagkey: flag });
+    var user = { key: 'user' };
+    client.variation('flagkey', user, 'default', function(err, result) {
+      expect(err).toBeNull();
+      expect(result).toEqual('default');
+      done();
+    });
+  });
+
+  it('returns default from variation() if flag key is not specified', function(done) {
+    var client = createOnlineClientWithFlags({ });
+    var user = { key: 'user' };
+    client.on('ready', function() {
+      client.variation(null, user, 'default', function(err, result) {
         expect(err).toBeNull();
         expect(result).toEqual('default');
         done();
@@ -198,6 +239,37 @@ describe('LDClient', function() {
     var user = { key: 'user' };
     client.on('ready', function() {
       client.variationDetail('flagkey', user, 'default', function(err, result) {
+        expect(err).toBeNull();
+        expect(result).toMatchObject({ value: 'default', variationIndex: null,
+          reason: { kind: 'ERROR', errorKind: 'FLAG_NOT_FOUND' } });
+        done();
+      });
+    });
+  });
+
+  it('returns default from variationDetail() if client and store are not initialized', function(done) {
+    var flag = {
+      key: 'flagkey',
+      version: 1,
+      on: false,
+      offVariation: 0,
+      variations: ['value']
+    };
+    client = createOnlineClientWithFlagsInUninitializedStore({ flagkey: flag });
+    var user = { key: 'user' };
+    client.variationDetail('flagkey', user, 'default', function(err, result) {
+      expect(err).toBeNull();
+      expect(result).toMatchObject({ value: 'default', variationIndex: null,
+        reason: { kind: 'ERROR', errorKind: 'CLIENT_NOT_READY' } });
+      done();
+    });
+  });
+
+  it('returns default from variation() if flag key is not specified', function(done) {
+    var client = createOnlineClientWithFlags({ });
+    var user = { key: 'user' };
+    client.on('ready', function() {
+      client.variationDetail(null, user, 'default', function(err, result) {
         expect(err).toBeNull();
         expect(result).toMatchObject({ value: 'default', variationIndex: null,
           reason: { kind: 'ERROR', errorKind: 'FLAG_NOT_FOUND' } });
