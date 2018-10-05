@@ -8,12 +8,6 @@ describe('LDClient', () => {
 
   var defaultUser = { key: 'user' };
 
-  var updateProcessor = {
-    start: callback => {
-      setImmediate(callback, updateProcessor.error);
-    }
-  };
-
   function createClientWithFlagsInUninitializedStore(flagsMap) {
     var store = InMemoryFeatureStore();
     for (var key in flagsMap) {

@@ -1,7 +1,3 @@
-var InMemoryFeatureStore = require('../feature_store');
-var LDClient = require('../index.js');
-var dataKind = require('../versioned_data_kind');
-var messages = require('../messages');
 var stubs = require('./stubs');
 
 describe('LDClient - analytics events', () => {
