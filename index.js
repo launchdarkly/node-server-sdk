@@ -177,7 +177,7 @@ var newClient = function(sdkKey, config) {
           variationInternal(key, user, defaultVal, includeReasonsInEvents, resolve, reject);
         } else {
           var err = new errors.LDClientError("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using default value");
-          maybeReportError(variationErr);
+          maybeReportError(err);
           var result = errorResult('CLIENT_NOT_READY', defaultVal);
           sendFlagEvent(key, null, user, result, defaultVal, includeReasonsInEvents);
           return resolve(result);
@@ -197,7 +197,7 @@ var newClient = function(sdkKey, config) {
 
     else if (!key) {
       err = new errors.LDClientError('No feature flag key specified. Returning default value.');
-      maybeReportError(variationError);
+      maybeReportError(err);
       return resolve(errorResult('FLAG_NOT_FOUND', defaultVal));
     }
 
