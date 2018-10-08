@@ -16,7 +16,7 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
 
   processor.start = function(fn) {
     var cb = fn || function(){};
-    es = eventSourceFactory(config.streamUri + "/all", 
+    es = new eventSourceFactory(config.streamUri + "/all", 
       {
         agent: config.proxyAgent, 
         headers: {'Authorization': sdkKey,'User-Agent': config.userAgent}
