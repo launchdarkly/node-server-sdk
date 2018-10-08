@@ -2,6 +2,14 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.5.0] - 2018-10-08
+### Added:
+- The `allFlagsState` method now accepts a new option, `detailsOnlyForTrackedFlags`, which reduces the size of the JSON representation of the flag state by omitting some metadata. Specifically, it omits any data that is normally used for generating detailed evaluation events if a flag does not have event tracking or debugging turned on.
+
+### Fixed:
+- Fixed an error that would occur in two cases where the client should return a default value: evaluating a flag when the client and the feature store are not yet initialized, and evaluating with no flag key. (Thanks, [SharkofMirkwood](https://github.com/launchdarkly/node-client/pull/123)!)
+- JSON data from `allFlagsState` is now slightly smaller even if you do not use the new option described above, because it completely omits the flag property for event tracking unless that property is true.
+
 ## [5.4.2] - 2018-09-05
 ### Fixed:
 - Fixed a bug that would sometimes cause an unhandled promise rejection warning-- and, depending on your Node configuration, a crash-- if there was an HTTP error during an automatic event flush. This was a partial regression of [#85](https://github.com/launchdarkly/node-client/issues/85) which was introduced in v5.0.0, although unlike the earlier bug, it happened nondeterministically rather than for all errors.
