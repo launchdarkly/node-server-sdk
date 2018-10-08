@@ -4,20 +4,23 @@ function FlagsStateBuilder(valid) {
   var flagValues = {};
   var flagMetadata = {};
 
-  builder.addFlag = function(flag, value, variation, reason) {
+  builder.addFlag = function(flag, value, variation, reason, detailsOnlyIfTracked) {
     flagValues[flag.key] = value;
-    var meta = {
-      version: flag.version,
-      trackEvents: flag.trackEvents
-    };
+    var meta = {};
+    if (!detailsOnlyIfTracked || flag.trackEvents || flag.debugEventsUntilDate) {
+      meta.version = flag.version;
+      if (reason) {
+        meta.reason = reason;
+      }
+    }
     if (variation !== undefined && variation !== null) {
       meta.variation = variation;
     }
+    if (flag.trackEvents) {
+      meta.trackEvents = true;
+    }
     if (flag.debugEventsUntilDate !== undefined && flag.debugEventsUntilDate !== null) {
       meta.debugEventsUntilDate = flag.debugEventsUntilDate;
-    }
-    if (reason) {
-      meta.reason = reason;
     }
     flagMetadata[flag.key] = meta;
   };

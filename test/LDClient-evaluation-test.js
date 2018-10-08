@@ -438,6 +438,63 @@ describe('LDClient', () => {
       });
     });
 
+    it('can omit details for untracked flags', done => {
+      var flag1 = {
+        key: 'flag1',
+        version: 100,
+        offVariation: 0,
+        variations: ['value1']
+      };
+      var flag2 = {
+        key: 'flag2',
+        version: 200,
+        offVariation: 0,
+        variations: ['value2'],
+        trackEvents: true
+      };
+      var flag3 = {
+        key: 'flag3',
+        version: 300,
+        offVariation: 0,
+        variations: ['value3'],
+        debugEventsUntilDate: 1000
+      };
+      var client = stubs.createClient({}, { flag1: flag1, flag2: flag2, flag3: flag3 });
+      var user = { key: 'user' };
+      client.on('ready', function() {
+        client.allFlagsState(user, { withReasons: true, detailsOnlyForTrackedFlags: true }, function(err, state) {
+          expect(err).toBeNull();
+          expect(state.valid).toEqual(true);
+          expect(state.allValues()).toEqual({flag1: 'value1', flag2: 'value2', flag3: 'value3'});
+          expect(state.getFlagValue('flag1')).toEqual('value1');
+          expect(state.toJSON()).toEqual({
+            flag1: 'value1',
+            flag2: 'value2',
+            flag3: 'value3',
+            $flagsState: {
+              flag1: {
+                variation: 0
+              },
+              flag2: {
+                version: 200,
+                variation: 0,
+                reason: { kind: 'OFF' },
+                trackEvents: true
+              },
+              flag3: {
+                version: 300,
+                variation: 0,
+                reason: { kind: 'OFF' },
+                debugEventsUntilDate: 1000
+              }
+            },
+            $valid: true
+          });
+          done();
+        });
+      });
+    });
+
     it('returns empty state in offline mode and logs a message', done => {
       var flag = {
         key: 'flagkey',
