@@ -7,13 +7,12 @@ describe('StreamProcessor', function() {
 
   function fakeEventSource() {
     var es = { handlers: {} };
-    es.initialize = function(url, options) {
+    es.constructor = function(url, options) {
       es.url = url;
       es.options = options;
-      return es;
-    };
-    es.addEventListener = function(type, handler) {
-      es.handlers[type] = handler;
+      this.addEventListener = function(type, handler) {
+        es.handlers[type] = handler;
+      };
     };
     return es;
   }
@@ -37,7 +36,7 @@ describe('StreamProcessor', function() {
   it('uses expected URL', function() {
     var config = { streamUri: 'http://test' };
     var es = fakeEventSource();
-    var sp = StreamProcessor(sdkKey, config, null, es.initialize);
+    var sp = StreamProcessor(sdkKey, config, null, es.constructor);
     sp.start();
     expect(es.url).toEqual(config.streamUri + '/all');
   });
@@ -45,7 +44,7 @@ describe('StreamProcessor', function() {
   it('sets expected headers', function() {
     var config = { streamUri: 'http://test', userAgent: 'agent' };
     var es = fakeEventSource();
-    var sp = StreamProcessor(sdkKey, config, null, es.initialize);
+    var sp = StreamProcessor(sdkKey, config, null, es.constructor);
     sp.start();
     expect(es.options.headers['Authorization']).toEqual(sdkKey);
     expect(es.options.headers['User-Agent']).toEqual(config.userAgent);
@@ -67,7 +66,7 @@ describe('StreamProcessor', function() {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: fakeLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, null, es.initialize);
+      var sp = StreamProcessor(sdkKey, config, null, es.constructor);
       sp.start();
 
       es.handlers.put({ data: JSON.stringify(putData) });
@@ -89,7 +88,7 @@ describe('StreamProcessor', function() {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: fakeLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, null, es.initialize);
+      var sp = StreamProcessor(sdkKey, config, null, es.constructor);
       
       var cb = function(err) {
         expect(err).toBe(undefined);
@@ -104,7 +103,7 @@ describe('StreamProcessor', function() {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: fakeLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, null, es.initialize);
+      var sp = StreamProcessor(sdkKey, config, null, es.constructor);
       
       sp.start(expectJsonError(config, done));
       es.handlers.put({ data: '{not-good' });
@@ -116,7 +115,7 @@ describe('StreamProcessor', function() {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: fakeLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, null, es.initialize);
+      var sp = StreamProcessor(sdkKey, config, null, es.constructor);
 
       var patchData = {
         path: '/flags/flagkey',
@@ -136,7 +135,7 @@ describe('StreamProcessor', function() {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: fakeLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, null, es.initialize);
+      var sp = StreamProcessor(sdkKey, config, null, es.constructor);
 
       var patchData = {
         path: '/segments/segkey',
@@ -156,7 +155,7 @@ describe('StreamProcessor', function() {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: fakeLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, null, es.initialize);
+      var sp = StreamProcessor(sdkKey, config, null, es.constructor);
       
       sp.start(expectJsonError(config, done));
       es.handlers.patch({ data: '{not-good' });
@@ -168,7 +167,7 @@ describe('StreamProcessor', function() {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: fakeLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, null, es.initialize);
+      var sp = StreamProcessor(sdkKey, config, null, es.constructor);
 
       sp.start();
 
@@ -192,7 +191,7 @@ describe('StreamProcessor', function() {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: fakeLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, null, es.initialize);
+      var sp = StreamProcessor(sdkKey, config, null, es.constructor);
 
       sp.start();
 
@@ -216,7 +215,7 @@ describe('StreamProcessor', function() {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: fakeLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, null, es.initialize);
+      var sp = StreamProcessor(sdkKey, config, null, es.constructor);
       
       sp.start(expectJsonError(config, done));
       es.handlers.delete({ data: '{not-good' });
@@ -242,7 +241,7 @@ describe('StreamProcessor', function() {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: fakeLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, fakeRequestor, es.initialize);
+      var sp = StreamProcessor(sdkKey, config, fakeRequestor, es.constructor);
 
       sp.start();
 
@@ -277,7 +276,7 @@ describe('StreamProcessor', function() {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: fakeLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, fakeRequestor, es.initialize);
+      var sp = StreamProcessor(sdkKey, config, fakeRequestor, es.constructor);
 
       sp.start();
 
@@ -304,7 +303,7 @@ describe('StreamProcessor', function() {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: fakeLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, fakeRequestor, es.initialize);
+      var sp = StreamProcessor(sdkKey, config, fakeRequestor, es.constructor);
 
       sp.start();
 
