@@ -289,6 +289,7 @@ var newClient = function(sdkKey, config) {
       var builder = FlagsStateBuilder(true);
       var clientOnly = options.clientSideOnly;
       var withReasons = options.withReasons;
+      var detailsOnlyIfTracked = options.detailsOnlyForTrackedFlags;
       config.featureStore.all(dataKind.features, function(flags) {
         async.forEachOf(flags, function(flag, key, iterateeCb) {
           if (clientOnly && !flag.clientSide) {
@@ -299,7 +300,7 @@ var newClient = function(sdkKey, config) {
               if (err != null) {
                 maybeReportError(new Error('Error for feature flag "' + flag.key + '" while evaluating all flags: ' + err));
               }
-              builder.addFlag(flag, detail.value, detail.variationIndex, withReasons ? detail.reason : null);
+              builder.addFlag(flag, detail.value, detail.variationIndex, withReasons ? detail.reason : null, detailsOnlyIfTracked);
               setImmediate(iterateeCb);
             });
           }
