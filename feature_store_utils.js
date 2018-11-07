@@ -17,19 +17,17 @@ function StoreCache(ttl, getFallback) {
     }
 
     getFallback(kind, key, function (item) {
-      if (cache) {
-        cache.set(cacheKey(kind, key), item);
-      }
+      cache && cache.set(cacheKey(kind, key), item);
       cb(item);
     });
   };
 
   this.set = function(kind, key, newItem) {
-    cache.set(cacheKey(kind, key), newItem);
+    cache && cache.set(cacheKey(kind, key), newItem);
   };
 
   this.flush = function() {
-    cache.flushAll();
+    cache && cache.flushAll();
   };
 
   this.close = function() {
