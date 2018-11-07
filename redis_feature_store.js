@@ -1,7 +1,7 @@
 var redis = require('redis'),
-    NodeCache = require( "node-cache" ),
     winston = require('winston'),
-    dataKind = require('./versioned_data_kind');
+    dataKind = require('./versioned_data_kind'),
+util = require('./feature_store_utils');
 
 
 var noop = function(){};
@@ -12,8 +12,8 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
   var client = redis.createClient(redisOpts),
       store = {},
       itemsPrefix = (prefix || "launchdarkly") + ":",
-      cache = cacheTTL ? new NodeCache({ stdTTL: cacheTTL}) : null,
-      updateQueue = [],
+      cache = new util.StoreCache(cacheTTL, doGet),
+      updateQueue = new util.UpdateQueue(),
       inited = false,
       checkedInit = false;
 
@@ -55,22 +55,10 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
     return itemsPrefix + kind.namespace;
   }
 
-  function cacheKey(kind, key) {
-    return kind.namespace + ":" + key;
-  }
-
   // A helper that performs a get with the redis client
   function doGet(kind, key, cb) {
     var item;
     cb = cb || noop;
-
-    if (cacheTTL) {
-      item = cache.get(cacheKey(kind, key));
-      if (item) {
-        cb(item);
-        return;
-      }
-    }
 
     if (!connected) {
       logger.warn('Attempted to fetch key ' + key + ' while Redis connection is down');
@@ -79,6 +67,7 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
     }
 
     client.hget(itemsKey(kind), key, function(err, obj) {
+      51
       if (err) {
         logger.error("Error fetching key " + key + " from Redis in '" + kind.namespace + "'", err);
         cb(null);
@@ -89,30 +78,9 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
     });
   }
 
-  function executePendingUpdates() {
-    if (updateQueue.length > 0) {
-      const entry = updateQueue[0];
-      const fn = entry[0];
-      const args = entry[1];
-      const cb = entry[2];
-      const newCb = function() {
-        updateQueue.shift();
-        if (updateQueue.length > 0) {
-          setImmediate(executePendingUpdates);
-        }
-        cb && cb();
-      };
-      fn.apply(store, args.concat([newCb]));
-    }
-  }
-
   // Places an update operation on the queue.
   var serializeFn = function(updateFn, fnArgs, cb) {
-    updateQueue.push([updateFn, fnArgs, cb]);
-    if (updateQueue.length == 1) {
-      // if nothing else is in progress, we can start this one right away
-      executePendingUpdates();
-    }
+    updateQueue.enqueue(updateFn.bind(store), fnArgs, cb);
   };
 
   store.get = function(kind, key, cb) {
@@ -162,9 +130,7 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
   store._init = function(allData, cb) {
     var multi = client.multi();
 
-    if (cacheTTL) {
-      cache.flushAll();
-    }
+    cache.flush();
 
     for (var kindNamespace in allData) {
       if (Object.hasOwnProperty.call(allData, kindNamespace)) {
@@ -177,9 +143,7 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
           if (Object.hasOwnProperty.call(items, key)) {
             stringified[key] = JSON.stringify(items[key]);
           }
-          if (cacheTTL) {
-            cache.set(cacheKey(kind, key), items[key]);
-          }
+          cache.set(kind, key, items[key]);
         }
         // Redis does not allow hmset() with an empty object
         if (Object.keys(stringified).length > 0) {
@@ -244,8 +208,8 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
               updateItemWithVersioning(kind, newItem, cb, resultFn);
             } else {
               resultFn(err);
-              if (!err && cacheTTL) {
-                cache.set(cacheKey(kind, newItem.key), newItem);
+              if (!err) {
+                cache.set(kind, newItem.key, newItem);
               }
               cb();
             }
@@ -280,9 +244,7 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
 
   store.close = function() {
     client.quit();
-    if (cacheTTL) {
-      cache.close();
-    }
+    cache.close();
   };
 
   return store;
