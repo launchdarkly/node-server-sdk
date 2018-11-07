@@ -37,7 +37,6 @@ function StoreCache(ttl, getFallback) {
   };
 }
 
-// queue
 function UpdateQueue() {
   var updateQueue = [];
   this.enqueue = function(updateFn, fnArgs, cb) {

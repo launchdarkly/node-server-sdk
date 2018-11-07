@@ -1,7 +1,7 @@
 var redis = require('redis'),
     winston = require('winston'),
     dataKind = require('./versioned_data_kind'),
-util = require('./feature_store_utils');
+    util = require('./feature_store_utils');
 
 
 var noop = function(){};
@@ -67,7 +67,6 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
     }
 
     client.hget(itemsKey(kind), key, function(err, obj) {
-      51
       if (err) {
         logger.error("Error fetching key " + key + " from Redis in '" + kind.namespace + "'", err);
         cb(null);
