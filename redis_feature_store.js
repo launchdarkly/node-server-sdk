@@ -1,19 +1,24 @@
 var redis = require('redis'),
     winston = require('winston'),
     dataKind = require('./versioned_data_kind'),
-    util = require('./feature_store_utils');
+    CachingStoreWrapper = require('./caching_store_wrapper');
+    UpdateQueue = require('./update_queue');
 
 
 var noop = function(){};
 
 
 function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
+  return new CachingStoreWrapper(cacheTTL, new RedisFeatureStoreNoCache(redisOpts, prefix, logger));
+}
+
+// TODO better name?
+function RedisFeatureStoreNoCache(redisOpts, prefix, logger) {
 
   var client = redis.createClient(redisOpts),
       store = {},
       itemsPrefix = (prefix || "launchdarkly") + ":",
-      cache = new util.StoreCache(cacheTTL, doGet),
-      updateQueue = new util.UpdateQueue(),
+      updateQueue = new UpdateQueue(),
       inited = false,
       checkedInit = false;
 
@@ -129,8 +134,6 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
   store._init = function(allData, cb) {
     var multi = client.multi();
 
-    cache.flush();
-
     for (var kindNamespace in allData) {
       if (Object.hasOwnProperty.call(allData, kindNamespace)) {
         var kind = dataKind[kindNamespace];
@@ -142,7 +145,6 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
           if (Object.hasOwnProperty.call(items, key)) {
             stringified[key] = JSON.stringify(items[key]);
           }
-          cache.set(kind, key, items[key]);
         }
         // Redis does not allow hmset() with an empty object
         if (Object.keys(stringified).length > 0) {
@@ -207,9 +209,6 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
               updateItemWithVersioning(kind, newItem, cb, resultFn);
             } else {
               resultFn(err);
-              if (!err) {
-                cache.set(kind, newItem.key, newItem);
-              }
               cb();
             }
           });
@@ -243,7 +242,6 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
 
   store.close = function() {
     client.quit();
-    cache.close();
   };
 
   return store;
