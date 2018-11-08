@@ -6,10 +6,10 @@ function cacheKey(kind, key) {
 }
 
 function CachingStoreWrapper(ttl, underlyingStore) {
-  var cache = ttl ? new NodeCache({ stdTTL: ttl }) : null;
+  var cache = new NodeCache({ stdTTL: ttl });
 
   this.init = function(allData, cb) {
-    cache && cache.flushAll();
+    cache.flushAll();
 
     // populate cache with initial data
     for (var kindNamespace in allData) {
@@ -34,16 +34,14 @@ function CachingStoreWrapper(ttl, underlyingStore) {
   };
 
   this.get = function(kind, key, cb) {
-    if (cache) {
-      item = cache.get(cacheKey(kind, key));
-      if (item) {
-        cb(item);
-        return;
-      }
+    item = cache.get(cacheKey(kind, key));
+    if (item) {
+      cb(item);
+      return;
     }
 
     underlyingStore.get(kind, key, function (item) {
-      cache && cache.set(cacheKey(kind, key), item);
+      cache.set(cacheKey(kind, key), item);
       cb(item);
     });
   };
@@ -51,19 +49,19 @@ function CachingStoreWrapper(ttl, underlyingStore) {
   this.upsert = function(kind, newItem, cb, resultFn) {
     underlyingStore.upsert(kind, newItem, cb, function(err) {
       if (!err) {
-        cache && cache.set(kind, newItem.key, newItem);
+        cache.set(kind, newItem.key, newItem);
       }
       resultFn(err);
     });
   };
 
   this.delete = function(kind, key, version, cb) {
-    cache && cache.del(cacheKey(kind, key));
+    cache.del(cacheKey(kind, key));
     underlyingStore.delete(kind, key, version, cb);
   };
 
   this.close = function() {
-    cache && cache.close();
+    cache.close();
     underlyingStore.close();
   };
 }
