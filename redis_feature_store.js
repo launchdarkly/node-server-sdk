@@ -9,11 +9,10 @@ var noop = function(){};
 
 
 function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
-  return new CachingStoreWrapper(cacheTTL, new RedisFeatureStoreNoCache(redisOpts, prefix, logger));
+  return new CachingStoreWrapper(cacheTTL, new UncachedRedisFeatureStore(redisOpts, prefix, logger));
 }
 
-// TODO better name?
-function RedisFeatureStoreNoCache(redisOpts, prefix, logger) {
+function UncachedRedisFeatureStore(redisOpts, prefix, logger) {
 
   var client = redis.createClient(redisOpts),
       store = {},
