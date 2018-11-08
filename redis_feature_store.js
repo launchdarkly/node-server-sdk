@@ -11,7 +11,7 @@ var noop = function(){};
 function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
   var store = new UncachedRedisFeatureStore(redisOpts, prefix, logger);
   if (cacheTTL) {
-    store = new CachingStoreWrapper(cacheTTL, store);
+    store = new CachingStoreWrapper(store, cacheTTL);
   }
   return store;
 }

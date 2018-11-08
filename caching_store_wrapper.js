@@ -5,7 +5,7 @@ function cacheKey(kind, key) {
   return kind.namespace + ":" + key;
 }
 
-function CachingStoreWrapper(ttl, underlyingStore) {
+function CachingStoreWrapper(underlyingStore, ttl) {
   var cache = new NodeCache({ stdTTL: ttl });
 
   this.init = function(allData, cb) {
