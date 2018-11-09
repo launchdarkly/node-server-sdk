@@ -2,18 +2,13 @@ var redis = require('redis'),
     winston = require('winston'),
     dataKind = require('./versioned_data_kind'),
     CachingStoreWrapper = require('./caching_store_wrapper');
-    UpdateQueue = require('./update_queue');
 
 
 var noop = function(){};
 
 
 function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
-  var store = new UncachedRedisFeatureStore(redisOpts, prefix, logger);
-  if (cacheTTL) {
-    store = new CachingStoreWrapper(store, cacheTTL);
-  }
-  return store;
+  return new CachingStoreWrapper(new UncachedRedisFeatureStore(redisOpts, prefix, logger), cacheTTL);
 }
 
 function UncachedRedisFeatureStore(redisOpts, prefix, logger) {
@@ -21,7 +16,6 @@ function UncachedRedisFeatureStore(redisOpts, prefix, logger) {
   var client = redis.createClient(redisOpts),
       store = {},
       itemsPrefix = (prefix || "launchdarkly") + ":",
-      updateQueue = new UpdateQueue(),
       inited = false,
       checkedInit = false;
 
@@ -85,11 +79,6 @@ function UncachedRedisFeatureStore(redisOpts, prefix, logger) {
     });
   }
 
-  // Places an update operation on the queue.
-  var serializeFn = function(updateFn, fnArgs, cb) {
-    updateQueue.enqueue(updateFn.bind(store), fnArgs, cb);
-  };
-
   store.get = function(kind, key, cb) {
     cb = cb || noop;
     doGet(kind, key, function(item) {
@@ -131,10 +120,6 @@ function UncachedRedisFeatureStore(redisOpts, prefix, logger) {
   };
 
   store.init = function(allData, cb) {
-    serializeFn(store._init, [allData], cb);
-  };
-
-  store._init = function(allData, cb) {
     var multi = client.multi();
 
     for (var kindNamespace in allData) {
@@ -166,34 +151,21 @@ function UncachedRedisFeatureStore(redisOpts, prefix, logger) {
     });
   };
 
-  store.delete = function(kind, key, version, cb) {
-    serializeFn(store._delete, [kind, key, version], cb);
-  };
-
-  store._delete = function(kind, key, version, cb) {
-    var deletedItem = { key: key, version: version, deleted: true };
-    updateItemWithVersioning(kind, deletedItem, cb,
-      function(err) {
-        if (err) {
-          logger.error("Error deleting key " + key + " in '" + kind.namespace + "'", err);
-        }
-      });
-  }
-
   store.upsert = function(kind, item, cb) {
-    serializeFn(store._upsert, [kind, item], cb);
+    store.upsertInternal(kind, item, function() { cb(); });
+
   };
 
-  store._upsert = function(kind, item, cb) {
-    updateItemWithVersioning(kind, item, cb,
-      function(err) {
-        if (err) {
-          logger.error("Error upserting key " + key + " in '" + kind.namespace + "'", err);
-        }
-      });
+  store.upsertInternal = function(kind, item, cb) {
+    updateItemWithVersioning(kind, item, function(err, attemptedWrite) {
+      if (err) {
+        logger.error("Error upserting key " + key + " in '" + kind.namespace + "'", err);
+      }
+      cb(err, attemptedWrite);
+    });
   }
 
-  function updateItemWithVersioning(kind, newItem, cb, resultFn) {
+  function updateItemWithVersioning(kind, newItem, cb) {
     client.watch(itemsKey(kind));
     var multi = client.multi();
     // test_transaction_hook is instrumentation, set only by the unit tests
@@ -202,7 +174,7 @@ function UncachedRedisFeatureStore(redisOpts, prefix, logger) {
       doGet(kind, newItem.key, function(oldItem) {
         if (oldItem && oldItem.version >= newItem.version) {
           multi.discard();
-          cb();
+          cb(null, false);
         } else {
           multi.hset(itemsKey(kind), newItem.key, JSON.stringify(newItem));
           multi.exec(function(err, replies) {
@@ -211,8 +183,7 @@ function UncachedRedisFeatureStore(redisOpts, prefix, logger) {
               logger.debug("Concurrent modification detected, retrying");
               updateItemWithVersioning(kind, newItem, cb, resultFn);
             } else {
-              resultFn(err);
-              cb();
+              cb(err, true);
             }
           });
         }
@@ -222,25 +193,14 @@ function UncachedRedisFeatureStore(redisOpts, prefix, logger) {
 
   store.initialized = function(cb) {
     cb = cb || noop;
-    if (inited) {
-      // Once we've determined that we're initialized, we can never become uninitialized again
-      cb(true);
-    }
-    else if (checkedInit) {
-      // We don't want to hit Redis for this question more than once; if we've already checked there
-      // and it wasn't populated, we'll continue to say we're uninited until init() has been called
-      cb(false);
-    }
-    else {
-      var inited = false;
-      client.exists(itemsKey(dataKind.features), function(err, obj) {
-        if (!err && obj) {
-          inited = true;
-        }
-        checkedInit = true;
-        cb(inited);
-      });
-    }
+    var inited = false;
+    client.exists(itemsKey(dataKind.features), function(err, obj) {
+      if (!err && obj) {
+        inited = true;
+      }
+      checkedInit = true;
+      cb(inited);
+    });
   };
 
   store.close = function() {
