@@ -8,10 +8,10 @@ var noop = function(){};
 
 
 function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
-  return new CachingStoreWrapper(new UncachedRedisFeatureStore(redisOpts, prefix, logger), cacheTTL);
+  return new CachingStoreWrapper(new redisFeatureStoreInternal(redisOpts, prefix, logger), cacheTTL);
 }
 
-function UncachedRedisFeatureStore(redisOpts, prefix, logger) {
+function redisFeatureStoreInternal(redisOpts, prefix, logger) {
 
   var client = redis.createClient(redisOpts),
       store = {},
@@ -145,11 +145,6 @@ function UncachedRedisFeatureStore(redisOpts, prefix, logger) {
       }
       cb();
     });
-  };
-
-  store.upsert = function(kind, item, cb) {
-    store.upsertInternal(kind, item, function() { cb(); });
-
   };
 
   store.upsertInternal = function(kind, item, cb) {
