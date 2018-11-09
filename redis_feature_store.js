@@ -15,9 +15,7 @@ function UncachedRedisFeatureStore(redisOpts, prefix, logger) {
 
   var client = redis.createClient(redisOpts),
       store = {},
-      itemsPrefix = (prefix || "launchdarkly") + ":",
-      inited = false,
-      checkedInit = false;
+      itemsPrefix = (prefix || "launchdarkly") + ":";
 
   logger = (logger ||
     new winston.Logger({
@@ -144,8 +142,6 @@ function UncachedRedisFeatureStore(redisOpts, prefix, logger) {
     multi.exec(function(err, replies) {
       if (err) {
         logger.error("Error initializing Redis store", err);
-      } else {
-        inited = true;
       }
       cb();
     });
@@ -193,13 +189,8 @@ function UncachedRedisFeatureStore(redisOpts, prefix, logger) {
 
   store.initialized = function(cb) {
     cb = cb || noop;
-    var inited = false;
     client.exists(itemsKey(dataKind.features), function(err, obj) {
-      if (!err && obj) {
-        inited = true;
-      }
-      checkedInit = true;
-      cb(inited);
+      cb(Boolean(!err && obj));
     });
   };
 
