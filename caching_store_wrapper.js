@@ -19,33 +19,37 @@ function CachingStoreWrapper(underlyingStore, ttl) {
   var initialized = false;
 
   this.init = function(allData, cb) {
-    if (cache) {
-      queue.enqueue(function(cb) {
-        cache.del(initializedKey);
-        cache.flushAll();
+    queue.enqueue(function(cb) {
+      underlyingStore.init(allData, function() {
+        initialized = true;
 
-        // populate cache with initial data
-        for (var kindNamespace in allData) {
-          if (Object.hasOwnProperty.call(allData, kindNamespace)) {
-            var kind = dataKind[kindNamespace];
-            var items = allData[kindNamespace];
-            cache.set(allCacheKey(kind), items);
-            for (var key in items) {
-              cache.set(cacheKey(kind, key), items[key]);
+        if (cache) {
+          cache.del(initializedKey);
+          cache.flushAll();
+
+          // populate cache with initial data
+          for (var kindNamespace in allData) {
+            if (Object.hasOwnProperty.call(allData, kindNamespace)) {
+              var kind = dataKind[kindNamespace];
+              var items = allData[kindNamespace];
+              cache.set(allCacheKey(kind), items);
+              for (var key in items) {
+                cache.set(cacheKey(kind, key), items[key]);
+              }
             }
           }
         }
 
-        underlyingStore.init(allData, cb);
-      }, [], cb);
-    }
+        cb();
+      });
+    }, [], cb);
   };
 
   this.initialized = function(cb) {
     if (initialized) {
-      cb(initialized);
+      cb(true);
     } else if (cache && cache.get(initializedKey)) {
-      return false;
+      cb(false);
     } else {
       underlyingStore.initialized(function(inited) {
         initialized = inited;
@@ -65,34 +69,36 @@ function CachingStoreWrapper(underlyingStore, ttl) {
     }
 
     underlyingStore.all(kind, function(items) {
-      cache.set(allCacheKey(kind), items)
+      cache && cache.set(allCacheKey(kind), items);
       cb(items);
     });
   };
 
   this.get = function(kind, key, cb) {
-    var item = cache && cache.get(cacheKey(kind, key));
-    if (item) {
-      if (item.deleted) {
-        cb(null);
+    if (cache) {
+      var item = cache.get(cacheKey(kind, key));
+      if (item !== undefined) {
+        cb(itemOnlyIfNotDeleted(item));
         return;
       }
-      cb(item);
-      return;
     }
 
-    underlyingStore.get(kind, key, function (item) {
+    underlyingStore.get(kind, key, function(item) {
       cache && cache.set(cacheKey(kind, key), item);
-      cb(item);
+      cb(itemOnlyIfNotDeleted(item));
     });
   };
+
+  function itemOnlyIfNotDeleted(item) { 
+    return (!item || item.deleted) ? null : item;
+  }
 
   this.upsert = function(kind, newItem, cb) {
     queue.enqueue(function (cb) {
       flushAllCaches();
-      underlyingStore.upsertInternal(kind, newItem, function(err, attemptedWrite) {
-        if (attemptedWrite && !err) {
-          cache && cache.set(cacheKey(kind, newItem.key), newItem);
+      underlyingStore.upsertInternal(kind, newItem, function(err, updatedItem) {
+        if (!err) {
+          cache && cache.set(cacheKey(kind, newItem.key), updatedItem);
         }
         cb();
       });
