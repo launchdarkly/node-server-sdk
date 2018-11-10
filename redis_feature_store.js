@@ -165,7 +165,7 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
       doGet(kind, newItem.key, function(oldItem) {
         if (oldItem && oldItem.version >= newItem.version) {
           multi.discard();
-          cb(null, false);
+          cb(null, oldItem);
         } else {
           multi.hset(itemsKey(kind), newItem.key, JSON.stringify(newItem));
           multi.exec(function(err, replies) {
@@ -174,7 +174,7 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
               logger.debug("Concurrent modification detected, retrying");
               updateItemWithVersioning(kind, newItem, cb, resultFn);
             } else {
-              cb(err, true);
+              cb(err, newItem);
             }
           });
         }
