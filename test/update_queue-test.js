@@ -34,7 +34,7 @@ describe('UpdateQueue', function() {
 
     const expected = [
       'submit 1',
-      'start 1',  // note, this one executes immediately because there was nothing pening
+      'start 1',  // note, this one executes immediately because there was nothing pending
       'submit 2',
       'submit 3',
       'end 1',
