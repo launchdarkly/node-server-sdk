@@ -78,7 +78,7 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
     });
   }
 
-  store.get = function(kind, key, cb) {
+  store.getInternal = function(kind, key, cb) {
     cb = cb || noop;
     doGet(kind, key, function(item) {
       if (item && !item.deleted) {
@@ -89,7 +89,7 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
     });
   };
 
-  store.all = function(kind, cb) {
+  store.getAllInternal = function(kind, cb) {
     cb = cb || noop;
     if (!connected) {
       logger.warn('Attempted to fetch all keys while Redis connection is down');
@@ -118,7 +118,7 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
     });
   };
 
-  store.init = function(allData, cb) {
+  store.initInternal = function(allData, cb) {
     var multi = client.multi();
 
     for (var kindNamespace in allData) {
@@ -185,7 +185,7 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
     });
   }
 
-  store.initialized = function(cb) {
+  store.initializedInternal = function(cb) {
     cb = cb || noop;
     client.exists(initedKey, function(err, obj) {
       cb(Boolean(!err && obj));
