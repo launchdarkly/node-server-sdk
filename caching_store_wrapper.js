@@ -12,7 +12,13 @@ function allCacheKey(kind) {
 
 var initializedKey = "$checkedInit";
 
-
+/*
+  CachingStoreWrapper provides commonly needed functionality for implementations of an
+  SDK feature store. The underlyingStore must implement a simplified interface for
+  querying and updating the data store (see redis_feature_store.js for an example)
+  while CachingStoreWrapper adds optional caching of stored items and of the
+  initialized state, and ensures that asynchronous operations are serialized correctly.
+*/
 function CachingStoreWrapper(underlyingStore, ttl) {
   var cache = ttl ? new NodeCache({ stdTTL: ttl }) : null;
   var queue = new UpdateQueue();
@@ -22,7 +28,7 @@ function CachingStoreWrapper(underlyingStore, ttl) {
   
   this.init = function(allData, cb) {
     queue.enqueue(function(cb) {
-      underlyingStore.init(allData, function() {
+      underlyingStore.initInternal(allData, function() {
         initialized = true;
 
         if (cache) {
@@ -53,7 +59,7 @@ function CachingStoreWrapper(underlyingStore, ttl) {
     } else if (cache && cache.get(initializedKey)) {
       cb(false);
     } else {
-      underlyingStore.initialized(function(inited) {
+      underlyingStore.initializedInternal(function(inited) {
         initialized = inited;
         if (!initialized) {
           cache && cache.set(initializedKey, true);
@@ -70,7 +76,7 @@ function CachingStoreWrapper(underlyingStore, ttl) {
       return;
     }
 
-    underlyingStore.all(kind, function(items) {
+    underlyingStore.getAllInternal(kind, function(items) {
       cache && cache.set(allCacheKey(kind), items);
       cb(items);
     });
@@ -85,7 +91,7 @@ function CachingStoreWrapper(underlyingStore, ttl) {
       }
     }
 
-    underlyingStore.get(kind, key, function(item) {
+    underlyingStore.getInternal(kind, key, function(item) {
       cache && cache.set(cacheKey(kind, key), item);
       cb(itemOnlyIfNotDeleted(item));
     });

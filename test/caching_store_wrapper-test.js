@@ -7,16 +7,16 @@ function MockCore() {
     inited: false,
     initQueriedCount: 0,
 
-    init: function(newData, cb) { 
+    initInternal: function(newData, cb) { 
       c.data = newData;
       cb();
     },
 
-    get: function(kind, key, cb)  {
+    getInternal: function(kind, key, cb)  {
       cb(c.data[kind.namespace][key]);
     },
 
-    all: function(kind, cb) {
+    getAllInternal: function(kind, cb) {
       cb(c.data[kind.namespace]);
     },
 
@@ -30,7 +30,7 @@ function MockCore() {
       }
     },
 
-    initialized: function(cb) {
+    initializedInternal: function(cb) {
       c.initQueriedCount++;
       cb(c.inited);
     },
