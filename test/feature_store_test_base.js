@@ -53,10 +53,10 @@ function baseFeatureStoreTests(makeStore, clearExistingData, isCached) {
   it('init() completely replaces previous data', function(done) {
     var store = makeStore();
     var flags = {
-      first: { key: 'thing', version: 1 },
-      second: { key: 'stuff', version: 1 }
+      first: { key: 'first', version: 1 },
+      second: { key: 'second', version: 1 }
     };
-    var segments = { first: { key: 'thing', version: 2 } };
+    var segments = { first: { key: 'first', version: 2 } };
     var initData = {};
     initData[dataKind.features.namespace] = flags;
     initData[dataKind.segments.namespace] = segments;
@@ -67,8 +67,8 @@ function baseFeatureStoreTests(makeStore, clearExistingData, isCached) {
         store.all(dataKind.segments, function(items) {
           expect(items).toEqual(segments);
 
-          var newFlags = { first: { key: 'thing', version: 3 } };
-          var newSegments = { first: { key: 'thing', version: 4 } };
+          var newFlags = { first: { key: 'first', version: 3 } };
+          var newSegments = { first: { key: 'first', version: 4 } };
           var initData = {};
           initData[dataKind.features.namespace] = newFlags;
           initData[dataKind.segments.namespace] = newSegments;
