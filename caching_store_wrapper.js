@@ -18,6 +18,8 @@ function CachingStoreWrapper(underlyingStore, ttl) {
   var queue = new UpdateQueue();
   var initialized = false;
 
+  this.underlyingStore = underlyingStore;
+  
   this.init = function(allData, cb) {
     queue.enqueue(function(cb) {
       underlyingStore.init(allData, function() {

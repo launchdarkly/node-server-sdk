@@ -15,7 +15,8 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
 
   var client = redis.createClient(redisOpts),
       store = {},
-      itemsPrefix = (prefix || "launchdarkly") + ":";
+      itemsPrefix = (prefix || "launchdarkly") + ":",
+      initedKey = itemsPrefix + "$inited";
 
   logger = (logger ||
     new winston.Logger({
@@ -139,6 +140,8 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
       }
     }
 
+    multi.set(initedKey, "");
+    
     multi.exec(function(err, replies) {
       if (err) {
         logger.error("Error initializing Redis store", err);
@@ -159,8 +162,8 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
   function updateItemWithVersioning(kind, newItem, cb) {
     client.watch(itemsKey(kind));
     var multi = client.multi();
-    // test_transaction_hook is instrumentation, set only by the unit tests
-    var prepare = store.test_transaction_hook || function(prepareCb) { prepareCb(); };
+    // testUpdateHook is instrumentation, used only by the unit tests
+    var prepare = store.testUpdateHook || function(prepareCb) { prepareCb(); };
     prepare(function() {
       doGet(kind, newItem.key, function(oldItem) {
         if (oldItem && oldItem.version >= newItem.version) {
@@ -172,7 +175,7 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
             if (!err && replies === null) {
               // This means the EXEC failed because someone modified the watched key
               logger.debug("Concurrent modification detected, retrying");
-              updateItemWithVersioning(kind, newItem, cb, resultFn);
+              updateItemWithVersioning(kind, newItem, cb);
             } else {
               cb(err, newItem);
             }
@@ -184,7 +187,7 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
 
   store.initialized = function(cb) {
     cb = cb || noop;
-    client.exists(itemsKey(dataKind.features), function(err, obj) {
+    client.exists(initedKey, function(err, obj) {
       cb(Boolean(!err && obj));
     });
   };
