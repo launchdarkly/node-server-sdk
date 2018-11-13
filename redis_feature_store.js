@@ -106,11 +106,8 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
             items = obj;
 
         for (var key in items) {
-          if (Object.hasOwnProperty.call(items,key)) {
-            var item = JSON.parse(items[key]);
-            if (!item.deleted) {
-              results[key] = item;
-            }
+          if (Object.hasOwnProperty.call(items, key)) {
+            results[key] = JSON.parse(items[key]);
           }
         }
         cb(results);
