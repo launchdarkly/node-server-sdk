@@ -170,6 +170,30 @@ describe('CachingStoreWrapper', function() {
     });
   });
 
+  runCachedAndUncachedTests('all() with deleted item', function(done, wrapper, core, isCached) {
+    const flag1 = { key: 'flag1', version: 1 };
+    const flag2 = { key: 'flag2', version: 1, deleted: true };
+
+    core.forceSet(features, flag1);
+    core.forceSet(features, flag2);
+
+    wrapper.all(features, function(items) {
+      expect(items).toEqual({ 'flag1': flag1 });
+
+      core.forceRemove(features, flag1.key);
+
+      wrapper.all(features, function(items) {
+        if (isCached) {
+          expect(items).toEqual({ 'flag1': flag1 });
+        } else {
+          expect(items).toEqual({ });
+        }
+
+        done();
+      });
+    });
+  });
+
   runCachedTestOnly('cached all() uses values from init()', function(done, wrapper, core) {
     const flag1 = { key: 'flag1', version: 1 };
     const flag2 = { key: 'flag2', version: 1 };

@@ -77,8 +77,15 @@ function CachingStoreWrapper(underlyingStore, ttl) {
     }
 
     underlyingStore.getAllInternal(kind, function(items) {
-      cache && cache.set(allCacheKey(kind), items);
-      cb(items);
+      var filteredItems = {};
+      Object.keys(items).forEach(function(key) {
+        var item = items[key];
+        if (item && !item.deleted) {
+          filteredItems[key] = item;
+        }
+      });
+      cache && cache.set(allCacheKey(kind), filteredItems);
+      cb(filteredItems);
     });
   };
 
