@@ -1,21 +1,22 @@
 var redis = require('redis'),
-    NodeCache = require( "node-cache" ),
     winston = require('winston'),
-    dataKind = require('./versioned_data_kind');
+    dataKind = require('./versioned_data_kind'),
+    CachingStoreWrapper = require('./caching_store_wrapper');
 
 
 var noop = function(){};
 
 
 function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
+  return new CachingStoreWrapper(new redisFeatureStoreInternal(redisOpts, prefix, logger), cacheTTL);
+}
+
+function redisFeatureStoreInternal(redisOpts, prefix, logger) {
 
   var client = redis.createClient(redisOpts),
       store = {},
       itemsPrefix = (prefix || "launchdarkly") + ":",
-      cache = cacheTTL ? new NodeCache({ stdTTL: cacheTTL}) : null,
-      updateQueue = [],
-      inited = false,
-      checkedInit = false;
+      initedKey = itemsPrefix + "$inited";
 
   logger = (logger ||
     new winston.Logger({
@@ -55,22 +56,10 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
     return itemsPrefix + kind.namespace;
   }
 
-  function cacheKey(kind, key) {
-    return kind.namespace + ":" + key;
-  }
-
   // A helper that performs a get with the redis client
   function doGet(kind, key, cb) {
     var item;
     cb = cb || noop;
-
-    if (cacheTTL) {
-      item = cache.get(cacheKey(kind, key));
-      if (item) {
-        cb(item);
-        return;
-      }
-    }
 
     if (!connected) {
       logger.warn('Attempted to fetch key ' + key + ' while Redis connection is down');
@@ -89,33 +78,7 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
     });
   }
 
-  function executePendingUpdates() {
-    if (updateQueue.length > 0) {
-      const entry = updateQueue[0];
-      const fn = entry[0];
-      const args = entry[1];
-      const cb = entry[2];
-      const newCb = function() {
-        updateQueue.shift();
-        if (updateQueue.length > 0) {
-          setImmediate(executePendingUpdates);
-        }
-        cb && cb();
-      };
-      fn.apply(store, args.concat([newCb]));
-    }
-  }
-
-  // Places an update operation on the queue.
-  var serializeFn = function(updateFn, fnArgs, cb) {
-    updateQueue.push([updateFn, fnArgs, cb]);
-    if (updateQueue.length == 1) {
-      // if nothing else is in progress, we can start this one right away
-      executePendingUpdates();
-    }
-  };
-
-  store.get = function(kind, key, cb) {
+  store.getInternal = function(kind, key, cb) {
     cb = cb || noop;
     doGet(kind, key, function(item) {
       if (item && !item.deleted) {
@@ -126,7 +89,7 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
     });
   };
 
-  store.all = function(kind, cb) {
+  store.getAllInternal = function(kind, cb) {
     cb = cb || noop;
     if (!connected) {
       logger.warn('Attempted to fetch all keys while Redis connection is down');
@@ -143,11 +106,8 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
             items = obj;
 
         for (var key in items) {
-          if (Object.hasOwnProperty.call(items,key)) {
-            var item = JSON.parse(items[key]);
-            if (!item.deleted) {
-              results[key] = item;
-            }
+          if (Object.hasOwnProperty.call(items, key)) {
+            results[key] = JSON.parse(items[key]);
           }
         }
         cb(results);
@@ -155,16 +115,8 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
     });
   };
 
-  store.init = function(allData, cb) {
-    serializeFn(store._init, [allData], cb);
-  };
-
-  store._init = function(allData, cb) {
+  store.initInternal = function(allData, cb) {
     var multi = client.multi();
-
-    if (cacheTTL) {
-      cache.flushAll();
-    }
 
     for (var kindNamespace in allData) {
       if (Object.hasOwnProperty.call(allData, kindNamespace)) {
@@ -177,9 +129,6 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
           if (Object.hasOwnProperty.call(items, key)) {
             stringified[key] = JSON.stringify(items[key]);
           }
-          if (cacheTTL) {
-            cache.set(cacheKey(kind, key), items[key]);
-          }
         }
         // Redis does not allow hmset() with an empty object
         if (Object.keys(stringified).length > 0) {
@@ -188,66 +137,44 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
       }
     }
 
+    multi.set(initedKey, "");
+    
     multi.exec(function(err, replies) {
       if (err) {
         logger.error("Error initializing Redis store", err);
-      } else {
-        inited = true;
       }
       cb();
     });
   };
 
-  store.delete = function(kind, key, version, cb) {
-    serializeFn(store._delete, [kind, key, version], cb);
-  };
-
-  store._delete = function(kind, key, version, cb) {
-    var deletedItem = { key: key, version: version, deleted: true };
-    updateItemWithVersioning(kind, deletedItem, cb,
-      function(err) {
-        if (err) {
-          logger.error("Error deleting key " + key + " in '" + kind.namespace + "'", err);
-        }
-      });
+  store.upsertInternal = function(kind, item, cb) {
+    updateItemWithVersioning(kind, item, function(err, attemptedWrite) {
+      if (err) {
+        logger.error("Error upserting key " + key + " in '" + kind.namespace + "'", err);
+      }
+      cb(err, attemptedWrite);
+    });
   }
 
-  store.upsert = function(kind, item, cb) {
-    serializeFn(store._upsert, [kind, item], cb);
-  };
-
-  store._upsert = function(kind, item, cb) {
-    updateItemWithVersioning(kind, item, cb,
-      function(err) {
-        if (err) {
-          logger.error("Error upserting key " + key + " in '" + kind.namespace + "'", err);
-        }
-      });
-  }
-
-  function updateItemWithVersioning(kind, newItem, cb, resultFn) {
+  function updateItemWithVersioning(kind, newItem, cb) {
     client.watch(itemsKey(kind));
     var multi = client.multi();
-    // test_transaction_hook is instrumentation, set only by the unit tests
-    var prepare = store.test_transaction_hook || function(prepareCb) { prepareCb(); };
+    // testUpdateHook is instrumentation, used only by the unit tests
+    var prepare = store.testUpdateHook || function(prepareCb) { prepareCb(); };
     prepare(function() {
       doGet(kind, newItem.key, function(oldItem) {
         if (oldItem && oldItem.version >= newItem.version) {
           multi.discard();
-          cb();
+          cb(null, oldItem);
         } else {
           multi.hset(itemsKey(kind), newItem.key, JSON.stringify(newItem));
           multi.exec(function(err, replies) {
             if (!err && replies === null) {
               // This means the EXEC failed because someone modified the watched key
               logger.debug("Concurrent modification detected, retrying");
-              updateItemWithVersioning(kind, newItem, cb, resultFn);
+              updateItemWithVersioning(kind, newItem, cb);
             } else {
-              resultFn(err);
-              if (!err && cacheTTL) {
-                cache.set(cacheKey(kind, newItem.key), newItem);
-              }
-              cb();
+              cb(err, newItem);
             }
           });
         }
@@ -255,34 +182,15 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
     });
   }
 
-  store.initialized = function(cb) {
+  store.initializedInternal = function(cb) {
     cb = cb || noop;
-    if (inited) {
-      // Once we've determined that we're initialized, we can never become uninitialized again
-      cb(true);
-    }
-    else if (checkedInit) {
-      // We don't want to hit Redis for this question more than once; if we've already checked there
-      // and it wasn't populated, we'll continue to say we're uninited until init() has been called
-      cb(false);
-    }
-    else {
-      var inited = false;
-      client.exists(itemsKey(dataKind.features), function(err, obj) {
-        if (!err && obj) {
-          inited = true;
-        }
-        checkedInit = true;
-        cb(inited);
-      });
-    }
+    client.exists(initedKey, function(err, obj) {
+      cb(Boolean(!err && obj));
+    });
   };
 
   store.close = function() {
     client.quit();
-    if (cacheTTL) {
-      cache.close();
-    }
   };
 
   return store;

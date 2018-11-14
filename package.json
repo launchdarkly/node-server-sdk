@@ -33,7 +33,7 @@
     "request": "2.87.0",
     "request-etag": "^2.0.3",
     "semver": "5.5.0",
-    "tunnel": "https://github.com/launchdarkly/node-tunnel/tarball/d860e57650cce1ea655d00854c81babe6b47e02c",
+    "tunnel": "0.0.6",
     "winston": "2.4.1"
   },
   "engines": {
