@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.6.0] - 2018-11-14
+### Added:
+- To make it easier to build feature store integrations for databases other than Redis, some of the feature store support logic has been made into a reusable component in `caching_store_wrapper.js`.
+
+### Changed:
+- For proxy support, the SDK now uses the published version of the `tunnel` package from NPM, rather than a Git reference to a fork.
+
 ## [5.5.0] - 2018-10-08
 ### Added:
 - The `allFlagsState` method now accepts a new option, `detailsOnlyForTrackedFlags`, which reduces the size of the JSON representation of the flag state by omitting some metadata. Specifically, it omits any data that is normally used for generating detailed evaluation events if a flag does not have event tracking or debugging turned on.
