@@ -77,6 +77,10 @@ function CachingStoreWrapper(underlyingStore, ttl) {
     }
 
     underlyingStore.getAllInternal(kind, function(items) {
+      if (items === null || items === undefined) {
+        cb(items);
+        return;
+      }
       var filteredItems = {};
       Object.keys(items).forEach(function(key) {
         var item = items[key];
@@ -125,7 +129,7 @@ function CachingStoreWrapper(underlyingStore, ttl) {
   };
 
   this.close = function() {
-    cache.close();
+    cache && cache.close();
     underlyingStore.close();
   };
 

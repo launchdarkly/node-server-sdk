@@ -6,6 +6,9 @@ function MockCore() {
     data: { features: {} },
     inited: false,
     initQueriedCount: 0,
+    getAllError: false,
+    upsertError: null,
+    closed: false,
 
     initInternal: function(newData, cb) { 
       c.data = newData;
@@ -17,10 +20,14 @@ function MockCore() {
     },
 
     getAllInternal: function(kind, cb) {
-      cb(c.data[kind.namespace]);
+      cb(c.getAllError ? null : c.data[kind.namespace]);
     },
 
     upsertInternal: function(kind, item, cb) {
+      if (c.upsertError) {
+        cb(c.upsertError, null);
+        return;
+      }
       const oldItem = c.data[kind.namespace][item.key];
       if (oldItem && oldItem.version >= item.version) {
         cb(null, oldItem);
@@ -33,6 +40,10 @@ function MockCore() {
     initializedInternal: function(cb) {
       c.initQueriedCount++;
       cb(c.inited);
+    },
+
+    close: function() {
+      c.closed = true;
     },
 
     forceSet: function(kind, item) {
@@ -194,6 +205,15 @@ describe('CachingStoreWrapper', function() {
     });
   });
 
+  runCachedAndUncachedTests('all() error condition', function(done, wrapper, core, isCached) {
+    core.getAllError = true;
+
+    wrapper.all(features, function(items) {
+      expect(items).toBe(null);
+      done();
+    });
+  });
+
   runCachedTestOnly('cached all() uses values from init()', function(done, wrapper, core) {
     const flag1 = { key: 'flag1', version: 1 };
     const flag2 = { key: 'flag2', version: 1 };
@@ -259,6 +279,34 @@ describe('CachingStoreWrapper', function() {
 
           done();
         });
+      });
+    });
+  });
+
+  runCachedAndUncachedTests('upsert() - error', function(done, wrapper, core, isCached) {
+    const flagv1 = { key: 'flag', version: 1 };
+    const flagv2 = { key: 'flag', version: 2 };
+
+    wrapper.upsert(features, flagv1, function() {
+      expect(core.data[features.namespace][flagv1.key]).toEqual(flagv1);
+
+      core.upsertError = new Error('sorry');
+
+      wrapper.upsert(features, flagv2, function() {
+        expect(core.data[features.namespace][flagv1.key]).toEqual(flagv1);
+
+        // if we have a cache, verify that the old item is still cached by writing a different value
+        // to the underlying data - get() should still return the cached item
+        if (isCached) {
+          const flagv3 = { key: 'flag', version: 3 };
+          core.forceSet(features, flagv3);
+          wrapper.get(features, flagv1.key, function(item) {
+            expect(item).toEqual(flagv1);  
+            done();
+          });
+        } else {
+          done();
+        }
       });
     });
   });
@@ -381,6 +429,14 @@ describe('CachingStoreWrapper', function() {
           }, 1100);
         });
       });
+    });
+  });
+
+  describe('close()', function() {
+    runCachedAndUncachedTests('closes underlying store', function(done, wrapper, core) {
+      wrapper.close();
+      expect(core.closed).toBe(true);
+      done();
     });
   });
 });
