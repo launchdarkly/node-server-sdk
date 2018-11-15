@@ -69,4 +69,10 @@ describe('configuration', function() {
     var config = configuration.validate({ pollInterval: 31 });
     expect(config.pollInterval).toEqual(31);
   });
+
+  it('should not share the default featureStore across different config instances', function() {
+    var config1 = configuration.validate({});
+    var config2 = configuration.validate({});
+    expect(config1.featureStore).not.toEqual(config2.featureStore);
+  });
 });
