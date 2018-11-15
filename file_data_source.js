@@ -11,7 +11,7 @@ var fs = require('fs'),
   property of your LaunchDarkly client configuration. In the options, set "paths" to the file
   paths of your data file(s):
 
-      var dataSource = FileDataSource({ paths: [ myFilePath ] });
+      var dataSource = LaunchDarkly.FileDataSource({ paths: [ myFilePath ] });
       var config = { updateProcessor: dataSource };
 
   Flag data files can be either JSON or YAML. They contain an object with three possible
