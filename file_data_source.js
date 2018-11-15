@@ -51,45 +51,54 @@ function FileDataSource(options) {
       });
     }
 
-    async function loadFile(path, allData) {
-      var data = await new Promise((resolve, reject) =>
+    function loadFilePromise(path, allData) {
+      return new Promise((resolve, reject) =>
         fs.readFile(path, 'utf8', (err, data) =>
-          err ? reject(err) : resolve(data)
-        ));
-      var parsed = parseData(data) || {};
-      var addItem = (kind, item) => {
-        if (!allData[kind.namespace]) {
-          allData[kind.namespace] = {};
+          err ? reject(err) : resolve(data))
+      ).then(data => {
+        var parsed = parseData(data) || {};
+        var addItem = (kind, item) => {
+          if (!allData[kind.namespace]) {
+            allData[kind.namespace] = {};
+          }
+          if (allData[kind.namespace][item.key]) {
+            throw new Error('found duplicate key: "' + item.key + '"');
+          } else {
+            allData[kind.namespace][item.key] = item;
+          }
         }
-        if (allData[kind.namespace][item.key]) {
-          throw new Error('found duplicate key: "' + item.key + '"');
-        } else {
-          allData[kind.namespace][item.key] = item;
-        }
-      }
-      Object.values(parsed.flags || {}).forEach(item => {
-        addItem(dataKind.features, item);
-      });
-      Object.entries(parsed.flagValues || {}).forEach(e => {
-        addItem(dataKind.features, makeFlagWithValue(e[0], e[1]));
-      });
-      Object.values(parsed.segments || {}).forEach(item => {
-        addItem(dataKind.segments, item);
+        Object.values(parsed.flags || {}).forEach(item => {
+          addItem(dataKind.features, item);
+        });
+        Object.entries(parsed.flagValues || {}).forEach(e => {
+          addItem(dataKind.features, makeFlagWithValue(e[0], e[1]));
+        });
+        Object.values(parsed.segments || {}).forEach(item => {
+          addItem(dataKind.segments, item);
+        });
       });
     }
 
-    async function loadAll() {
+    function loadAllPromise() {
       pendingUpdate = false;
       var allData = {};
+      var p = Promise.resolve();
       for (var i = 0; i < paths.length; i++) {
-        try {
-          await loadFile(paths[i], allData);
-        } catch (e) {
-          throw new Error('Unable to load flags: ' + e + ' [' + paths[i] + ']');
-        }
+        (path => {
+          p = p.then(() => loadFilePromise(path, allData))
+            .catch(e => {
+              throw new Error('Unable to load flags: ' + e + ' [' + path + ']');
+            });
+        })(paths[i]);
       }
-      await new Promise(resolve => featureStore.init(allData, resolve));
-      inited = true;
+      return p.then(() => initStorePromise(allData));
+    }
+
+    function initStorePromise(data) {
+      return new Promise(resolve => featureStore.init(data, () => {
+        inited = true;
+        resolve();
+      }));
     }
 
     function parseData(data) {
@@ -109,7 +118,7 @@ function FileDataSource(options) {
 
     function startWatching() {
       var reload = () => {
-        loadAll().then(() => {
+        loadAllPromise().then(() => {
           logger && logger.warn('Reloaded flags from file data');
         }).catch(() => {});
       };
@@ -138,7 +147,7 @@ function FileDataSource(options) {
         startWatching();
       }
 
-      loadAll().then(() => cb(), err => cb(err));
+      loadAllPromise().then(() => cb(), err => cb(err));
     };
 
     fds.stop = () => {
