@@ -6,6 +6,8 @@ function MockCore() {
     data: { features: {} },
     inited: false,
     initQueriedCount: 0,
+    getAllError: false,
+    upsertError: null,
 
     initInternal: function(newData, cb) { 
       c.data = newData;
@@ -17,10 +19,14 @@ function MockCore() {
     },
 
     getAllInternal: function(kind, cb) {
-      cb(c.data[kind.namespace]);
+      cb(c.getAllError ? null : c.data[kind.namespace]);
     },
 
     upsertInternal: function(kind, item, cb) {
+      if (c.upsertError) {
+        cb(upsertError, null);
+        return;
+      }
       const oldItem = c.data[kind.namespace][item.key];
       if (oldItem && oldItem.version >= item.version) {
         cb(null, oldItem);
@@ -191,6 +197,15 @@ describe('CachingStoreWrapper', function() {
 
         done();
       });
+    });
+  });
+
+  runCachedAndUncachedTests('all() error condition', function(done, wrapper, core, isCached) {
+    core.getAllError = true;
+
+    wrapper.all(features, function(items) {
+      expect(items).toBe(null);
+      done();
     });
   });
 
