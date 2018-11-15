@@ -4,23 +4,25 @@ var messages = require('./messages');
 var package_json = require('./package.json');
 
 module.exports = (function() {
-  var defaults = {
-    baseUri: 'https://app.launchdarkly.com',
-    streamUri: 'https://stream.launchdarkly.com',
-    eventsUri: 'https://events.launchdarkly.com',
-    stream: true,
-    sendEvents: true,
-    timeout: 5,
-    capacity: 1000,
-    flushInterval: 5,
-    pollInterval: 30,
-    offline: false,
-    useLdd: false,
-    allAttributesPrivate: false,
-    privateAttributeNames: [],
-    userKeysCapacity: 1000,
-    userKeysFlushInterval: 300,
-    featureStore: InMemoryFeatureStore()
+  var defaults = function() {
+    return {
+      baseUri: 'https://app.launchdarkly.com',
+      streamUri: 'https://stream.launchdarkly.com',
+      eventsUri: 'https://events.launchdarkly.com',
+      stream: true,
+      sendEvents: true,
+      timeout: 5,
+      capacity: 1000,
+      flushInterval: 5,
+      pollInterval: 30,
+      offline: false,
+      useLdd: false,
+      allAttributesPrivate: false,
+      privateAttributeNames: [],
+      userKeysCapacity: 1000,
+      userKeysFlushInterval: 300,
+      featureStore: InMemoryFeatureStore()
+    };
   };
 
   var deprecatedOptions = {
@@ -87,7 +89,7 @@ module.exports = (function() {
     
     checkDeprecatedOptions(config);
 
-    config = applyDefaults(config, defaults);
+    config = applyDefaults(config, defaults());
 
     config.baseUri = canonicalizeUri(config.baseUri);
     config.streamUri = canonicalizeUri(config.streamUri);

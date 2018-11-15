@@ -2,6 +2,15 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.6.2] - 2018-11-15
+### Fixed:
+- Creating multiple clients with the default in-memory feature store (i.e. leaving `config.featureStore` unset) was causing all of the clients to share the _same_ feature store instance. This has been fixed so they will now each get their own in-memory store. (Thanks, [seanparmelee](https://github.com/launchdarkly/node-client/pull/130)!)
+
+## [5.6.1] - 2018-11-15
+### Fixed:
+- Fixed a bug introduced in v5.6.0 that could cause an unhandled promise rejection if a Redis error occurred while trying to query all flags from Redis.
+- Fixed a bug introduced in v5.6.0 that could cause an exception when calling `close()` on a client that was using a Redis feature store _without_ in-memory caching.
+
 ## [5.6.0] - 2018-11-14
 ### Added:
 - To make it easier to build feature store integrations for databases other than Redis, some of the feature store support logic has been made into a reusable component in `caching_store_wrapper.js`.
