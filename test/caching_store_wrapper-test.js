@@ -25,7 +25,7 @@ function MockCore() {
 
     upsertInternal: function(kind, item, cb) {
       if (c.upsertError) {
-        cb(upsertError, null);
+        cb(c.upsertError, null);
         return;
       }
       const oldItem = c.data[kind.namespace][item.key];
@@ -279,6 +279,34 @@ describe('CachingStoreWrapper', function() {
 
           done();
         });
+      });
+    });
+  });
+
+  runCachedAndUncachedTests('upsert() - error', function(done, wrapper, core, isCached) {
+    const flagv1 = { key: 'flag', version: 1 };
+    const flagv2 = { key: 'flag', version: 2 };
+
+    wrapper.upsert(features, flagv1, function() {
+      expect(core.data[features.namespace][flagv1.key]).toEqual(flagv1);
+
+      core.upsertError = new Error('sorry');
+
+      wrapper.upsert(features, flagv2, function() {
+        expect(core.data[features.namespace][flagv1.key]).toEqual(flagv1);
+
+        // if we have a cache, verify that the old item is still cached by writing a different value
+        // to the underlying data - get() should still return the cached item
+        if (isCached) {
+          const flagv3 = { key: 'flag', version: 3 };
+          core.forceSet(features, flagv3);
+          wrapper.get(features, flagv1.key, function(item) {
+            expect(item).toEqual(flagv1);  
+            done();
+          });
+        } else {
+          done();
+        }
       });
     });
   });
