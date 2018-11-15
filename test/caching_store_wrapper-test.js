@@ -8,6 +8,7 @@ function MockCore() {
     initQueriedCount: 0,
     getAllError: false,
     upsertError: null,
+    closed: false,
 
     initInternal: function(newData, cb) { 
       c.data = newData;
@@ -39,6 +40,10 @@ function MockCore() {
     initializedInternal: function(cb) {
       c.initQueriedCount++;
       cb(c.inited);
+    },
+
+    close: function() {
+      c.closed = true;
     },
 
     forceSet: function(kind, item) {
@@ -396,6 +401,14 @@ describe('CachingStoreWrapper', function() {
           }, 1100);
         });
       });
+    });
+  });
+
+  describe('close()', function() {
+    runCachedAndUncachedTests('closes underlying store', function(done, wrapper, core) {
+      wrapper.close();
+      expect(core.closed).toBe(true);
+      done();
     });
   });
 });

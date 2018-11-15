@@ -129,7 +129,7 @@ function CachingStoreWrapper(underlyingStore, ttl) {
   };
 
   this.close = function() {
-    cache.close();
+    cache && cache.close();
     underlyingStore.close();
   };
 
