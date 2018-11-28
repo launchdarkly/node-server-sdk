@@ -13,7 +13,7 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
 
 function redisFeatureStoreInternal(redisOpts, prefix, logger) {
 
-  var client = redis.createClient(redisOpts),
+  var client = redisOpts.client || redis.createClient(redisOpts),
       store = {},
       itemsPrefix = (prefix || "launchdarkly") + ":",
       initedKey = itemsPrefix + "$inited";
@@ -29,28 +29,33 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
 
   connected = false;
   initialConnect = true;
-  client.on('error', function(err) {
-    // Note that we *must* have an error listener or else any connection error will trigger an
-    // uncaught exception.
-    logger.error('Redis error - ' + err);
-  });
-  client.on('reconnecting', function(info) {
-    logger.info('Attempting to reconnect to Redis (attempt #' + info.attempt +
-      ', delay: ' + info.delay + 'ms)');
-  });
-  client.on('connect', function() {
-    if (!initialConnect) {
-      logger.warn('Reconnected to Redis');
-    }
-    initialConnect = false;
-    connected = true;
-  });
-  client.on('end', function() {
-    connected = false;
-  });
 
-  // Allow driver programs to exit, even if the Redis socket is active
-  client.unref();
+  if (!redisOpts.client) {
+    client.on('error', function (err) {
+      // Note that we *must* have an error listener or else any connection error will trigger an
+      // uncaught exception.
+      logger.error('Redis error - ' + err);
+    });
+    client.on('reconnecting', function (info) {
+      logger.info('Attempting to reconnect to Redis (attempt #' + info.attempt +
+        ', delay: ' + info.delay + 'ms)');
+    });
+    client.on('connect', function () {
+      if (!initialConnect) {
+        logger.warn('Reconnected to Redis');
+      }
+      initialConnect = false;
+      connected = true;
+    });
+    client.on('end', function () {
+      connected = false;
+    });
+
+    // Allow driver programs to exit, even if the Redis socket is active
+    client.unref();
+  } else {
+    connected = true;
+  }
 
   function itemsKey(kind) {
     return itemsPrefix + kind.namespace;
@@ -138,7 +143,7 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
     }
 
     multi.set(initedKey, "");
-    
+
     multi.exec(function(err, replies) {
       if (err) {
         logger.error("Error initializing Redis store", err);
