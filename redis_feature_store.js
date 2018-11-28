@@ -27,34 +27,32 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
     })
   );
 
-  connected = false;
-  initialConnect = true;
+  connected = !!redisOpts.client;
+  initialConnect = !redisOpts.client;
+
+  client.on('error', function (err) {
+    // Note that we *must* have an error listener or else any connection error will trigger an
+    // uncaught exception.
+    logger.error('Redis error - ' + err);
+  });
+  client.on('reconnecting', function (info) {
+    logger.info('Attempting to reconnect to Redis (attempt #' + info.attempt +
+      ', delay: ' + info.delay + 'ms)');
+  });
+  client.on('connect', function () {
+    if (!initialConnect) {
+      logger.warn('Reconnected to Redis');
+    }
+    initialConnect = false;
+    connected = true;
+  });
+  client.on('end', function () {
+    connected = false;
+  });
 
   if (!redisOpts.client) {
-    client.on('error', function (err) {
-      // Note that we *must* have an error listener or else any connection error will trigger an
-      // uncaught exception.
-      logger.error('Redis error - ' + err);
-    });
-    client.on('reconnecting', function (info) {
-      logger.info('Attempting to reconnect to Redis (attempt #' + info.attempt +
-        ', delay: ' + info.delay + 'ms)');
-    });
-    client.on('connect', function () {
-      if (!initialConnect) {
-        logger.warn('Reconnected to Redis');
-      }
-      initialConnect = false;
-      connected = true;
-    });
-    client.on('end', function () {
-      connected = false;
-    });
-
     // Allow driver programs to exit, even if the Redis socket is active
     client.unref();
-  } else {
-    connected = true;
   }
 
   function itemsKey(kind) {
