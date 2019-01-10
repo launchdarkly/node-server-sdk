@@ -58,7 +58,7 @@ Your first feature flag
 Using flag data from a file
 ---------------------------
 
-For testing purposes, the SDK can be made to read feature flag state from a file or files instead of connecting to LaunchDarkly. See [`file_data_source.js`](https://github.com/launchdarkly/node-client/blob/master/file_data_source.js) for more details.
+For testing purposes, the SDK can be made to read feature flag state from a file or files instead of connecting to LaunchDarkly. See `FileDataSource` in the [TypeScript API documentation](https://github.com/launchdarkly/node-client/blob/master/index.d.ts) for more details.
 
 Learn more
 -----------

@@ -7,31 +7,7 @@ var fs = require('fs'),
   FileDataSource provides a way to use local files as a source of feature flag state, instead of
   connecting to LaunchDarkly. This would typically be used in a test environment.
 
-  To use this component, call FileDataSource(options) and store the result in the "updateProcessor"
-  property of your LaunchDarkly client configuration. In the options, set "paths" to the file
-  paths of your data file(s):
-
-      var dataSource = LaunchDarkly.FileDataSource({ paths: [ myFilePath ] });
-      var config = { updateProcessor: dataSource };
-
-  Flag data files can be either JSON or YAML. They contain an object with three possible
-  properties:
-
-  - "flags": Full feature flag definitions.
-  - "flagValues": Simplified feature flags, just a map of flag keys to values.
-  - "segments": User segment definitions.
-
-  The format of the data in "flags" and "segments" is defined by the LaunchDarkly application
-  and is subject to change. You can query existing flags and segments from LaunchDarkly in JSON
-  format by querying https://app.launchdarkly.com/sdk/latest-all and passing your SDK key in
-  the Authorization header.
-
-  You can also specify that flags should be reloaded whenever a file is modified, by setting
-  "autoUpdate: true" in the options. This feature uses Node's fs.watch() API, so it is subject to
-  the limitations described here: https://nodejs.org/docs/latest/api/fs.html#fs_fs_watch_filename_options_listener
-
-  For more details, see the LaunchDarkly reference guide:
-  https://docs.launchdarkly.com/v2.0/docs/reading-flags-from-a-file
+  See documentation in index.d.ts.
 */
 function FileDataSource(options) {
   var paths = (options && options.paths) || [];
