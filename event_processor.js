@@ -44,7 +44,7 @@ function EventProcessor(sdkKey, config, errorReporter) {
   function makeOutputEvent(event) {
     switch (event.kind) {
       case 'feature':
-        debug = !!event.debug;
+        var debug = !!event.debug;
         var out = {
           kind: debug ? 'debug' : 'feature',
           creationDate: event.creationDate,
