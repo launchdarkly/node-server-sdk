@@ -40,6 +40,9 @@
     "node": ">= 0.8.x"
   },
   "devDependencies": {
+    "babel-core": "6.26.0",
+    "babel-jest": "22.4.3",
+    "babel-preset-env": "1.6.1",
     "jest": "22.4.3",
     "jest-junit": "3.6.0",
     "nock": "9.2.3",
