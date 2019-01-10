@@ -27,8 +27,8 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
     })
   );
 
-  connected = false;
-  initialConnect = true;
+  var connected = false;
+  var initialConnect = true;
   client.on('error', function(err) {
     // Note that we *must* have an error listener or else any connection error will trigger an
     // uncaught exception.

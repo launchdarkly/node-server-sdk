@@ -196,7 +196,7 @@ var newClient = function(sdkKey, config) {
     }
 
     else if (!key) {
-      err = new errors.LDClientError('No feature flag key specified. Returning default value.');
+      var err = new errors.LDClientError('No feature flag key specified. Returning default value.');
       maybeReportError(err);
       return resolve(errorResult('FLAG_NOT_FOUND', defaultVal));
     }
@@ -208,7 +208,7 @@ var newClient = function(sdkKey, config) {
 
     config.featureStore.get(dataKind.features, key, function(flag) {
       if (!user) {
-        variationErr = new errors.LDClientError('No user specified. Returning default value.');
+        var variationErr = new errors.LDClientError('No user specified. Returning default value.');
         maybeReportError(variationErr);
         var result = errorResult('USER_NOT_SPECIFIED', defaultVal);
         sendFlagEvent(key, flag, user, result, defaultVal, includeReasonsInEvents);
