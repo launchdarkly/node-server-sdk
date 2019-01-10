@@ -138,7 +138,7 @@ function FileDataSource(options) {
       watchers = [];
     }
 
-    fds = {};
+    var fds = {};
 
     fds.start = fn => {
       var cb = fn || (() => {});

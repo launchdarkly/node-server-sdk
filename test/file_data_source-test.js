@@ -187,7 +187,7 @@ describe('FileDataSource', function() {
     await asyncify(fds.start);
 
     expect(fds.initialized()).toBe(false);
-    expect(await asyncify(store.initialized)).toBe(false);
+    expect(await asyncify(cb => store.initialized(cb))).toBe(false);
   });
 
   it('does not reload modified file if auto-update is off', async () => {
