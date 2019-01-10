@@ -67,14 +67,14 @@ function FileDataSource(options) {
             allData[kind.namespace][item.key] = item;
           }
         }
-        Object.values(parsed.flags || {}).forEach(item => {
-          addItem(dataKind.features, item);
+        Object.keys(parsed.flags || {}).forEach(key => {
+          addItem(dataKind.features, parsed.flags[key]);
         });
-        Object.entries(parsed.flagValues || {}).forEach(e => {
-          addItem(dataKind.features, makeFlagWithValue(e[0], e[1]));
+        Object.keys(parsed.flagValues || {}).forEach(key => {
+          addItem(dataKind.features, makeFlagWithValue(key, parsed.flagValues[key]));
         });
-        Object.values(parsed.segments || {}).forEach(item => {
-          addItem(dataKind.segments, item);
+        Object.keys(parsed.segments || {}).forEach(key => {
+          addItem(dataKind.segments, parsed.segments[key]);
         });
       });
     }
