@@ -1,6 +1,7 @@
 var fs = require('fs');
 var tmp = require('tmp');
 var dataKind = require('../versioned_data_kind');
+const { asyncify, sleepAsync } = require('./async_utils');
 
 var LaunchDarkly = require('../index');
 var FileDataSource = require('../file_data_source');
@@ -118,16 +119,6 @@ describe('FileDataSource', function() {
     return a1;
   }
 
-  function asyncify(f) {
-    return new Promise(resolve => f(resolve));
-  }
-
-  function sleep(millis) {
-    return new Promise(resolve => {
-      setTimeout(resolve, millis);
-    });
-  }
-
   it('does not load flags prior to start', async () => {
     var path = await makeTempFile('{"flagValues":{"key":"value"}}');
     var fds = setupDataSource({ paths: [path] });
@@ -207,9 +198,9 @@ describe('FileDataSource', function() {
     var items = await asyncify(cb => store.all(dataKind.segments, cb));
     expect(Object.keys(items).length).toEqual(0);
 
-    await sleep(200);
+    await sleepAsync(200);
     await replaceFileContent(path, segmentOnlyJson);
-    await sleep(200);
+    await sleepAsync(200);
 
     items = await asyncify(cb => store.all(dataKind.segments, cb));
     expect(Object.keys(items).length).toEqual(0);
@@ -223,9 +214,9 @@ describe('FileDataSource', function() {
     var items = await asyncify(cb => store.all(dataKind.segments, cb));
     expect(Object.keys(items).length).toEqual(0);
 
-    await sleep(200);
+    await sleepAsync(200);
     await replaceFileContent(path, segmentOnlyJson);
-    await sleep(200);
+    await sleepAsync(200);
 
     items = await asyncify(cb => store.all(dataKind.segments, cb));
     expect(Object.keys(items).length).toEqual(1);
