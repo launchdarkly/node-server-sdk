@@ -1,5 +1,6 @@
 var CachingStoreWrapper = require('../caching_store_wrapper');
 var features = require('../versioned_data_kind').features;
+var segments = require('../versioned_data_kind').segments;
 const { asyncify, sleepAsync } = require('./async_utils');
 
 function MockCore() {
@@ -58,23 +59,38 @@ function MockCore() {
   return c;
 }
 
+function MockOrderedCore() { 
+  const c = {
+    data: { features: {} },
+
+    initOrderedInternal: function(newData, cb) { 
+      c.data = newData;
+      cb();
+    },
+    // don't bother mocking the rest of the stuff since the wrapper behaves identically except for init
+  };
+  return c;
+}
+
 const cacheSeconds = 15;
 
-function runCachedAndUncachedTests(name, testFn) {
+function runCachedAndUncachedTests(name, testFn, coreFn) {
+  var makeCore = coreFn ? coreFn : MockCore;
   describe(name, function() {
-    const core1 = MockCore();
+    const core1 = makeCore();
     const wrapper1 = new CachingStoreWrapper(core1, cacheSeconds);
-    it('cached', async () => await testFn(wrapper1, core1, true));
+    it('cached', async () => await testFn(wrapper1, core1, true), 1000);
 
-    const core2 = MockCore();
+    const core2 = makeCore();
     const wrapper2 = new CachingStoreWrapper(core2, 0);
-    it('uncached', async () => await testFn(wrapper2, core2, false));
+    it('uncached', async () => await testFn(wrapper2, core2, false), 1000);
   });
 }
 
-function runCachedTestOnly(name, testFn) { 
+function runCachedTestOnly(name, testFn, coreFn) {
+  var makeCore = coreFn ? coreFn : MockCore;
   it(name, async () => {
-    const core = MockCore();
+    const core = makeCore();
     const wrapper = new CachingStoreWrapper(core, cacheSeconds);
     await testFn(wrapper, core);
   });
@@ -370,5 +386,49 @@ describe('CachingStoreWrapper', function() {
       wrapper.close();
       expect(core.closed).toBe(true);
     });
+  });
+
+  describe('core that uses initOrdered()', function() {
+    runCachedAndUncachedTests('receives properly ordered data for init', async (wrapper, core) => {
+      var dependencyOrderingTestData = {};
+      dependencyOrderingTestData[features.namespace] = {
+        a: { key: "a", prerequisites: [ { key: "b" }, { key: "c" } ] },
+        b: { key: "b", prerequisites: [ { key: "c" }, { key: "e" } ] },
+        c: { key: "c" },
+        d: { key: "d" },
+        e: { key: "e" },
+        f: { key: "f" }
+      };
+      dependencyOrderingTestData[segments.namespace] = {
+        o: { key: "o" }
+      };
+      await asyncify(cb => wrapper.init(dependencyOrderingTestData, cb));
+      
+      var receivedData = core.data;
+      expect(receivedData.length).toEqual(2);
+
+      // Segments should always come first
+      expect(receivedData[0].kind).toEqual(segments);
+      expect(receivedData[0].items.length).toEqual(1);
+      
+      // Features should be ordered so that a flag always appears after its prerequisites, if any
+      expect(receivedData[1].kind).toEqual(features);
+      var featuresMap = dependencyOrderingTestData[features.namespace];
+      var featuresList = receivedData[1].items;
+      expect(featuresList.length).toEqual(Object.keys(featuresMap).length);
+      for (var itemIndex in featuresList) {
+        var item = featuresList[itemIndex];
+        (item.prerequisites || []).forEach(function(prereq) {
+          var prereqKey = prereq.key;
+          var prereqItem = featuresMap[prereqKey];
+          var prereqIndex = featuresList.indexOf(prereqItem);
+          if (prereqIndex > itemIndex) {
+            var allKeys = featuresList.map(f => f.key);
+            throw new Error(item.key + " depends on " + prereqKey + ", but " + item.key +
+              " was listed first; keys in order are [" + allKeys.join(", ") + "]");
+          }
+        });
+      }
+    }, MockOrderedCore);
   });
 });

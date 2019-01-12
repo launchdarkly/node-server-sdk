@@ -1,8 +1,17 @@
 var dataKind = require('./versioned_data_kind');
 
-// An in-memory store with an async interface.
-// It's async as other implementations (e.g. the RedisFeatureStore)
-// may be async, and we want to retain interface compatibility.
+// The default in-memory implementation of a feature store, which holds feature flags and
+// other related data received from LaunchDarkly.
+//
+// Other implementations of the same interface can be used by passing them in the featureStore
+// property of the client configuration (that's why the interface here is async, even though
+// the in-memory store doesn't do anything asynchronous - because other implementations may
+// need to be async). The interface is defined by LDFeatureStore in index.d.ts. There is a
+// Redis-backed implementation in RedisFeatureStore; for other options, see
+// [https://docs.launchdarkly.com/v2.0/docs/using-a-persistent-feature-store].
+//
+// Additional implementations should use CachingStoreWrapper if possible.
+
 var noop = function(){};
 function InMemoryFeatureStore() {
   var store = {allData:{}};

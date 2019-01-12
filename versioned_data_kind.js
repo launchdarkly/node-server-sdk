@@ -12,13 +12,21 @@
 var features = {
   namespace: 'features',
   streamApiPath: '/flags/',
-  requestPath: '/sdk/latest-flags/'
+  requestPath: '/sdk/latest-flags/',
+  priority: 1,
+  getDependencyKeys: function(flag) {
+    if (!flag.prerequisites || !flag.prerequisites.length) {
+      return [];
+    }
+    return flag.prerequisites.map(function(p) { return p.key; });
+  }
 };
 
 var segments = {
   namespace: 'segments',
   streamApiPath: '/segments/',
-  requestPath: '/sdk/latest-segments/'
+  requestPath: '/sdk/latest-segments/',
+  priority: 0
 };
 
 module.exports = {
