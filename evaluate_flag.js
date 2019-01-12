@@ -344,11 +344,10 @@ function bucketUser(user, key, attr, salt) {
     idHash += "." + user.secondary;
   }
 
-  hashKey = util.format("%s.%s.%s", key, salt, idHash);
-  hashVal = parseInt(sha1(hashKey).substring(0,15), 16);
+  var hashKey = util.format("%s.%s.%s", key, salt, idHash);
+  var hashVal = parseInt(sha1(hashKey).substring(0,15), 16);
 
-  result = hashVal / 0xFFFFFFFFFFFFFFF;
-  return result;
+  return hashVal / 0xFFFFFFFFFFFFFFF;
 }
 
 function bucketableStringValue(value) {

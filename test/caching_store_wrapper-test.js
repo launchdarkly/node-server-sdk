@@ -1,5 +1,7 @@
 var CachingStoreWrapper = require('../caching_store_wrapper');
 var features = require('../versioned_data_kind').features;
+var segments = require('../versioned_data_kind').segments;
+const { asyncify, sleepAsync } = require('./async_utils');
 
 function MockCore() {
   const c = {
@@ -57,181 +59,166 @@ function MockCore() {
   return c;
 }
 
+function MockOrderedCore() { 
+  const c = {
+    data: { features: {} },
+
+    initOrderedInternal: function(newData, cb) { 
+      c.data = newData;
+      cb();
+    },
+    // don't bother mocking the rest of the stuff since the wrapper behaves identically except for init
+  };
+  return c;
+}
+
 const cacheSeconds = 15;
 
-function runCachedAndUncachedTests(name, testFn) {
+function runCachedAndUncachedTests(name, testFn, coreFn) {
+  var makeCore = coreFn ? coreFn : MockCore;
   describe(name, function() {
-    const core1 = MockCore();
+    const core1 = makeCore();
     const wrapper1 = new CachingStoreWrapper(core1, cacheSeconds);
-    it('cached', function(done) { testFn(done, wrapper1, core1, true); });
+    it('cached', async () => await testFn(wrapper1, core1, true), 1000);
 
-    const core2 = MockCore();
+    const core2 = makeCore();
     const wrapper2 = new CachingStoreWrapper(core2, 0);
-    it('uncached', function(done) { testFn(done, wrapper2, core2, false); });
+    it('uncached', async () => await testFn(wrapper2, core2, false), 1000);
   });
 }
 
-function runCachedTestOnly(name, testFn) { 
-  it(name, function(done) {
-    const core = MockCore();
+function runCachedTestOnly(name, testFn, coreFn) {
+  var makeCore = coreFn ? coreFn : MockCore;
+  it(name, async () => {
+    const core = makeCore();
     const wrapper = new CachingStoreWrapper(core, cacheSeconds);
-    testFn(done, wrapper, core);
+    await testFn(wrapper, core);
   });
 }
 
 describe('CachingStoreWrapper', function() {
 
-  runCachedAndUncachedTests('get()', function(done, wrapper, core, isCached) {
+  runCachedAndUncachedTests('get()', async (wrapper, core, isCached) => {
     const flagv1 = { key: 'flag', version: 1 };
     const flagv2 = { key: 'flag', version: 2 };
 
     core.forceSet(features, flagv1);
 
-    wrapper.get(features, flagv1.key, function(item) {
-      expect(item).toEqual(flagv1);
+    var item = await asyncify(cb => wrapper.get(features, flagv1.key, cb));
+    expect(item).toEqual(flagv1);
 
-      core.forceSet(features, flagv2); // Make a change that bypasses the cache
+    core.forceSet(features, flagv2); // Make a change that bypasses the cache
 
-      wrapper.get(features, flagv1.key, function(item) {
-        // If cached, it should return the cached value rather than calling the underlying getter
-        expect(item).toEqual(isCached ? flagv1 : flagv2);
-
-        done();
-      });
-    });
+    item = await asyncify(cb => wrapper.get(features, flagv1.key, cb));
+    // If cached, it should return the cached value rather than calling the underlying getter
+    expect(item).toEqual(isCached ? flagv1 : flagv2);
   });
 
-  runCachedAndUncachedTests('get() with deleted item', function(done, wrapper, core, isCached) {
+  runCachedAndUncachedTests('get() with deleted item', async (wrapper, core, isCached) => {
     const flagv1 = { key: 'flag', version: 1, deleted: true };
     const flagv2 = { key: 'flag', version: 2, deleted: false };
 
     core.forceSet(features, flagv1);
 
-    wrapper.get(features, flagv1.key, function(item) {
-      expect(item).toBe(null);
+    var item = await asyncify(cb => wrapper.get(features, flagv1.key, cb));
+    expect(item).toBe(null);
 
-      core.forceSet(features, flagv2); // Make a change that bypasses the cache
+    core.forceSet(features, flagv2); // Make a change that bypasses the cache
 
-      wrapper.get(features, flagv2.key, function(item) {
-        // If cached, the deleted state should persist in the cache
-        expect(item).toEqual(isCached ? null : flagv2);
-
-        done();
-      });
-    });
+    item = await asyncify(cb => wrapper.get(features, flagv2.key, cb));
+    // If cached, the deleted state should persist in the cache
+    expect(item).toEqual(isCached ? null : flagv2);
   });
 
-  runCachedAndUncachedTests('get() with missing item', function(done, wrapper, core, isCached) {
+  runCachedAndUncachedTests('get() with missing item', async (wrapper, core, isCached) => {
     const flag = { key: 'flag', version: 1 };
 
-    wrapper.get(features, flag.key, function(item) {
-      expect(item).toBe(null);
+    var item = await asyncify(cb => wrapper.get(features, flag.key, cb));
+    expect(item).toBe(null);
 
-      core.forceSet(features, flag);
+    core.forceSet(features, flag);
 
-      wrapper.get(features, flag.key, function(item) {
-        // If cached, the previous null result should persist in the cache
-        expect(item).toEqual(isCached ? null  : flag);
-
-        done();
-      });
-    });
+    item = await asyncify(cb => wrapper.get(features, flag.key, cb));
+    // If cached, the previous null result should persist in the cache
+    expect(item).toEqual(isCached ? null  : flag);
   });
 
-  runCachedTestOnly('cached get() uses values from init()', function(done, wrapper, core) {
+  runCachedTestOnly('cached get() uses values from init()', async (wrapper, core) => {
     const flagv1 = { key: 'flag', version: 1 };
     const flagv2 = { key: 'flag', version: 2 };
 
     const allData = { features: { 'flag': flagv1 } };
 
-    wrapper.init(allData, function() {
-      expect(core.data).toEqual(allData);
+    await asyncify(cb => wrapper.init(allData, cb));
+    expect(core.data).toEqual(allData);
 
-      core.forceSet(features, flagv2);
+    core.forceSet(features, flagv2);
 
-      wrapper.get(features, flagv1.key, function(item) {
-        expect(item).toEqual(flagv1);
-
-        done();
-      });
-    });
+    var item = await asyncify(cb => wrapper.get(features, flagv1.key, cb));
+    expect(item).toEqual(flagv1);
   });
 
-  runCachedAndUncachedTests('all()', function(done, wrapper, core, isCached) {
+  runCachedAndUncachedTests('all()', async (wrapper, core, isCached) => {
     const flag1 = { key: 'flag1', version: 1 };
     const flag2 = { key: 'flag2', version: 1 };
 
     core.forceSet(features, flag1);
     core.forceSet(features, flag2);
 
-    wrapper.all(features, function(items) {
+    var items = await asyncify(cb => wrapper.all(features, cb));
+    expect(items).toEqual({ 'flag1': flag1, 'flag2': flag2 });
+
+    core.forceRemove(features, flag2.key);
+
+    items = await asyncify(cb => wrapper.all(features, cb));
+    if (isCached) {
       expect(items).toEqual({ 'flag1': flag1, 'flag2': flag2 });
-
-      core.forceRemove(features, flag2.key);
-
-      wrapper.all(features, function(items) {
-        if (isCached) {
-          expect(items).toEqual({ 'flag1': flag1, 'flag2': flag2 });
-        } else {
-          expect(items).toEqual({ 'flag1': flag1 });
-        }
-
-        done();
-      });
-    });
+    } else {
+      expect(items).toEqual({ 'flag1': flag1 });
+    }
   });
 
-  runCachedAndUncachedTests('all() with deleted item', function(done, wrapper, core, isCached) {
+  runCachedAndUncachedTests('all() with deleted item', async (wrapper, core, isCached) => {
     const flag1 = { key: 'flag1', version: 1 };
     const flag2 = { key: 'flag2', version: 1, deleted: true };
 
     core.forceSet(features, flag1);
     core.forceSet(features, flag2);
 
-    wrapper.all(features, function(items) {
+    var items = await asyncify(cb => wrapper.all(features, cb));
+    expect(items).toEqual({ 'flag1': flag1 });
+
+    core.forceRemove(features, flag1.key);
+
+    items = await asyncify(cb => wrapper.all(features, cb));
+    if (isCached) {
       expect(items).toEqual({ 'flag1': flag1 });
-
-      core.forceRemove(features, flag1.key);
-
-      wrapper.all(features, function(items) {
-        if (isCached) {
-          expect(items).toEqual({ 'flag1': flag1 });
-        } else {
-          expect(items).toEqual({ });
-        }
-
-        done();
-      });
-    });
+    } else {
+      expect(items).toEqual({ });
+    }
   });
 
-  runCachedAndUncachedTests('all() error condition', function(done, wrapper, core, isCached) {
+  runCachedAndUncachedTests('all() error condition', async (wrapper, core, isCached) => {
     core.getAllError = true;
 
-    wrapper.all(features, function(items) {
-      expect(items).toBe(null);
-      done();
-    });
+    var items = await asyncify(cb => wrapper.all(features, cb));
+    expect(items).toBe(null);
   });
 
-  runCachedTestOnly('cached all() uses values from init()', function(done, wrapper, core) {
+  runCachedTestOnly('cached all() uses values from init()', async (wrapper, core) => {
     const flag1 = { key: 'flag1', version: 1 };
     const flag2 = { key: 'flag2', version: 1 };
 
     const allData = { features: { flag1: flag1, flag2: flag2 } };
 
-    wrapper.init(allData, function() {
-      core.forceRemove(features, flag2.key);
+    await asyncify(cb => wrapper.init(allData, cb));
+    core.forceRemove(features, flag2.key);
 
-      wrapper.all(features, function(items) {
-        expect(items).toEqual({ flag1: flag1, flag2: flag2 });
-
-        done();
-      });
-    });
+    var items = await asyncify(cb => wrapper.all(features, cb));
+    expect(items).toEqual({ flag1: flag1, flag2: flag2 });
   });
 
-  runCachedTestOnly('cached all() uses fresh values if there has been an update', function(done, wrapper, core) {
+  runCachedTestOnly('cached all() uses fresh values if there has been an update', async (wrapper, core) => {
     const flag1v1 = { key: 'flag1', version: 1 };
     const flag1v2 = { key: 'flag1', version: 2 };
     const flag2v1 = { key: 'flag2', version: 1 };
@@ -239,204 +226,209 @@ describe('CachingStoreWrapper', function() {
 
     const allData = { features: { flag1: flag1v1, flag2: flag2v2 } };
 
-    wrapper.init(allData, function() {
-      expect(core.data).toEqual(allData);
+    await asyncify(cb => wrapper.init(allData, cb));
+    expect(core.data).toEqual(allData);
 
-      // make a change to flag1 using the wrapper - this should flush the cache
-      wrapper.upsert(features, flag1v2, function() {
-        // make a change to flag2 that bypasses the cache
-        core.forceSet(features, flag2v2);
+    // make a change to flag1 using the wrapper - this should flush the cache
+    await asyncify(cb => wrapper.upsert(features, flag1v2, cb));
+    // make a change to flag2 that bypasses the cache
+    core.forceSet(features, flag2v2);
 
-        // we should now see both changes since the cache was flushed
-        wrapper.all(features, function(items) { 
-          expect(items).toEqual({ flag1: flag1v2, flag2: flag2v2 });
-
-          done();
-        });
-      });
-    });
+    // we should now see both changes since the cache was flushed
+    var items = await asyncify(cb => wrapper.all(features, cb));
+    expect(items).toEqual({ flag1: flag1v2, flag2: flag2v2 });
   });
 
-  runCachedAndUncachedTests('upsert() - successful', function(done, wrapper, core, isCached) {
+  runCachedAndUncachedTests('upsert() - successful', async (wrapper, core, isCached) => {
     const flagv1 = { key: 'flag', version: 1 };
     const flagv2 = { key: 'flag', version: 2 };
 
-    wrapper.upsert(features, flagv1, function() {
-      expect(core.data[features.namespace][flagv1.key]).toEqual(flagv1);
+    await asyncify(cb => wrapper.upsert(features, flagv1, cb));
+    expect(core.data[features.namespace][flagv1.key]).toEqual(flagv1);
 
-      wrapper.upsert(features, flagv2, function() {
-        expect(core.data[features.namespace][flagv1.key]).toEqual(flagv2);
+    await asyncify(cb => wrapper.upsert(features, flagv2, cb));
+    expect(core.data[features.namespace][flagv1.key]).toEqual(flagv2);
 
-        // if we have a cache, verify that the new item is now cached by writing a different value
-        // to the underlying data - get() should still return the cached item
-        if (isCached) {
-          const flagv3 = { key: 'flag', version: 3 };
-          core.forceSet(features, flagv3);
-        }
+    // if we have a cache, verify that the new item is now cached by writing a different value
+    // to the underlying data - get() should still return the cached item
+    if (isCached) {
+      const flagv3 = { key: 'flag', version: 3 };
+      core.forceSet(features, flagv3);
+    }
 
-        wrapper.get(features, flagv1.key, function(item) {
-          expect(item).toEqual(flagv2);
-
-          done();
-        });
-      });
-    });
+    var item = await asyncify(cb => wrapper.get(features, flagv1.key, cb));
+    expect(item).toEqual(flagv2);
   });
 
-  runCachedAndUncachedTests('upsert() - error', function(done, wrapper, core, isCached) {
+  runCachedAndUncachedTests('upsert() - error', async (wrapper, core, isCached) => {
     const flagv1 = { key: 'flag', version: 1 };
     const flagv2 = { key: 'flag', version: 2 };
 
-    wrapper.upsert(features, flagv1, function() {
-      expect(core.data[features.namespace][flagv1.key]).toEqual(flagv1);
+    await asyncify(cb => wrapper.upsert(features, flagv1, cb));
+    expect(core.data[features.namespace][flagv1.key]).toEqual(flagv1);
 
-      core.upsertError = new Error('sorry');
+    core.upsertError = new Error('sorry');
 
-      wrapper.upsert(features, flagv2, function() {
-        expect(core.data[features.namespace][flagv1.key]).toEqual(flagv1);
+    await asyncify(cb => wrapper.upsert(features, flagv2, cb));
+    expect(core.data[features.namespace][flagv1.key]).toEqual(flagv1);
 
-        // if we have a cache, verify that the old item is still cached by writing a different value
-        // to the underlying data - get() should still return the cached item
-        if (isCached) {
-          const flagv3 = { key: 'flag', version: 3 };
-          core.forceSet(features, flagv3);
-          wrapper.get(features, flagv1.key, function(item) {
-            expect(item).toEqual(flagv1);  
-            done();
-          });
-        } else {
-          done();
-        }
-      });
-    });
+    // if we have a cache, verify that the old item is still cached by writing a different value
+    // to the underlying data - get() should still return the cached item
+    if (isCached) {
+      const flagv3 = { key: 'flag', version: 3 };
+      core.forceSet(features, flagv3);
+      var item = await asyncify(cb => wrapper.get(features, flagv1.key, cb));
+      expect(item).toEqual(flagv1);  
+    }
   });
 
-  runCachedTestOnly('cached upsert() - unsuccessful', function(done, wrapper, core) {
+  runCachedTestOnly('cached upsert() - unsuccessful', async (wrapper, core) => {
     const flagv1 = { key: 'flag', version: 1 };
     const flagv2 = { key: 'flag', version: 2 };
 
     core.forceSet(features, flagv2); // this is now in the underlying data, but not in the cache
 
-    wrapper.upsert(features, flagv1, function() {
-      expect(core.data[features.namespace][flagv1.key]).toEqual(flagv2); // value in store remains the same
+    await asyncify(cb => wrapper.upsert(features, flagv1, cb));
+    expect(core.data[features.namespace][flagv1.key]).toEqual(flagv2); // value in store remains the same
 
-      // the cache should now contain flagv2 - check this by making another change that bypasses
-      // the cache, and verifying that get() uses the cached value instead
-      const flagv3 = { key: 'flag', version: 3 };
-      core.forceSet(features, flagv3);
+    // the cache should now contain flagv2 - check this by making another change that bypasses
+    // the cache, and verifying that get() uses the cached value instead
+    const flagv3 = { key: 'flag', version: 3 };
+    core.forceSet(features, flagv3);
 
-      wrapper.get(features, flagv1.key, function(item)  {
-        expect(item).toEqual(flagv2);
-
-        done();
-      });
-    });
+    var item = await asyncify(cb => wrapper.get(features, flagv1.key, cb));
+    expect(item).toEqual(flagv2);
   });
 
-  runCachedAndUncachedTests('delete()', function(done, wrapper, core, isCached) {
+  runCachedAndUncachedTests('delete()', async (wrapper, core, isCached) => {
     const flagv1 = { key: 'flag', version: 1 };
     const flagv2 = { key: 'flag', version: 2, deleted: true };
     const flagv3 = { key: 'flag', version: 3 };
 
     core.forceSet(features, flagv1);
 
-    wrapper.get(features, flagv1.key, function(item) {
-      expect(item).toEqual(flagv1);
+    var item = await asyncify(cb => wrapper.get(features, flagv1.key, cb));
+    expect(item).toEqual(flagv1);
 
-      wrapper.delete(features, flagv1.key, flagv2.version);
+    await asyncify(cb => wrapper.delete(features, flagv1.key, flagv2.version, cb));
 
-      expect(core.data[features.namespace][flagv1.key]).toEqual(flagv2);
+    expect(core.data[features.namespace][flagv1.key]).toEqual(flagv2);
 
-      // make a change to the flag that bypasses the cache
-      core.forceSet(features, flagv3);
+    // make a change to the flag that bypasses the cache
+    core.forceSet(features, flagv3);
 
-      wrapper.get(features, flagv1.key, function(item) {
-        expect(item).toEqual(isCached ? null : flagv3);
-
-        done();
-      });
-    });
+    var item = await asyncify(cb => wrapper.get(features, flagv1.key, cb));
+    expect(item).toEqual(isCached ? null : flagv3);
   });
 
   describe('initialized()', function() {
-    it('calls underlying initialized() only if not already inited', function(done) {
+    it('calls underlying initialized() only if not already inited', async () => {
       const core = MockCore();
       const wrapper = new CachingStoreWrapper(core, 0);
 
-      wrapper.initialized(function(value) {
-        expect(value).toEqual(false);
-        expect(core.initQueriedCount).toEqual(1);
+      var value = await asyncify(cb => wrapper.initialized(cb));
+      expect(value).toEqual(false);
+      expect(core.initQueriedCount).toEqual(1);
 
-        core.inited = true;
+      core.inited = true;
 
-        wrapper.initialized(function(value) {
-          expect(value).toEqual(true);
-          expect(core.initQueriedCount).toEqual(2);
+      value = await asyncify(cb => wrapper.initialized(cb));
+      expect(value).toEqual(true);
+      expect(core.initQueriedCount).toEqual(2);
 
-          core.inited = false; // this should have no effect since we already returned true
+      core.inited = false; // this should have no effect since we already returned true
 
-          wrapper.initialized(function(value) {
-            expect(value).toEqual(true);
-            expect(core.initQueriedCount).toEqual(2);
-
-            done();
-          });
-        });
-      });
+      value = await asyncify(cb => wrapper.initialized(cb));
+      expect(value).toEqual(true);
+      expect(core.initQueriedCount).toEqual(2);
     });
 
-    it('will not call initialized() if init() has been called', function(done) {
+    it('will not call initialized() if init() has been called', async () => {
       const core = MockCore();
       const wrapper = new CachingStoreWrapper(core, 0);
 
-      wrapper.initialized(function(value) {
-        expect(value).toEqual(false);
-        expect(core.initQueriedCount).toEqual(1);
+      var value = await asyncify(cb => wrapper.initialized(cb));
+      expect(value).toEqual(false);
+      expect(core.initQueriedCount).toEqual(1);
 
-        const allData = { features: {} };
-        wrapper.init(allData, function() {
-          wrapper.initialized(function(value) {
-            expect(value).toEqual(true);
-            expect(core.initQueriedCount).toEqual(1);
+      const allData = { features: {} };
+      await asyncify(cb => wrapper.init(allData, cb));
 
-            done();
-          });
-        });
-      });
+      value = await asyncify(cb => wrapper.initialized(cb));
+      expect(value).toEqual(true);
+      expect(core.initQueriedCount).toEqual(1);
     });
 
-    it('can cache false result', function(done) {
+    it('can cache false result', async () => {
       const core = MockCore();
       const wrapper = new CachingStoreWrapper(core, 1); // cache TTL = 1 second
 
-      wrapper.initialized(function(value) {
-        expect(value).toEqual(false);
-        expect(core.initQueriedCount).toEqual(1);
+      var value = await asyncify(cb => wrapper.initialized(cb));
+      expect(value).toEqual(false);
+      expect(core.initQueriedCount).toEqual(1);
 
-        core.inited = true;
+      core.inited = true;
 
-        wrapper.initialized(function(value) {
-          expect(value).toEqual(false);
-          expect(core.initQueriedCount).toEqual(1);
+      value = await asyncify(cb => wrapper.initialized(cb));
+      expect(value).toEqual(false);
+      expect(core.initQueriedCount).toEqual(1);
 
-          setTimeout(function() {
-            wrapper.initialized(function(value) {
-              expect(value).toEqual(true);
-              expect(core.initQueriedCount).toEqual(2);
-
-              done();
-            });
-          }, 1100);
-        });
-      });
+      await sleepAsync(1100);
+      
+      value = await asyncify(cb => wrapper.initialized(cb));
+      expect(value).toEqual(true);
+      expect(core.initQueriedCount).toEqual(2);
     });
   });
 
   describe('close()', function() {
-    runCachedAndUncachedTests('closes underlying store', function(done, wrapper, core) {
+    runCachedAndUncachedTests('closes underlying store', async (wrapper, core) => {
       wrapper.close();
       expect(core.closed).toBe(true);
-      done();
     });
+  });
+
+  describe('core that uses initOrdered()', function() {
+    runCachedAndUncachedTests('receives properly ordered data for init', async (wrapper, core) => {
+      var dependencyOrderingTestData = {};
+      dependencyOrderingTestData[features.namespace] = {
+        a: { key: "a", prerequisites: [ { key: "b" }, { key: "c" } ] },
+        b: { key: "b", prerequisites: [ { key: "c" }, { key: "e" } ] },
+        c: { key: "c" },
+        d: { key: "d" },
+        e: { key: "e" },
+        f: { key: "f" }
+      };
+      dependencyOrderingTestData[segments.namespace] = {
+        o: { key: "o" }
+      };
+      await asyncify(cb => wrapper.init(dependencyOrderingTestData, cb));
+      
+      var receivedData = core.data;
+      expect(receivedData.length).toEqual(2);
+
+      // Segments should always come first
+      expect(receivedData[0].kind).toEqual(segments);
+      expect(receivedData[0].items.length).toEqual(1);
+      
+      // Features should be ordered so that a flag always appears after its prerequisites, if any
+      expect(receivedData[1].kind).toEqual(features);
+      var featuresMap = dependencyOrderingTestData[features.namespace];
+      var featuresList = receivedData[1].items;
+      expect(featuresList.length).toEqual(Object.keys(featuresMap).length);
+      for (var itemIndex in featuresList) {
+        var item = featuresList[itemIndex];
+        (item.prerequisites || []).forEach(function(prereq) {
+          var prereqKey = prereq.key;
+          var prereqItem = featuresMap[prereqKey];
+          var prereqIndex = featuresList.indexOf(prereqItem);
+          if (prereqIndex > itemIndex) {
+            var allKeys = featuresList.map(f => f.key);
+            throw new Error(item.key + " depends on " + prereqKey + ", but " + item.key +
+              " was listed first; keys in order are [" + allKeys.join(", ") + "]");
+          }
+        });
+      }
+    }, MockOrderedCore);
   });
 });

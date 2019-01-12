@@ -754,6 +754,62 @@ declare module 'ldclient-node' {
      */
     flush: (callback?: (err: any, res: boolean) => void) => Promise<void>;
   }
+
+  /**
+   * Configuration for FileDataSource.
+   */
+  export interface FileDataSourceOptions {
+    /**
+     * The path(s) of the file(s) that FileDataSource will read.
+     */
+    paths: Array<string>;
+
+    /**
+     * True if FileDataSource should reload flags whenever one of the data files is modified.
+     * This feature uses Node's fs.watch() API, so it is subject to
+     * the limitations described here: https://nodejs.org/docs/latest/api/fs.html#fs_fs_watch_filename_options_listener
+     */
+    autoUpdate?: boolean;
+
+    /**
+     * Configures a logger for warnings and errors. This can be a custom logger or an instance of
+     * winston.Logger. By default, it uses the same logger as the rest of the SDK.
+     */
+    logger?: LDLogger | object;
+  }
+
+  /**
+   * Creates an object that allows you to use local files as a source of feature flag state,
+   * instead of connecting to LaunchDarkly. This would typically be used in a test environment.
+   * <p>
+   * To use this component, call FileDataSource(options) and store the result in the "updateProcessor"
+   * property of your LaunchDarkly client configuration:
+   * <pre>
+   *     var dataSource = LaunchDarkly.FileDataSource({ paths: [ myFilePath ] });
+   *     var config = { updateProcessor: dataSource };
+   * </pre>
+   * <p>
+   * Flag data files can be either JSON or YAML. They contain an object with three possible
+   * properties:
+   * <ul>
+   * <li> "flags": Full feature flag definitions.
+   * <li> "flagValues": Simplified feature flags, just a map of flag keys to values.
+   * <li> "segments": User segment definitions.
+   * </ul>
+   * <p>
+   * The format of the data in "flags" and "segments" is defined by the LaunchDarkly application
+   * and is subject to change. You can query existing flags and segments from LaunchDarkly in JSON
+   * format by querying https://app.launchdarkly.com/sdk/latest-all and passing your SDK key in
+   * the Authorization header.
+   * <p>
+   * For more details, see the LaunchDarkly reference guide:
+   * https://docs.launchdarkly.com/v2.0/docs/reading-flags-from-a-file
+   *
+   * @param options  configuration for the data source; you should at least set the "paths" property
+   */
+  export function FileDataSource(
+    options: FileDataSourceOptions
+  ): object;
 }
 
 declare module 'ldclient-node/streaming' {

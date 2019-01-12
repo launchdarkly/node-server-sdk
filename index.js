@@ -1,5 +1,6 @@
 var FeatureStoreEventWrapper = require('./feature_store_event_wrapper');
 var RedisFeatureStore = require('./redis_feature_store');
+var FileDataSource = require('./file_data_source');
 var Requestor = require('./requestor');
 var EventEmitter = require('events').EventEmitter;
 var EventProcessor = require('./event_processor');
@@ -55,13 +56,12 @@ var newClient = function(sdkKey, config) {
   var client = new EventEmitter(),
       initComplete = false,
       failure,
-      queue = [],
       requestor,
       updateProcessor,
       eventProcessor;
 
   config = configuration.validate(config);
-
+  
   // Initialize global tunnel if proxy options are set
   if (config.proxyHost && config.proxyPort ) {
     config.proxyAgent = createProxyAgent(config);
@@ -85,22 +85,34 @@ var newClient = function(sdkKey, config) {
     throw new Error("You must configure the client with an SDK key");
   }
 
-  if (config.updateProcessor) {
-    updateProcessor = config.updateProcessor;
-  } else if (config.useLdd || config.offline) {
-    updateProcessor = NullUpdateProcessor();
-  } else {
-    requestor = Requestor(sdkKey, config);
-
-    if (config.stream) {
-      config.logger.info("Initializing stream processor to receive feature flag updates");
-      updateProcessor = StreamingProcessor(sdkKey, config, requestor);
+  var createDefaultUpdateProcessor = function(config) {
+    if (config.useLdd || config.offline) {
+      return NullUpdateProcessor();
     } else {
-      config.logger.info("Initializing polling processor to receive feature flag updates");
-      config.logger.warn("You should only disable the streaming API if instructed to do so by LaunchDarkly support");
-      updateProcessor = PollingProcessor(config, requestor);
+      requestor = Requestor(sdkKey, config);
+  
+      if (config.stream) {
+        config.logger.info("Initializing stream processor to receive feature flag updates");
+        return StreamingProcessor(sdkKey, config, requestor);
+      } else {
+        config.logger.info("Initializing polling processor to receive feature flag updates");
+        config.logger.warn("You should only disable the streaming API if instructed to do so by LaunchDarkly support");
+        return PollingProcessor(config, requestor);
+      }
     }
   }
+  var updateProcessorFactory = createDefaultUpdateProcessor;
+  if (config.updateProcessor) {
+    if (typeof config.updateProcessor === 'function') {
+      updateProcessorFactory = config.updateProcessor;
+    } else {
+      updateProcessor = config.updateProcessor;
+    }
+  }
+  if (!updateProcessor) {
+    updateProcessor = updateProcessorFactory(config);
+  }
+
   updateProcessor.start(function(err) {
     if (err) {
       var error;
@@ -196,7 +208,7 @@ var newClient = function(sdkKey, config) {
     }
 
     else if (!key) {
-      err = new errors.LDClientError('No feature flag key specified. Returning default value.');
+      var err = new errors.LDClientError('No feature flag key specified. Returning default value.');
       maybeReportError(err);
       return resolve(errorResult('FLAG_NOT_FOUND', defaultVal));
     }
@@ -208,7 +220,7 @@ var newClient = function(sdkKey, config) {
 
     config.featureStore.get(dataKind.features, key, function(flag) {
       if (!user) {
-        variationErr = new errors.LDClientError('No user specified. Returning default value.');
+        var variationErr = new errors.LDClientError('No user specified. Returning default value.');
         maybeReportError(variationErr);
         var result = errorResult('USER_NOT_SPECIFIED', defaultVal);
         sendFlagEvent(key, flag, user, result, defaultVal, includeReasonsInEvents);
@@ -378,6 +390,7 @@ var newClient = function(sdkKey, config) {
 module.exports = {
   init: newClient,
   RedisFeatureStore: RedisFeatureStore,
+  FileDataSource: FileDataSource,
   errors: errors
 };
 

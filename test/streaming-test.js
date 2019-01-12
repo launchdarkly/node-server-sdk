@@ -1,6 +1,7 @@
 var InMemoryFeatureStore = require('../feature_store');
 var StreamProcessor = require('../streaming');
 var dataKind = require('../versioned_data_kind');
+const { asyncify, sleepAsync } = require('./async_utils');
 
 describe('StreamProcessor', function() {
   var sdkKey = 'SDK_KEY';
@@ -24,13 +25,10 @@ describe('StreamProcessor', function() {
     };
   }
 
-  function expectJsonError(config, done) {
-    return function(err) {
-      expect(err).not.toBe(undefined);
-      expect(err.message).toEqual('Malformed JSON data in event stream');
-      expect(config.logger.error).toHaveBeenCalled();
-      done();
-    }
+  function expectJsonError(err, config) {
+    expect(err).not.toBe(undefined);
+    expect(err.message).toEqual('Malformed JSON data in event stream');
+    expect(config.logger.error).toHaveBeenCalled();
   }
 
   it('uses expected URL', function() {
@@ -62,7 +60,7 @@ describe('StreamProcessor', function() {
       }
     };
 
-    it('causes flags and segments to be stored', function(done) {
+    it('causes flags and segments to be stored', async () => {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: fakeLogger() };
       var es = fakeEventSource();
@@ -71,47 +69,42 @@ describe('StreamProcessor', function() {
 
       es.handlers.put({ data: JSON.stringify(putData) });
 
-      featureStore.initialized(function(flag) {
-        expect(flag).toEqual(true);
-      });
-
-      featureStore.get(dataKind.features, 'flagkey', function(f) {
-        expect(f.version).toEqual(1);
-        featureStore.get(dataKind.segments, 'segkey', function(s) {
-          expect(s.version).toEqual(2);
-          done();
-        });
-      });
+      var flag = await asyncify(cb => featureStore.initialized(cb));
+      expect(flag).toEqual(true);
+      
+      var f = await asyncify(cb => featureStore.get(dataKind.features, 'flagkey', cb));
+      expect(f.version).toEqual(1);
+      var s = await asyncify(cb => featureStore.get(dataKind.segments, 'segkey', cb));
+      expect(s.version).toEqual(2);
     });
 
-    it('calls initialization callback', function(done) {
+    it('calls initialization callback', async () => {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: fakeLogger() };
       var es = fakeEventSource();
       var sp = StreamProcessor(sdkKey, config, null, es.constructor);
       
-      var cb = function(err) {
-        expect(err).toBe(undefined);
-        done();
-      }
-      
-      sp.start(cb);
+      var waitUntilStarted = asyncify(cb => sp.start(cb));
       es.handlers.put({ data: JSON.stringify(putData) });
+      var result = await waitUntilStarted;
+      expect(result).toBe(undefined);
     });
 
-    it('passes error to callback if data is invalid', function(done) {
+    it('passes error to callback if data is invalid', async () => {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: fakeLogger() };
       var es = fakeEventSource();
       var sp = StreamProcessor(sdkKey, config, null, es.constructor);
       
-      sp.start(expectJsonError(config, done));
+      var waitUntilStarted = asyncify(cb => sp.start(cb));
       es.handlers.put({ data: '{not-good' });
+      var result = await waitUntilStarted;
+      expectJsonError(result, config);
     });
   });
 
   describe('patch message', function() {
-    it('updates flag', function(done) {
+    it('updates flag', async () => {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: fakeLogger() };
       var es = fakeEventSource();
@@ -125,13 +118,11 @@ describe('StreamProcessor', function() {
       sp.start();
       es.handlers.patch({ data: JSON.stringify(patchData) });
 
-      featureStore.get(dataKind.features, 'flagkey', function(f) {
-        expect(f.version).toEqual(1);
-        done();
-      });
+      var f = await asyncify(cb => featureStore.get(dataKind.features, 'flagkey', cb));
+      expect(f.version).toEqual(1);
     });
 
-    it('updates segment', function(done) {
+    it('updates segment', async () => {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: fakeLogger() };
       var es = fakeEventSource();
@@ -145,25 +136,25 @@ describe('StreamProcessor', function() {
       sp.start();
       es.handlers.patch({ data: JSON.stringify(patchData) });
 
-      featureStore.get(dataKind.segments, 'segkey', function(s) {
-        expect(s.version).toEqual(1);
-        done();
-      });
+      var s = await asyncify(cb => featureStore.get(dataKind.segments, 'segkey', cb));
+      expect(s.version).toEqual(1);
     });
 
-    it('passes error to callback if data is invalid', function(done) {
+    it('passes error to callback if data is invalid', async () => {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: fakeLogger() };
       var es = fakeEventSource();
       var sp = StreamProcessor(sdkKey, config, null, es.constructor);
       
-      sp.start(expectJsonError(config, done));
+      var waitForCallback = asyncify(cb => sp.start(cb));
       es.handlers.patch({ data: '{not-good' });
+      var result = await waitForCallback;
+      expectJsonError(result, config);
     });
   });
 
   describe('delete message', function() {
-    it('deletes flag', function(done) {
+    it('deletes flag', async () => {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: fakeLogger() };
       var es = fakeEventSource();
@@ -172,22 +163,18 @@ describe('StreamProcessor', function() {
       sp.start();
 
       var flag = { key: 'flagkey', version: 1 }
-      featureStore.upsert(dataKind.features, flag, function() {
-        featureStore.get(dataKind.features, flag.key, function(f) {
-          expect(f).toEqual(flag);
+      await asyncify(cb => featureStore.upsert(dataKind.features, flag, cb));
+      var f = await asyncify(cb => featureStore.get(dataKind.features, flag.key, cb));
+      expect(f).toEqual(flag);
 
-          var deleteData = { path: '/flags/' + flag.key, version: 2 };
-          es.handlers.delete({ data: JSON.stringify(deleteData) });
+      var deleteData = { path: '/flags/' + flag.key, version: 2 };
+      es.handlers.delete({ data: JSON.stringify(deleteData) });
 
-          featureStore.get(dataKind.features, flag.key, function(f) {
-            expect(f).toBe(null);
-            done();
-          })
-        });
-      });
+      var f = await asyncify(cb => featureStore.get(dataKind.features, flag.key, cb));
+      expect(f).toBe(null);
     });
 
-    it('deletes segment', function(done) {
+    it('deletes segment', async () => {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: fakeLogger() };
       var es = fakeEventSource();
@@ -196,29 +183,27 @@ describe('StreamProcessor', function() {
       sp.start();
 
       var segment = { key: 'segkey', version: 1 }
-      featureStore.upsert(dataKind.segments, segment, function() {
-        featureStore.get(dataKind.segments, segment.key, function(s) {
-          expect(s).toEqual(segment);
+      await asyncify(cb => featureStore.upsert(dataKind.segments, segment, cb));
+      var s = await asyncify(cb => featureStore.get(dataKind.segments, segment.key, cb));
+      expect(s).toEqual(segment);
 
-          var deleteData = { path: '/segments/' + segment.key, version: 2 };
-          es.handlers.delete({ data: JSON.stringify(deleteData) });
+      var deleteData = { path: '/segments/' + segment.key, version: 2 };
+      es.handlers.delete({ data: JSON.stringify(deleteData) });
 
-          featureStore.get(dataKind.segments, segment.key, function(s) {
-            expect(s).toBe(null);
-            done();
-          })
-        });
-      });
+      s = await asyncify(cb => featureStore.get(dataKind.segments, segment.key, cb));
+      expect(s).toBe(null);
     });
 
-    it('passes error to callback if data is invalid', function(done) {
+    it('passes error to callback if data is invalid', async () => {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: fakeLogger() };
       var es = fakeEventSource();
       var sp = StreamProcessor(sdkKey, config, null, es.constructor);
       
-      sp.start(expectJsonError(config, done));
+      var waitForResult = asyncify(cb => sp.start(cb));
       es.handlers.delete({ data: '{not-good' });
+      var result = await waitForResult;
+      expectJsonError(result, config);
     });
   });
 
@@ -237,7 +222,7 @@ describe('StreamProcessor', function() {
       }
     };
 
-    it('requests and stores flags and segments', function(done) {
+    it('requests and stores flags and segments', async () => {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: fakeLogger() };
       var es = fakeEventSource();
@@ -247,23 +232,18 @@ describe('StreamProcessor', function() {
 
       es.handlers['indirect/put']({});
 
-      setImmediate(function() {
-        featureStore.get(dataKind.features, 'flagkey', function(f) {
-          expect(f.version).toEqual(1);
-          featureStore.get(dataKind.segments, 'segkey', function(s) {
-            expect(s.version).toEqual(2);
-            featureStore.initialized(function(flag) {
-              expect(flag).toBe(true);
-            });
-            done();
-          });
-        });
-      });
+      await sleepAsync(0);
+      var f = await asyncify(cb => featureStore.get(dataKind.features, 'flagkey', cb));
+      expect(f.version).toEqual(1);
+      var s = await asyncify(cb => featureStore.get(dataKind.segments, 'segkey', cb));
+      expect(s.version).toEqual(2);
+      var value = await asyncify(cb => featureStore.initialized(cb));
+      expect(value).toBe(true);
     });
   });
 
   describe('indirect patch message', function() {
-    it('requests and updates flag', function(done) {
+    it('requests and updates flag', async () => {
       var flag = { key: 'flagkey', version: 1 };
       var fakeRequestor = {
         requestObject: function(kind, key, cb) {
@@ -282,15 +262,12 @@ describe('StreamProcessor', function() {
 
       es.handlers['indirect/patch']({ data: '/flags/flagkey' });
 
-      setImmediate(function() {
-        featureStore.get(dataKind.features, 'flagkey', function(f) {
-          expect(f.version).toEqual(1);
-          done();
-        });
-      });
+      await sleepAsync(0);
+      var f = await asyncify(cb => featureStore.get(dataKind.features, 'flagkey', cb));
+      expect(f.version).toEqual(1);
     });
 
-    it('requests and updates segment', function(done) {
+    it('requests and updates segment', async () => {
       var segment = { key: 'segkey', version: 1 };
       var fakeRequestor = {
         requestObject: function(kind, key, cb) {
@@ -309,12 +286,9 @@ describe('StreamProcessor', function() {
 
       es.handlers['indirect/patch']({ data: '/segments/segkey' });
 
-      setImmediate(function() {
-        featureStore.get(dataKind.segments, 'segkey', function(s) {
-          expect(s.version).toEqual(1);
-          done();
-        });
-      });
+      await sleepAsync(0);
+      var s = await asyncify(cb => featureStore.get(dataKind.segments, 'segkey', cb));
+      expect(s.version).toEqual(1);
     });
   });
 });
