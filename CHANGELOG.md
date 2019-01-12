@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.7.0] - 2019-01-11
+### Added:
+- It is now possible to inject feature flags into the client from local JSON or YAML files, replacing the normal LaunchDarkly connection. This would typically be for testing purposes. See `FileDataSource` in the [TypeScript API documentation](https://github.com/launchdarkly/node-client/blob/master/index.d.ts), and ["Reading flags from a file"](https://docs.launchdarkly.com/v2.0/docs/reading-flags-from-a-file).
+
+### Fixed:
+- Fixed a potential race condition that could happen when using a DynamoDB or Consul feature store. The Redis feature store was not affected.
+
 ## [5.6.2] - 2018-11-15
 ### Fixed:
 - Creating multiple clients with the default in-memory feature store (i.e. leaving `config.featureStore` unset) was causing all of the clients to share the _same_ feature store instance. This has been fixed so they will now each get their own in-memory store. (Thanks, [seanparmelee](https://github.com/launchdarkly/node-client/pull/130)!)
