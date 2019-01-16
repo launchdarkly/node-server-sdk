@@ -9,11 +9,15 @@ describe('RedisFeatureStore', function() {
   var extraRedisClient = redis.createClient(redisOpts);
 
   function makeCachedStore() {
-    return new RedisFeatureStore(redisOpts, 30);    
+    return new RedisFeatureStore(redisOpts, 30);
   }
 
   function makeUncachedStore() {
     return new RedisFeatureStore(redisOpts, 0);
+  }
+
+  function makeStoreWithPrefix(prefix) {
+    return new RedisFeatureStore(redisOpts, 0, prefix);
   }
 
   function clearExistingData(callback) {
@@ -21,7 +25,7 @@ describe('RedisFeatureStore', function() {
   }
 
   testBase.baseFeatureStoreTests(makeCachedStore, clearExistingData, true);
-  testBase.baseFeatureStoreTests(makeUncachedStore, clearExistingData, false);
+  testBase.baseFeatureStoreTests(makeUncachedStore, clearExistingData, false, makeStoreWithPrefix);
 
   testBase.concurrentModificationTests(makeUncachedStore,
     function(hook) {
