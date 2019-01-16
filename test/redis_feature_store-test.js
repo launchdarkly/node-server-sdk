@@ -8,12 +8,12 @@ describe('RedisFeatureStore', function() {
 
   var extraRedisClient = redis.createClient(redisOpts);
 
-  function makeCachedStore() {
-    return new RedisFeatureStore(redisOpts, 30);    
+  function makeCachedStore(options) {
+    return new RedisFeatureStore(redisOpts, 30, options && options.prefix);    
   }
 
-  function makeUncachedStore() {
-    return new RedisFeatureStore(redisOpts, 0);
+  function makeUncachedStore(options) {
+    return new RedisFeatureStore(redisOpts, 0, options && options.prefix);
   }
 
   function clearExistingData(callback) {
