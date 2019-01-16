@@ -6,14 +6,13 @@ const { asyncify } = require('./async_utils');
 // caching disabled.
 //
 // Parameters:
-// - makeStore(options): creates an instance of the feature store; add options to the
-// configuration, if provided
+// - makeStore(): creates an instance of the feature store
 // - clearExistingData(callback): if specified, will be called before each test to clear any
 // storage that the store instances may be sharing; this also implies that the feature store
-// - isCached: true if the instances returned by makeStore() have caching enabled. If
-// applicable, 
+// - isCached: true if the instances returned by makeStore() have caching enabled.
+// - makeStoreWithPrefix(prefix): creates an uncached instance of the store with a key prefix
 
-function baseFeatureStoreTests(makeStore, clearExistingData, isCached) {
+function baseFeatureStoreTests(makeStore, clearExistingData, isCached, makeStoreWithPrefix) {
   var feature1 = {
     key: 'foo',
     version: 10
@@ -99,18 +98,20 @@ function baseFeatureStoreTests(makeStore, clearExistingData, isCached) {
     testInitStateDetection('can detect if another instance has initialized the store, even with empty data',
       { features: {} });
 
-    it('is independent from other instances with different prefixes', async () => {
-      var flag = { key: 'flag', version: 1 };
-      var storeA = makeStore({ prefix: 'a' });
-      await asyncify(cb => storeA.init({ features: { flag: flag } }, cb));
-      var storeB = makeStore({ prefix: 'b' });
-      await asyncify(cb => storeB.init({ features: { } }, cb));
-      var storeB1 = makeStore({ prefix: 'b' });  // this ensures we're not just reading cached data
-      var item = await asyncify(cb => storeB1.get(dataKind.features, 'flag', cb));
-      expect(item).toBe(null);
-      item = await asyncify(cb => storeA.get(dataKind.features, 'flag', cb));
-      expect(item).toEqual(flag);
-    });
+    if (makeStoreWithPrefix) {
+      it('is independent from other instances with different prefixes', async () => {
+        var flag = { key: 'flag', version: 1 };
+        var storeA = makeStoreWithPrefix('a');
+        await asyncify(cb => storeA.init({ features: { flag: flag } }, cb));
+        var storeB = makeStoreWithPrefix('b');
+        await asyncify(cb => storeB.init({ features: { } }, cb));
+        var storeB1 = makeStoreWithPrefix('b');  // this ensures we're not just reading cached data
+        var item = await asyncify(cb => storeB1.get(dataKind.features, 'flag', cb));
+        expect(item).toBe(null);
+        item = await asyncify(cb => storeA.get(dataKind.features, 'flag', cb));
+        expect(item).toEqual(flag);
+      });
+    }
   }
 
   it('gets existing feature', async () => {
