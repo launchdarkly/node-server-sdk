@@ -23,6 +23,6 @@ jobs:
           targetType: inline
           workingDirectory: $(System.DefaultWorkingDirectory)
           script: |
-              node --version
-              npm install
-              npm test
+            node --version
+            npm install
+            npm test
