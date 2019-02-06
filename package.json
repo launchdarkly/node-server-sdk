@@ -48,6 +48,7 @@
     "jest-junit": "3.6.0",
     "nock": "9.2.3",
     "tmp": "0.0.33",
+    "typedoc": "0.14.2",
     "typescript": "3.0.1"
   },
   "jest": {
