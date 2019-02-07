@@ -7,7 +7,7 @@ module.exports = {
     'test-types.ts'
   ],
   name: 'LaunchDarkly Node SDK',
-  theme: 'default',
+  theme: 'docs/theme',
   readme: 'none',
   includeDeclarations: true
 };
