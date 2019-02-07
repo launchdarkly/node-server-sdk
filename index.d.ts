@@ -3,7 +3,10 @@
 /**
  * This is the API reference for the LaunchDarkly SDK for Node.js.
  *
- * For information, see the [SDK reference guide](http://docs.launchdarkly.com/docs/node-sdk-reference).
+ * In typical usage, you will call [[init]] once at startup time to obtain an instance of
+ * [[LDClient]], which provides access to all of the SDK's functionality.
+ *
+ * For more information, see the [SDK reference guide](http://docs.launchdarkly.com/docs/node-sdk-reference).
  */
 
 declare module 'ldclient-node' {
