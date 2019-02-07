@@ -245,6 +245,14 @@ declare module 'ldclient-node' {
     featureStore?: LDFeatureStore;
 
     /**
+     * A component that obtains feature flag data and puts it in the feature store.
+     *
+     * By default, this is the client's default streaming or polling component. It can be changed
+     * for testing purposes; see [[FileDataSource]].
+     */
+    updateProcessor?: object;
+
+    /**
      * The interval in between flushes of the analytics events queue, in seconds.
      */
     flushInterval?: number;
@@ -265,6 +273,11 @@ declare module 'ldclient-node' {
      * Both the host and port must be specified to enable proxy support.
      */
     proxyPort?: number;
+
+    /**
+     * When using an HTTP proxy, specifies whether it is accessed via `http` or `https`.
+     */
+    proxyScheme?: string;
 
     /**
      * Allows you to specify basic authentication parameters for an optional HTTP proxy.
@@ -442,106 +455,129 @@ declare module 'ldclient-node' {
   }
 
   /**
-   * The LaunchDarkly client feature store.
+   * Interface for a feature store component.
    *
-   * The client uses this internally to store flag updates it
-   * receives from LaunchDarkly.
+   * The feature store is what the client uses to store feature flag data that has been received
+   * from LaunchDarkly. By default, it uses an in-memory implementation; there are also adapters
+   * for Redis and other databases (see the [SDK Reference Guide](https://docs.launchdarkly.com/v2.0/docs/using-a-persistent-feature-store)).
+   * You will not need to use this interface unless you are writing your own implementation.
    */
   export interface LDFeatureStore {
     /**
-     * Get a flag's value.
+     * Get an entity from the store.
+     *
+     * The store should treat any entity with the property `deleted: true` as "not found".
      *
      * @param kind
-     *  The type of data to be accessed
+     *   The type of data to be accessed. The `namespace` property of this object indicates which
+     *   collection of entities to use, e.g. `"features"` or `"segments"`. The store should not
+     *   make any assumptions about the format of the data, but just return a JSON object.
      *
      * @param key
-     *  The flag key
+     *   The unique key of the entity within the specified collection.
      *
      * @param callback
-     *  Will be called with the resulting flag.
+     *   Will be called with the retrieved entity, or null if not found.
      */
-    get: (kind: object, key: string, callback: (res: LDFlagValue) => void) => void;
+    get(kind: object, key: string, callback: (res: object) => void): void;
 
     /**
-     * Get all flags.
+     * Get all entities from a collection.
+     *
+     * The store should filter out any entities with the property `deleted: true`.
      *
      * @param kind
-     *  The type of data to be accessed
+     *   The type of data to be accessed. The `namespace` property of this object indicates which
+     *   collection of entities to use, e.g. `"features"` or `"segments"`. The store should not
+     *   make any assumptions about the format of the data, but just return an object in which
+     *   each key is the `key` property of an entity and the value is the entity.
      *
      * @param callback
-     *  Will be called with the resulting flag set.
+     *   Will be called with the resulting map.
      */
-    all: (kind: object, callback: (res: LDFlagSet) => void) => void;
+    all(kind: object, callback: (res: object) => void): void;
 
     /**
-     * Initialize the store.
+     * Initialize the store, overwriting any existing data.
      *
-     * @param flags
-     *  Populate the store with an initial flag set.
+     * @param allData
+     *   An object in which each key is the "namespace" of a collection (e.g. `"features"`) and
+     *   the value is an object that maps keys to entities.
      *
      * @param callback
-     *  Will be called when the store has been initialized.
+     *   Will be called when the store has been initialized.
      */
-    init: (flags: LDFlagSet, callback?: () => void) => void;
+    init(allData: object, callback: () => void): void;
 
     /**
-     * Delete a key from the store.
+     * Delete an entity from the store.
+     *
+     * Deletion should be implemented by storing a placeholder object with the property
+     * `deleted: true` and a `version` property equal to the provided version. In other words,
+     * it should be exactly the same as calling `upsert` with such an object.
      *
      * @param kind
-     *  The type of data to be accessed
+     *   The type of data to be accessed. The `namespace` property of this object indicates which
+     *   collection of entities to use, e.g. `"features"` or `"segments"`.
      *
      * @param key
-     *  The flag key.
+     *   The unique key of the entity within the specified collection.
      *
      * @param version
-     *  The next version to increment the flag. The store should not update
-     * a newer version with an older version.
+     *   A number that must be greater than the `version` property of the existing entity in
+     *   order for it to be deleted. If it is less than or equal to the existing version, the
+     *   method should do nothing.
      *
      * @param callback
-     *  Will be called when the delete operation is complete.
+     *   Will be called when the delete operation is complete.
      */
-    delete: (kind: object, key: string, version: string, callback?: () => void) => void;
+    delete(kind: object, key: string, version: string, callback: () => void): void;
 
     /**
-     * Upsert a flag to the store.
+     * Add an entity or update an existing entity.
      *
      * @param kind
-     *  The type of data to be accessed
+     *   The type of data to be accessed. The `namespace` property of this object indicates which
+     *   collection of entities to use, e.g. `"features"` or `"segments"`. The store should not
+     *   make any assumptions about the format of the data, but just return a JSON object.
      *
      * @param key
-     *  The flag key.
+     *   The unique key of the entity within the specified collection.
      *
-     * @param flag
-     *  The feature flag for the corresponding key.
-     *
-     * @param callback
-     *  Will be called after the upsert operation is complete.
-     */
-    upsert: (kind: object, key: string, flag: LDFlagValue, callback?: () => void) => void;
-
-    /**
-     * Is the store initialized?
+     * @param data
+     *   The contents of the entity, as an object that can be converted to JSON. The store
+     *   should check the `version` property of this object, and should *not* overwrite any
+     *   existing data if the existing `version` is greater than or equal to that value.
      *
      * @param callback
-     *  Will be called when the store is initialized.
-     *
-     * @returns
-     *  Truthy if the cache is already initialized.
-     *
+     *   Will be called after the upsert operation is complete.
      */
-    initialized: (callback?: (err: any) => void) => boolean;
+    upsert(kind: object, key: string, data: object, callback: () => void): void;
 
     /**
-     * Close the feature store.
+     * Tests whether the store is initialized.
      *
+     * "Initialized" means that the store has been populated with data, either by the client
+     * having called `init()` within this process, or by another process (if this is a shared
+     * database).
+     *
+     * @param callback
+     *   Will be called back with the boolean result.
      */
-    close: () => void;
+    initialized(callback: (isInitialized: boolean) => void): void;
+
+    /**
+     * Releases any resources being used by the feature store.
+     */
+    close(): void;
   }
 
   /**
    * The LaunchDarkly client stream processor
    *
    * The client uses this internally to retrieve updates from LaunchDarkly.
+   *
+   * @ignore
    */
   export interface LDStreamProcessor {
     start: (fn?: (err?: any) => void) => void;
@@ -552,8 +588,9 @@ declare module 'ldclient-node' {
   /**
    * The LaunchDarkly client feature flag requestor
    *
-   * The client uses this internally to retrieve feature
-   * flags from LaunchDarkly.
+   * The client uses this internally to retrieve feature flags from LaunchDarkly.
+   *
+   * @ignore
    */
   export interface LDFeatureRequestor {
     requestObject: (
