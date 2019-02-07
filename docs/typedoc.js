@@ -8,5 +8,6 @@ module.exports = {
   ],
   name: 'LaunchDarkly Node SDK',
   theme: 'default',
+  readme: 'none',
   includeDeclarations: true
 };
