@@ -1,6 +1,4 @@
 
-TYPEDOC_OPTIONS=--name "LaunchDarkly Node SDK" --includeDeclarations --exclude "**/node_modules/**" --exclude test-types.ts
-
 .PHONY: html
 
 html:
