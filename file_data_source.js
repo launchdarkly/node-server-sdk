@@ -16,6 +16,7 @@ function FileDataSource(options) {
   return config => {
     var featureStore = config.featureStore;
     var watchers = [];
+    var timestamps = {};
     var pendingUpdate = false;
     var logger = options.logger || config.logger || defaultLogger();
     var inited = false;
@@ -24,6 +25,14 @@ function FileDataSource(options) {
       return new winston.Logger({
         level: 'info',
         transports: [ new (winston.transports.Console)() ]
+      });
+    }
+
+    function getFileTimestampPromise(path) {
+      return new Promise((resolve, reject) => {
+        fs.stat(path, (err, stat) => {
+          err ? reject(err) : resolve(stat.mtimeMs);
+        });
       });
     }
 
@@ -52,6 +61,11 @@ function FileDataSource(options) {
         Object.keys(parsed.segments || {}).forEach(key => {
           addItem(dataKind.segments, parsed.segments[key]);
         });
+        logger.info('Loaded flags from ' + path);
+      }).then(() =>
+        getFileTimestampPromise(path)
+      ).then(timestamp => {
+        timestamps[path] = timestamp;
       });
     }
 
@@ -92,18 +106,32 @@ function FileDataSource(options) {
       };
     }
 
-    function startWatching() {
+    function maybeReloadForPath(path) {
+      if (pendingUpdate) {
+        return; // coalesce updates so we don't do multiple reloads if a whole set of files was just updated
+      }
       var reload = () => {
         loadAllPromise().then(() => {
-          logger && logger.warn('Reloaded flags from file data');
+          logger.warn('Reloaded flags from file data');
         }).catch(() => {});
       };
+      getFileTimestampPromise(path)
+        .then(timestamp => {
+          // We do this check of the modified time because there's a known issue with fs.watch()
+          // reporting multiple changes when really the file has only changed once.
+          if (true || timestamp !== timestamps[path]) {
+            pendingUpdate = true;
+            setTimeout(reload, 10);
+          }
+        }).catch(() => {
+          logger.warn('Unexpected error trying to get timestamp of file: ' + path);
+        });
+    }
+
+    function startWatching() {
       paths.forEach(path => {
         var watcher = fs.watch(path, { persistent: false }, (event, filename) => {
-          if (!pendingUpdate) { // coalesce updates to avoid reloading repeatedly
-            pendingUpdate = true;
-            setTimeout(reload, 0);
-          }
+          maybeReloadForPath(path);
         });
         watchers.push(watcher);
       });
