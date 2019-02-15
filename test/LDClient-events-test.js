@@ -3,7 +3,9 @@ var stubs = require('./stubs');
 describe('LDClient - analytics events', () => {
 
   var eventProcessor;
-  var defaultUser = { key: 'user' };
+  var defaultUser = { key: 'user' };  
+  var userWithNoKey = { name: 'Keyless Joe' };
+  var userWithEmptyKey = { key: '' };
 
   beforeEach(() => {
     eventProcessor = stubs.stubEventProcessor();
@@ -144,33 +146,117 @@ describe('LDClient - analytics events', () => {
     });
   });
 
-  it('generates an event for identify()', async () => {
-    var client = stubs.createClient({ eventProcessor: eventProcessor }, {});
-    await client.waitForInitialization();
-    
-    client.identify(defaultUser);
-    expect(eventProcessor.events).toHaveLength(1);
-    var e = eventProcessor.events[0];
-    expect(e).toMatchObject({
-      kind: 'identify',
-      key: defaultUser.key,
-      user: defaultUser
+  describe('identify', () => {
+    it('generates an event', async () => {
+      var logger = stubs.stubLogger();
+      var client = stubs.createClient({ eventProcessor: eventProcessor, logger: logger }, {});
+      await client.waitForInitialization();
+      
+      client.identify(defaultUser);
+      expect(eventProcessor.events).toHaveLength(1);
+      var e = eventProcessor.events[0];
+      expect(e).toMatchObject({
+        kind: 'identify',
+        key: defaultUser.key,
+        user: defaultUser
+      });
+      expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    it('does not generate an event, and logs a warning, if user is missing', async () => {
+      var logger = stubs.stubLogger();
+      var client = stubs.createClient({ eventProcessor: eventProcessor, logger: logger }, {});
+      await client.waitForInitialization();
+      
+      client.identify();
+      expect(eventProcessor.events).toHaveLength(0);
+      expect(logger.warn).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not generate an event, and logs a warning, if user has no key', async () => {
+      var logger = stubs.stubLogger();
+      var client = stubs.createClient({ eventProcessor: eventProcessor, logger: logger }, {});
+      await client.waitForInitialization();
+      
+      client.identify(userWithNoKey);
+      expect(eventProcessor.events).toHaveLength(0);
+      expect(logger.warn).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not generate an event, and logs a warning, if user has empty key', async () => {
+      var logger = stubs.stubLogger();
+      var client = stubs.createClient({ eventProcessor: eventProcessor, logger: logger }, {});
+      await client.waitForInitialization();
+      
+      client.identify(userWithEmptyKey);
+      expect(eventProcessor.events).toHaveLength(0);
+      expect(logger.warn).toHaveBeenCalledTimes(1);
     });
   });
 
-  it('generates an event for track()', async () => {
-    var data = { thing: 'stuff' };
-    var client = stubs.createClient({ eventProcessor: eventProcessor }, {});
-    await client.waitForInitialization();
+  describe('track', () => {
+    it('generates an event with data', async () => {
+      var data = { thing: 'stuff' };
+      var logger = stubs.stubLogger();
+      var client = stubs.createClient({ eventProcessor: eventProcessor, logger: logger }, {});
+      await client.waitForInitialization();
 
-    client.track('eventkey', defaultUser, data);
-    expect(eventProcessor.events).toHaveLength(1);
-    var e = eventProcessor.events[0];
-    expect(e).toMatchObject({
-      kind: 'custom',
-      key: 'eventkey',
-      user: defaultUser,
-      data: data
+      client.track('eventkey', defaultUser, data);
+      expect(eventProcessor.events).toHaveLength(1);
+      var e = eventProcessor.events[0];
+      expect(e).toMatchObject({
+        kind: 'custom',
+        key: 'eventkey',
+        user: defaultUser,
+        data: data
+      });
+      expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    it('generates an event without data', async () => {
+      var logger = stubs.stubLogger();
+      var client = stubs.createClient({ eventProcessor: eventProcessor, logger: logger }, {});
+      await client.waitForInitialization();
+
+      client.track('eventkey', defaultUser);
+      expect(eventProcessor.events).toHaveLength(1);
+      var e = eventProcessor.events[0];
+      expect(e).toMatchObject({
+        kind: 'custom',
+        key: 'eventkey',
+        user: defaultUser
+      });
+      expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    it('does not generate an event, and logs a warning, if user is missing', async () => {
+      var logger = stubs.stubLogger();
+      var client = stubs.createClient({ eventProcessor: eventProcessor, logger: logger }, {});
+      await client.waitForInitialization();
+
+      client.track('eventkey');
+      expect(eventProcessor.events).toHaveLength(0);
+      expect(logger.warn).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not generate an event, and logs a warning, if user has no key', async () => {
+      var logger = stubs.stubLogger();
+      var client = stubs.createClient({ eventProcessor: eventProcessor, logger: logger }, {});
+      await client.waitForInitialization();
+
+      client.track('eventkey', userWithNoKey);
+      expect(eventProcessor.events).toHaveLength(0);
+      expect(logger.warn).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not generate an event, and logs a warning, if user has empty key', async () => {
+      var logger = stubs.stubLogger();
+      var client = stubs.createClient({ eventProcessor: eventProcessor, logger: logger }, {});
+      await client.waitForInitialization();
+
+      client.track('eventkey', userWithEmptyKey);
+      expect(eventProcessor.events).toHaveLength(0);
+      expect(logger.warn).toHaveBeenCalledTimes(1);
     });
   });
 });
