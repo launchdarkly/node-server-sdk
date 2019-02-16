@@ -716,6 +716,9 @@ declare module 'ldclient-node' {
      * to track custom goals or other events that do not currently have
      * goals.
      *
+     * If the user is omitted or has no key, the client will log a warning
+     * and will not send an event.
+     *
      * @param key
      *   The event to record.
      * @param user
@@ -730,6 +733,9 @@ declare module 'ldclient-node' {
      *
      * This only needs to be called if the user changes identities because
      * normally the user's identity is set during client initialization.
+     *
+     * If the user is omitted or has no key, the client will log a warning
+     * and will not send an event.
      *
      * @param user
      *   A map of user options. Must contain at least the `key` property
