@@ -342,6 +342,11 @@ var newClient = function(sdkKey, config) {
   }
 
   client.track = function(eventName, user, data) {
+    if (!userExistsAndHasKey(user)) {
+      config.logger.warn(messages.missingUserKeyNoEvent());
+      return;
+    }
+
     sanitizeUser(user);
     var event = {"key": eventName,
                 "user": user,
@@ -356,6 +361,11 @@ var newClient = function(sdkKey, config) {
   };
 
   client.identify = function(user) {
+    if (!userExistsAndHasKey(user)) {
+      config.logger.warn(messages.missingUserKeyNoEvent());
+      return;
+    }
+
     sanitizeUser(user);
     var event = {"key": user.key,
                  "kind": "identify",
@@ -371,6 +381,14 @@ var newClient = function(sdkKey, config) {
   function sendFlagEvent(key, flag, user, detail, defaultVal, includeReasonsInEvents) {
     var event = evaluate.createFlagEvent(key, flag, user, detail, defaultVal, null, includeReasonsInEvents);
     eventProcessor.sendEvent(event);
+  }
+
+  function userExistsAndHasKey(user) {
+    if (user) {
+      var key = user.key;
+      return key !== undefined && key !== null && key !== "";
+    }
+    return false;
   }
 
   function deprecatedMethod(oldName, newName) {
