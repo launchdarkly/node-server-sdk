@@ -31,7 +31,11 @@ function FileDataSource(options) {
     function getFileTimestampPromise(path) {
       return new Promise((resolve, reject) => {
         fs.stat(path, (err, stat) => {
-          err ? reject(err) : resolve(stat.mtimeMs);
+          if (err) {
+            reject(err);
+          } else {
+            resolve(stat.mtimeMs || stat.mtime);  // mtimeMs isn't always available; either of these values will work for  us
+          }
         });
       });
     }
