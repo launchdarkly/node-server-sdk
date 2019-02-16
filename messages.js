@@ -13,4 +13,4 @@ exports.httpErrorMessage = function(status, context, retryMessage) {
 
 exports.missingUserKeyNoEvent = function() {
   return 'User was unspecified or had no key; event will not be sent';
-}
+};
