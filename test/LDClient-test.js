@@ -88,10 +88,11 @@ describe('LDClient', () => {
     });
 
     it('is rejected if initialization fails', async () => {
+      var err = { status: 403 };
       var updateProcessor = stubs.stubUpdateProcessor();
-      updateProcessor.error = { status: 403 };
+      updateProcessor.error = err;
       var client = stubs.createClient({ updateProcessor: updateProcessor }, {});
-      await expect(client.waitForInitialization()).rejects.toThrow();
+      await expect(client.waitForInitialization()).rejects.toBe(err);
     });
   });
 
