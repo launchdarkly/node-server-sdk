@@ -835,6 +835,9 @@ declare module 'ldclient-node' {
      * section of the dashboard. This can be used to track custom goals or other events that do
      * not currently have goals.
      *
+     * If the user is omitted or has no key, the client will log a warning
+     * and will not send an event.
+     *
      * @param key
      *   The name of the event, which may correspond to a goal in A/B tests.
      * @param user
@@ -850,6 +853,9 @@ declare module 'ldclient-node' {
      * This simply creates an analytics event that will transmit the given user properties to
      * LaunchDarkly, so that the user will be visible on your dashboard even if you have not
      * evaluated any flags for that user. It has no other effect.
+     *
+     * If the user is omitted or has no key, the client will log a warning
+     * and will not send an event.
      *
      * @param user
      *   The user properties. Must contain at least the `key` property.
