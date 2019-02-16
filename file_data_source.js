@@ -119,7 +119,7 @@ function FileDataSource(options) {
         .then(timestamp => {
           // We do this check of the modified time because there's a known issue with fs.watch()
           // reporting multiple changes when really the file has only changed once.
-          if (true || timestamp !== timestamps[path]) {
+          if (timestamp !== timestamps[path]) {
             pendingUpdate = true;
             setTimeout(reload, 10);
             // The 10ms delay above is arbitrary - we just don't want to have the number be zero,
