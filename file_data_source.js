@@ -122,6 +122,9 @@ function FileDataSource(options) {
           if (true || timestamp !== timestamps[path]) {
             pendingUpdate = true;
             setTimeout(reload, 10);
+            // The 10ms delay above is arbitrary - we just don't want to have the number be zero,
+            // because in a case where multiple fs.watch events are fired off one after another,
+            // we want the reload to happen only after all of the event handlers have executed.
           }
         }).catch(() => {
           logger.warn('Unexpected error trying to get timestamp of file: ' + path);
