@@ -1,7 +1,7 @@
 var fs = require('fs');
 var tmp = require('tmp');
 var dataKind = require('../versioned_data_kind');
-const { asyncify, sleepAsync } = require('./async_utils');
+const { asyncify, asyncifyNode, sleepAsync } = require('./async_utils');
 
 var LaunchDarkly = require('../index');
 var FileDataSource = require('../file_data_source');
@@ -76,10 +76,15 @@ segments:
 describe('FileDataSource', function() {
   var store;
   var dataSources = [];
+  var logger;
 
   beforeEach(() => {
     store = InMemoryFeatureStore();
     dataSources = [];
+    logger = {
+      info: jest.fn(),
+      warn: jest.fn()
+    };
   });
 
   afterEach(() => {
@@ -87,27 +92,18 @@ describe('FileDataSource', function() {
   });
 
   function makeTempFile(content) {
-    return new Promise((resolve, reject) => {
-      tmp.file(function(err, path, fd) {
-        if (err) {
-          reject(err);
-        } else {
-          replaceFileContent(path, content).then(() => resolve(path));
-        }
+    return asyncifyNode(tmp.file)
+      .then(path => {
+        return replaceFileContent(path, content).then(() => path);
       });
-    });
   }
 
   function replaceFileContent(path, content) {
-    return new Promise((resolve, reject) => {
-      fs.writeFile(path, content, function(err) {
-        err ? reject(err) : resolve();
-      });  
-    });
+    return asyncifyNode(cb => fs.writeFile(path, content, cb));
   }
 
   function setupDataSource(options) {
-    var factory = FileDataSource(options);
+    var factory = FileDataSource(Object.assign({ logger: logger }, options));
     var ds = factory({ featureStore: store });
     dataSources.push(ds);
     return ds;
@@ -216,10 +212,12 @@ describe('FileDataSource', function() {
 
     await sleepAsync(200);
     await replaceFileContent(path, segmentOnlyJson);
-    await sleepAsync(200);
+    await sleepAsync(4000); // the long wait here is to see if we get any spurious reloads (ch32123)
 
     items = await asyncify(cb => store.all(dataKind.segments, cb));
     expect(Object.keys(items).length).toEqual(1);
+
+    expect(logger.warn.mock.calls.length).toEqual(1); // we call logger.warn() once for each reload
   });
 
   it('evaluates simplified flag with client as expected', async () => {
