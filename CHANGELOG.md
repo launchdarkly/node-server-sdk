@@ -2,6 +2,16 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.7.2] - 2019-02-22
+### Fixed:
+- Calling `identify()` or `track()` with no user object, or with a user that has no key, will now cause the SDK to log a warning (as the other SDKs do). The SDK no longer sends an analytics event in this case, since LaunchDarkly would discard the event as invalid anyway. Also, previously, calling `identify()` with no user object would throw an exception.
+- `FileDataSource`, in auto-update mode, could sometimes reload files more than once when they were only modified once (due to a known issue with Node's `fs.watch`). This should no longer happen. ([#138](https://github.com/launchdarkly/node-client/issues/138))
+- Fixed dependency vulnerabilities flagged by `npm audit`. These were all for test-only dependencies, so would not affect production code.
+- Previously, CI tests were only running on Linux. We have added a CI test suite that runs on Windows, using the latest stable version of Node.
+- A supported user property, `privateAttributeNames`, was not usable from TypeScript because it was omitted from the TypeScript declarations.
+- In TypeScript, asynchronous methods that can either take a callback or return a Promise were not usable in the Promise style, because the return types were declared incorrectly. ([#141](https://github.com/launchdarkly/node-client/issues/141))
+- Some TypeScript declarations that used `type` now use `interface` instead, except for `LDFlagValue` which is a type alias. This should not affect regular usage of the SDK in TypeScript, but it is easier to extend an `interface` than a `type` if desired.
+
 ## [5.7.1] - 2019-01-16
 
 Changes are only in test code used by other libraries. There is no need to upgrade to this release.
