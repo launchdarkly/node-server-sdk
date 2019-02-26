@@ -350,18 +350,8 @@ var newClient = function(sdkKey, config) {
       config.logger.warn(messages.missingUserKeyNoEvent());
       return;
     }
-
     sanitizeUser(user);
-    var event = {"key": eventName,
-                "user": user,
-                "kind": "custom",
-                "creationDate": new Date().getTime()};
-
-    if (data) {
-      event.data = data;
-    }
-
-    eventProcessor.sendEvent(event);
+    eventProcessor.sendEvent(eventFactoryDefault.newCustomEvent(eventName, user, data));
   };
 
   client.identify = function(user) {
@@ -369,13 +359,8 @@ var newClient = function(sdkKey, config) {
       config.logger.warn(messages.missingUserKeyNoEvent());
       return;
     }
-
     sanitizeUser(user);
-    var event = {"key": user.key,
-                 "kind": "identify",
-                 "user": user,
-                 "creationDate": new Date().getTime()};
-    eventProcessor.sendEvent(event);
+    eventProcessor.sendEvent(eventFactoryDefault.newIdentifyEvent(user));
   };
 
   client.flush = function(callback) {

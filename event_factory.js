@@ -86,6 +86,28 @@ function EventFactory(withReasons) {
     return e;
   };
 
+  ef.newIdentifyEvent = function(user) {
+    return {
+      kind: 'identify',
+      creationDate: new Date().getTime(),
+      key: user.key,
+      user: user
+    };
+  };
+
+  ef.newCustomEvent = function(eventName, user, data) {
+    var e = {
+      kind: 'custom',
+      creationDate: new Date().getTime(),
+      key: eventName,
+      user: user
+    };
+    if (data) {
+      e.data = data;
+    }
+    return e;
+  };
+
   return ef;
 }
 
