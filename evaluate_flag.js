@@ -10,7 +10,7 @@ var noop = function(){};
 
 // Callback receives (err, detail, events) where detail has the properties "value", "variationIndex", and "reason";
 // detail will never be null even if there's an error.
-function evaluate(flag, user, featureStore, cb) {
+function evaluate(flag, user, featureStore, eventFactory, cb) {
   cb = cb || noop;
   if (!user || user.key === null || user.key === undefined) {
     cb(null, errorResult('USER_NOT_SPECIFIED'), []);
@@ -23,12 +23,12 @@ function evaluate(flag, user, featureStore, cb) {
   }
 
   var events = [];
-  evalInternal(flag, user, featureStore, events, function(err, detail) {
+  evalInternal(flag, user, featureStore, events, eventFactory, function(err, detail) {
     cb(err, detail, events);
   });
 }
 
-function evalInternal(flag, user, featureStore, events, cb) {
+function evalInternal(flag, user, featureStore, events, eventFactory, cb) {
   // If flag is off, return the off variation
   if (!flag.on) {
     getOffResult(flag, { kind: 'OFF' }, function(err, detail) {
@@ -37,7 +37,7 @@ function evalInternal(flag, user, featureStore, events, cb) {
     return;
   }
 
-  checkPrerequisites(flag, user, featureStore, events, function(err, failureReason) {
+  checkPrerequisites(flag, user, featureStore, events, eventFactory, function(err, failureReason) {
     if (err != null || failureReason != null) {
       getOffResult(flag, failureReason, cb);
     } else {
@@ -47,24 +47,24 @@ function evalInternal(flag, user, featureStore, events, cb) {
 }
 
 // Callback receives (err, reason) where reason is null if successful, or a "prerequisite failed" reason
-function checkPrerequisites(flag, user, featureStore, events, cb) {
+function checkPrerequisites(flag, user, featureStore, events, eventFactory, cb) {
   if (flag.prerequisites) {
     async.mapSeries(flag.prerequisites, 
       function(prereq, callback) {
-        featureStore.get(dataKind.features, prereq.key, function(f) {
+        featureStore.get(dataKind.features, prereq.key, function(prereqFlag) {
           // If the flag does not exist in the store or is not on, the prerequisite
           // is not satisfied
-          if (!f) {
+          if (!prereqFlag) {
             callback({ key: prereq.key, err: new Error("Could not retrieve prerequisite feature flag \"" + prereq.key + "\"") });
             return;
           }
-          evalInternal(f, user, featureStore, events, function(err, detail) {
+          evalInternal(prereqFlag, user, featureStore, events, eventFactory, function(err, detail) {
             // If there was an error, the value is null, the variation index is out of range, 
             // or the value does not match the indexed variation the prerequisite is not satisfied
-            events.push(createFlagEvent(f.key, f, user, detail, null, flag.key, true));
+            events.push(eventFactory.newEvalEvent(prereqFlag, user, detail, null, flag));
             if (err) {
               callback({ key: prereq.key, err: err });
-            } else if (!f.on || detail.variationIndex != prereq.variation) {
+            } else if (!prereqFlag.on || detail.variationIndex != prereq.variation) {
               // Note that if the prerequisite flag is off, we don't consider it a match no matter what its
               // off variation was. But we still evaluate it and generate an event.
               callback({ key: prereq.key });
@@ -360,24 +360,4 @@ function bucketableStringValue(value) {
   return null;
 }
 
-function createFlagEvent(key, flag, user, detail, defaultVal, prereqOf, includeReason) {
-  var e = {
-    "kind": "feature",
-    "key": key,
-    "user": user,
-    "variation": detail.variationIndex,
-    "value": detail.value,
-    "default": defaultVal,
-    "creationDate": new Date().getTime(),
-    "version": flag ? flag.version : null,
-    "prereqOf": prereqOf,
-    "trackEvents": flag ? flag.trackEvents : null,
-    "debugEventsUntilDate": flag ? flag.debugEventsUntilDate : null
-  };
-  if (includeReason) {
-    e['reason'] = detail.reason;
-  }
-  return e;
-}
-
-module.exports = {evaluate: evaluate, bucketUser: bucketUser, createFlagEvent: createFlagEvent};
+module.exports = {evaluate: evaluate, bucketUser: bucketUser};

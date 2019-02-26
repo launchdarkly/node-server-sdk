@@ -3,6 +3,7 @@ var RedisFeatureStore = require('./redis_feature_store');
 var FileDataSource = require('./file_data_source');
 var Requestor = require('./requestor');
 var EventEmitter = require('events').EventEmitter;
+var EventFactory = require('./event_factory');
 var EventProcessor = require('./event_processor');
 var PollingProcessor = require('./polling');
 var StreamingProcessor = require('./streaming');
@@ -58,7 +59,9 @@ var newClient = function(sdkKey, config) {
       failure,
       requestor,
       updateProcessor,
-      eventProcessor;
+      eventProcessor,
+      eventFactoryDefault,
+      eventFactoryWithReasons;
 
   config = configuration.validate(config);
   
@@ -70,6 +73,9 @@ var newClient = function(sdkKey, config) {
   config.featureStore = FeatureStoreEventWrapper(config.featureStore, client);
 
   var maybeReportError = createErrorReporter(client, config.logger);
+
+  eventFactoryDefault = EventFactory(false);
+  eventFactoryWithReasons = EventFactory(true);
 
   if (config.eventProcessor) {
     eventProcessor = config.eventProcessor;
@@ -163,7 +169,7 @@ var newClient = function(sdkKey, config) {
 
   client.variation = function(key, user, defaultVal, callback) {
     return wrapPromiseCallback(new Promise(function(resolve, reject) {
-      evaluateIfPossible(key, user, defaultVal, false,
+      evaluateIfPossible(key, user, defaultVal, eventFactoryDefault,
         function(detail) {
           resolve(detail.value)
         },
@@ -173,7 +179,7 @@ var newClient = function(sdkKey, config) {
 
   client.variationDetail = function(key, user, defaultVal, callback) {
     return wrapPromiseCallback(new Promise(function(resolve, reject) {
-      evaluateIfPossible(key, user, defaultVal, true, resolve, reject);
+      evaluateIfPossible(key, user, defaultVal, eventFactoryWithReasons, resolve, reject);
     }.bind(this)), callback);
   };
 
@@ -181,27 +187,27 @@ var newClient = function(sdkKey, config) {
     return { value: defaultVal, variationIndex: null, reason: { kind: 'ERROR', errorKind: errorKind } };
   };
 
-  function evaluateIfPossible(key, user, defaultVal, includeReasonsInEvents, resolve, reject) {
+  function evaluateIfPossible(key, user, defaultVal, eventFactory, resolve, reject) {
     if (!initComplete) {
       config.featureStore.initialized(function(storeInited) {
         if (storeInited) {
           config.logger.warn("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using last known values from feature store")
-          variationInternal(key, user, defaultVal, includeReasonsInEvents, resolve, reject);
+          variationInternal(key, user, defaultVal, eventFactory, resolve, reject);
         } else {
           var err = new errors.LDClientError("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using default value");
           maybeReportError(err);
           var result = errorResult('CLIENT_NOT_READY', defaultVal);
-          sendFlagEvent(key, null, user, result, defaultVal, includeReasonsInEvents);
+          eventProcessor.sendEvent(eventFactory.newUnknownFlagEvent(key, user, result));
           return resolve(result);
         }
       });
     } else {
-      variationInternal(key, user, defaultVal, includeReasonsInEvents, resolve, reject);
+      variationInternal(key, user, defaultVal, eventFactory, resolve, reject);
     }
   }
 
   // resolves to a "detail" object with properties "value", "variationIndex", "reason"
-  function variationInternal(key, user, defaultVal, includeReasonsInEvents, resolve, reject) {
+  function variationInternal(key, user, defaultVal, eventFactory, resolve, reject) {
     if (client.isOffline()) {
       config.logger.info("Variation called in offline mode. Returning default value.");
       return resolve(errorResult('CLIENT_NOT_READY', defaultVal));
@@ -219,25 +225,23 @@ var newClient = function(sdkKey, config) {
     }
 
     config.featureStore.get(dataKind.features, key, function(flag) {
-      if (!user) {
-        var variationErr = new errors.LDClientError('No user specified. Returning default value.');
-        maybeReportError(variationErr);
-        var result = errorResult('USER_NOT_SPECIFIED', defaultVal);
-        sendFlagEvent(key, flag, user, result, defaultVal, includeReasonsInEvents);
-        return resolve(result);
-      }
 
       if (!flag) {
         maybeReportError(new errors.LDClientError('Unknown feature flag "' + key + '"; returning default value'));
         var result = errorResult('FLAG_NOT_FOUND', defaultVal);
-        sendFlagEvent(key, null, user, result, defaultVal, includeReasonsInEvents);
+        eventProcessor.sendEvent(eventFactory.newUnknownFlagEvent(key, user, result));
         return resolve(result);
       }
 
-      evaluate.evaluate(flag, user, config.featureStore, function(err, detail, events) {
-        var i;
-        var version = flag ? flag.version : null;
+      if (!user) {
+        var variationErr = new errors.LDClientError('No user specified. Returning default value.');
+        maybeReportError(variationErr);
+        var result = errorResult('USER_NOT_SPECIFIED', defaultVal);
+        eventProcessor.sendEvent(eventFactory.newDefaultEvent(flag, user, result));
+        return resolve(result);
+      }
 
+      evaluate.evaluate(flag, user, config.featureStore, eventFactory, function(err, detail, events) {
         if (err) {
           maybeReportError(new errors.LDClientError('Encountered error evaluating feature flag:' + (err.message ? (': ' + err.message) : err)));
         }
@@ -245,7 +249,7 @@ var newClient = function(sdkKey, config) {
         // Send off any events associated with evaluating prerequisites. The events
         // have already been constructed, so we just have to push them onto the queue.
         if (events) {
-          for (i = 0; i < events.length; i++) {
+          for (var i = 0; i < events.length; i++) {
             var e = events[i];
             if (!includeReasonsInEvents) {
               delete e['reason'];
@@ -258,7 +262,7 @@ var newClient = function(sdkKey, config) {
           config.logger.debug("Result value is null in variation");
           detail.value = defaultVal;
         }
-        sendFlagEvent(key, flag, user, detail, defaultVal, includeReasonsInEvents);
+        eventProcessor.sendEvent(eventFactory.newEvalEvent(flag, user, detail, defaultVal));
         return resolve(detail);
       });
     });
@@ -308,7 +312,7 @@ var newClient = function(sdkKey, config) {
             setImmediate(iterateeCb);
           } else {
             // At the moment, we don't send any events here
-            evaluate.evaluate(flag, user, config.featureStore, function(err, detail, events) {
+            evaluate.evaluate(flag, user, config.featureStore, eventFactoryDefault, function(err, detail, events) {
               if (err != null) {
                 maybeReportError(new Error('Error for feature flag "' + flag.key + '" while evaluating all flags: ' + err));
               }
@@ -377,11 +381,6 @@ var newClient = function(sdkKey, config) {
   client.flush = function(callback) {
     return eventProcessor.flush(callback);
   };
-
-  function sendFlagEvent(key, flag, user, detail, defaultVal, includeReasonsInEvents) {
-    var event = evaluate.createFlagEvent(key, flag, user, detail, defaultVal, null, includeReasonsInEvents);
-    eventProcessor.sendEvent(event);
-  }
 
   function userExistsAndHasKey(user) {
     if (user) {
