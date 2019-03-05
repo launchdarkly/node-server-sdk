@@ -359,7 +359,7 @@ declare module 'ldclient-node' {
      * If provided, this attribute is incorporated into generating
      * a variation in percentage rollouts.
      */
-    secondary: string;
+    secondary?: string;
 
     /**
      * The user's name.
