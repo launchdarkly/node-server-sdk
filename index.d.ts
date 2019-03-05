@@ -356,6 +356,12 @@ declare module 'ldclient-node' {
     key: string;
 
     /**
+     * If provided, this attribute is incorporated into generating
+     * a variation in percentage rollouts.
+     */
+    secondary: string;
+
+    /**
      * The user's name.
      *
      * You can search for users on the User page by name.
