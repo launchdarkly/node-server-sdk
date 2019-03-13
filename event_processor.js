@@ -184,8 +184,8 @@ function EventProcessor(sdkKey, config, errorReporter) {
       }
     }
 
-    request({
-      method: "POST",
+    var options = Object.assign({}, config.tlsOptions, {
+      method: 'POST',
       url: config.eventsUri + '/bulk',
       headers: {
         'Authorization': sdkKey,
@@ -196,7 +196,8 @@ function EventProcessor(sdkKey, config, errorReporter) {
       body: events,
       timeout: config.timeout * 1000,
       agent: config.proxyAgent
-    }).on('response', function(resp, body) {
+    });
+    request(options).on('response', function(resp, body) {
       if (resp.headers['date']) {
         var date = Date.parse(resp.headers['date']);
         if (date) {

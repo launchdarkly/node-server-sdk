@@ -19,7 +19,8 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
     es = new eventSourceFactory(config.streamUri + "/all", 
       {
         agent: config.proxyAgent, 
-        headers: {'Authorization': sdkKey,'User-Agent': config.userAgent}
+        headers: {'Authorization': sdkKey,'User-Agent': config.userAgent},
+        tlsOptions: config.tlsOptions
       });
       
     es.onerror = function(err) {

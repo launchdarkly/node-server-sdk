@@ -90,6 +90,9 @@ function EventSource(url, eventSourceInitDict) {
     }
 
     options.rejectUnauthorized = !(eventSourceInitDict && eventSourceInitDict.rejectUnauthorized == false);
+    if (eventSourceInitDict && eventSourceInitDict.tlsOptions) {
+      Object.assign(options, eventSourceInitDict.tlsOptions); // these options are ignored if we're not using HTTPS
+    }
 
     req = (isSecure ? https : http).request(options, function (res) {
       // Handle HTTP redirects
