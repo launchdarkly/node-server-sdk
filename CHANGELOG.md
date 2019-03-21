@@ -2,6 +2,14 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.7.3] - 2019-03-21
+### Changed:
+- The default value for the configuration property `capacity` (maximum number of events that can be stored at once) is now 10000, consistent with the other SDKs, rather than 1000.
+
+### Fixed:
+- A missing `var` keyword could cause an error in strict mode when evaluating a flag with rollouts. (Thanks, [phillipb](https://github.com/launchdarkly/node-client/pull/145)!)
+- The user attribute `secondary` was not included in the TypeScript declarations and therefore could not be used from TypeScript code.
+
 ## [5.7.2] - 2019-02-22
 ### Fixed:
 - Calling `identify()` or `track()` with no user object, or with a user that has no key, will now cause the SDK to log a warning (as the other SDKs do). The SDK no longer sends an analytics event in this case, since LaunchDarkly would discard the event as invalid anyway. Also, previously, calling `identify()` with no user object would throw an exception.
