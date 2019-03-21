@@ -12,7 +12,7 @@ module.exports = (function() {
       stream: true,
       sendEvents: true,
       timeout: 5,
-      capacity: 1000,
+      capacity: 10000,
       flushInterval: 5,
       pollInterval: 30,
       offline: false,
