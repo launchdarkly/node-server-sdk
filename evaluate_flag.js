@@ -49,7 +49,7 @@ function evalInternal(flag, user, featureStore, events, cb) {
 // Callback receives (err, reason) where reason is null if successful, or a "prerequisite failed" reason
 function checkPrerequisites(flag, user, featureStore, events, cb) {
   if (flag.prerequisites) {
-    async.mapSeries(flag.prerequisites, 
+    async.mapSeries(flag.prerequisites,
       function(prereq, callback) {
         featureStore.get(dataKind.features, prereq.key, function(f) {
           // If the flag does not exist in the store or is not on, the prerequisite
@@ -59,7 +59,7 @@ function checkPrerequisites(flag, user, featureStore, events, cb) {
             return;
           }
           evalInternal(f, user, featureStore, events, function(err, detail) {
-            // If there was an error, the value is null, the variation index is out of range, 
+            // If there was an error, the value is null, the variation index is out of range,
             // or the value does not match the indexed variation the prerequisite is not satisfied
             events.push(createFlagEvent(f.key, f, user, detail, null, flag.key, true));
             if (err) {
@@ -68,13 +68,13 @@ function checkPrerequisites(flag, user, featureStore, events, cb) {
               // Note that if the prerequisite flag is off, we don't consider it a match no matter what its
               // off variation was. But we still evaluate it and generate an event.
               callback({ key: prereq.key });
-            } else { 
+            } else {
               // The prerequisite was satisfied
               callback(null);
             }
-          });          
+          });
         });
-      }, 
+      },
       function(errInfo) {
         if (errInfo) {
           cb(errInfo.err, { 'kind': 'PREREQUISITE_FAILED', 'prerequisiteKey': errInfo.key });
@@ -301,12 +301,12 @@ function variationForUser(r, user, flag) {
     // This represets a fixed variation; return it
     return r.variation;
   } else if (r.rollout != null) {
-    // This represents a percentage rollout. Assume 
+    // This represents a percentage rollout. Assume
     // we're rolling out by key
     bucketBy = r.rollout.bucketBy != null ? r.rollout.bucketBy : "key";
     bucket = bucketUser(user, flag.key, bucketBy, flag.salt);
     for (i = 0; i < r.rollout.variations.length; i++) {
-      variate = r.rollout.variations[i];
+      var variate = r.rollout.variations[i];
       sum += variate.weight / 100000.0;
       if (bucket < sum) {
         return variate.variation;
@@ -322,7 +322,7 @@ function variationForUser(r, user, flag) {
 function userValue(user, attr) {
   if (builtins.indexOf(attr) >= 0 && user.hasOwnProperty(attr)) {
     return user[attr];
-  } 
+  }
   if (user.custom && user.custom.hasOwnProperty(attr)) {
     return user.custom[attr];
   }
