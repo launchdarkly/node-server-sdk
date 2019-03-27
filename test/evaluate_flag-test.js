@@ -1,8 +1,10 @@
 var evaluate = require('../evaluate_flag');
+var EventFactory = require('../event_factory');
 var InMemoryFeatureStore = require('../feature_store');
 var dataKind = require('../versioned_data_kind');
 
 var featureStore = new InMemoryFeatureStore();
+var eventFactory = EventFactory(false);
 
 function defineFeatures(features, cb) {
   var data = {};
@@ -20,12 +22,6 @@ function defineSegment(segment, cb) {
   data[dataKind.segments.namespace][segment.key] = segment;
   featureStore.init(data);
   setTimeout(cb, 0);
-}
-
-function evalBooleanFlag(flag, user, cb) {
-  evaluate.evaluate(flag, user, featureStore, function(err, result) {
-    cb(result);
-  });
 }
 
 function makeFlagWithRules(rules, fallthrough) {
@@ -73,7 +69,7 @@ describe('evaluate', function() {
       variations: ['a', 'b', 'c']
     };
     var user = { key: 'x' };
-    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+    evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail, events) {
       expect(detail).toMatchObject({ value: 'b', variationIndex: 1, reason: { kind: 'OFF' } });
       expect(events).toMatchObject([]);
       done();
@@ -88,7 +84,7 @@ describe('evaluate', function() {
       variations: ['a', 'b', 'c']
     };
     var user = { key: 'x' };
-    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+    evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail, events) {
       expect(detail).toMatchObject({ value: null, variationIndex: null, reason: { kind: 'OFF' } });
       expect(events).toMatchObject([]);
       done();
@@ -104,7 +100,7 @@ describe('evaluate', function() {
       variations: ['a', 'b', 'c']
     };
     var user = { key: 'x' };
-    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+    evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail, events) {
       expect(err).toEqual(Error('Invalid variation index in flag'));
       expect(detail).toMatchObject({ value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: 'MALFORMED_FLAG' } });
       expect(events).toMatchObject([]);
@@ -121,7 +117,7 @@ describe('evaluate', function() {
       variations: ['a', 'b', 'c']
     };
     var user = { key: 'x' };
-    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+    evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail, events) {
       expect(err).toEqual(Error('Invalid variation index in flag'));
       expect(detail).toMatchObject({ value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: 'MALFORMED_FLAG' } });
       expect(events).toMatchObject([]);
@@ -133,7 +129,7 @@ describe('evaluate', function() {
     var rule = { id: 'id', clauses: [{ attribute: 'key', op: 'in', values: ['other'] }], variation: 2 };
     var flag = makeFlagWithRules([rule], { variation: 0 });
     var user = { key: 'x' };
-    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+    evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail, events) {
       expect(detail).toMatchObject({ value: 'a', variationIndex: 0, reason: { kind: 'FALLTHROUGH' } });
       expect(events).toMatchObject([]);
       done();
@@ -144,7 +140,7 @@ describe('evaluate', function() {
     var rule = { id: 'id', clauses: [{ attribute: 'key', op: 'in', values: ['other'] }], variation: 99 };
     var flag = makeFlagWithRules([rule], { variation: 99 });
     var user = { key: 'x' };
-    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+    evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail, events) {
       expect(err).toEqual(Error('Invalid variation index in flag'));
       expect(detail).toMatchObject({ value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: 'MALFORMED_FLAG' }});
       expect(events).toMatchObject([]);
@@ -156,7 +152,7 @@ describe('evaluate', function() {
     var rule = { id: 'id', clauses: [{ attribute: 'key', op: 'in', values: ['other'] }], variation: 99 };
     var flag = makeFlagWithRules([rule], { variation: -1 });
     var user = { key: 'x' };
-    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+    evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail, events) {
       expect(err).toEqual(Error('Invalid variation index in flag'));
       expect(detail).toMatchObject({ value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: 'MALFORMED_FLAG' }});
       expect(events).toMatchObject([]);
@@ -168,7 +164,7 @@ describe('evaluate', function() {
     var rule = { id: 'id', clauses: [{ attribute: 'key', op: 'in', values: ['other'] }], variation: 99 };
     var flag = makeFlagWithRules([rule], { });
     var user = { key: 'x' };
-    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+    evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail, events) {
       expect(err).toEqual(Error('Variation/rollout object with no variation or rollout'));
       expect(detail).toMatchObject({ value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: 'MALFORMED_FLAG' }});
       expect(events).toMatchObject([]);
@@ -180,7 +176,7 @@ describe('evaluate', function() {
     var rule = { id: 'id', clauses: [{ attribute: 'key', op: 'in', values: ['other'] }], variation: 99 };
     var flag = makeFlagWithRules([rule], { rollout: { variations: [] } });
     var user = { key: 'x' };
-    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+    evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail, events) {
       expect(err).toEqual(Error('Variation/rollout object with no variation or rollout'));
       expect(detail).toMatchObject({ value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: 'MALFORMED_FLAG' }});
       expect(events).toMatchObject([]);
@@ -198,7 +194,7 @@ describe('evaluate', function() {
       variations: ['a', 'b', 'c']
     };
     var user = { key: 'x' };
-    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+    evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail, events) {
       expect(detail).toMatchObject({ value: 'b', variationIndex: 1,
         reason: { kind: 'PREREQUISITE_FAILED', prerequisiteKey: 'badfeature' } });
       expect(events).toMatchObject([]);
@@ -234,7 +230,7 @@ describe('evaluate', function() {
       var eventsShouldBe = [
         { kind: 'feature', key: 'feature1', variation: 1, value: 'e', version: 2, prereqOf: 'feature0' }
       ];
-      evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+      evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail, events) {
         expect(detail).toMatchObject({ value: 'b', variationIndex: 1,
           reason: { kind: 'PREREQUISITE_FAILED', prerequisiteKey: 'feature1' } });
         expect(events).toMatchObject(eventsShouldBe);
@@ -269,7 +265,7 @@ describe('evaluate', function() {
       var eventsShouldBe = [
         { kind: 'feature', key: 'feature1', variation: 0, value: 'd', version: 2, prereqOf: 'feature0' }
       ];
-      evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+      evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail, events) {
         expect(detail).toMatchObject({ value: 'b', variationIndex: 1,
           reason: { kind: 'PREREQUISITE_FAILED', prerequisiteKey: 'feature1' } });
         expect(events).toMatchObject(eventsShouldBe);
@@ -304,7 +300,7 @@ describe('evaluate', function() {
       var eventsShouldBe = [
         { kind: 'feature', key: 'feature1', variation: 1, value: 'e', version: 2, prereqOf: 'feature0' }
       ];
-      evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+      evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail, events) {
         expect(detail).toMatchObject({ value: 'a', variationIndex: 0, reason: { kind: 'FALLTHROUGH' } });
         expect(events).toMatchObject(eventsShouldBe);
         done();
@@ -316,7 +312,7 @@ describe('evaluate', function() {
     var rule = { id: 'id', clauses: [{ attribute: 'key', op: 'in', values: ['userkey'] }], variation: 2 };
     var flag = makeFlagWithRules([rule]);
     var user = { key: 'userkey' };
-    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+    evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail, events) {
       expect(detail).toMatchObject({ value: 'c', variationIndex: 2,
         reason: { kind: 'RULE_MATCH', ruleIndex: 0, ruleId: 'id' } });
       expect(events).toMatchObject([]);
@@ -328,7 +324,7 @@ describe('evaluate', function() {
     var rule = { id: 'id', clauses: [{ attribute: 'key', op: 'in', values: ['userkey'] }], variation: 99 };
     var flag = makeFlagWithRules([rule]);
     var user = { key: 'userkey' };
-    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+    evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail, events) {
       expect(err).toEqual(Error('Invalid variation index in flag'));
       expect(detail).toMatchObject({ value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: 'MALFORMED_FLAG' }});
       expect(events).toMatchObject([]);
@@ -340,7 +336,7 @@ describe('evaluate', function() {
     var rule = { id: 'id', clauses: [{ attribute: 'key', op: 'in', values: ['userkey'] }], variation: -1 };
     var flag = makeFlagWithRules([rule]);
     var user = { key: 'userkey' };
-    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+    evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail, events) {
       expect(err).toEqual(Error('Invalid variation index in flag'));
       expect(detail).toMatchObject({ value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: 'MALFORMED_FLAG' }});
       expect(events).toMatchObject([]);
@@ -352,7 +348,7 @@ describe('evaluate', function() {
     var rule = { id: 'id', clauses: [{ attribute: 'key', op: 'in', values: ['userkey'] }] };
     var flag = makeFlagWithRules([rule]);
     var user = { key: 'userkey' };
-    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+    evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail, events) {
       expect(err).toEqual(Error('Variation/rollout object with no variation or rollout'));
       expect(detail).toMatchObject({ value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: 'MALFORMED_FLAG' }});
       expect(events).toMatchObject([]);
@@ -364,7 +360,7 @@ describe('evaluate', function() {
     var rule = { id: 'id', clauses: [{ attribute: 'key', op: 'in', values: ['userkey'] }], rollout: { variations: [] } };
     var flag = makeFlagWithRules([rule]);
     var user = { key: 'userkey' };
-    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+    evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail, events) {
       expect(err).toEqual(Error('Variation/rollout object with no variation or rollout'));
       expect(detail).toMatchObject({ value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: 'MALFORMED_FLAG' }});
       expect(events).toMatchObject([]);
@@ -388,7 +384,7 @@ describe('evaluate', function() {
       variations: ['a', 'b', 'c']
     };
     var user = { key: 'userkey' };
-    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+    evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail, events) {
       expect(detail).toMatchObject({ value: 'c', variationIndex: 2, reason: { kind: 'TARGET_MATCH' } });
       expect(events).toMatchObject([]);
       done();
@@ -397,7 +393,7 @@ describe('evaluate', function() {
 
   function testClauseMatch(clause, user, shouldBe, done) {
     var flag = makeBooleanFlagWithOneClause(clause);
-    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+    evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail, events) {
       expect(detail.value).toBe(shouldBe);
       done();
     });
@@ -436,7 +432,7 @@ describe('evaluate', function() {
     defineSegment(segment, function() {
       var flag = makeFlagWithSegmentMatch(segment);
       var user = { key: 'foo' };
-      evaluate.evaluate(flag, user, featureStore, function(err, detail) {
+      evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail) {
         expect(detail.value).toBe(true);
         done();
       });
@@ -452,7 +448,7 @@ describe('evaluate', function() {
     defineSegment(segment, function() {
       var flag = makeFlagWithSegmentMatch(segment);
       var user = { key: 'foo' };
-      evaluate.evaluate(flag, user, featureStore, function(err, detail) {
+      evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail) {
         expect(detail.value).toBe(false);
         done();
       });
@@ -468,7 +464,7 @@ describe('evaluate', function() {
     defineSegment(segment, function() {
       var flag = makeFlagWithSegmentMatch(segment);
       var user = { key: 'bar' };
-      evaluate.evaluate(flag, user, featureStore, function(err, detail) {
+      evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail) {
         expect(detail.value).toBe(false);
         done();
       });
@@ -485,7 +481,7 @@ describe('evaluate', function() {
     defineSegment(segment, function() {
       var flag = makeFlagWithSegmentMatch(segment);
       var user = { key: 'foo' };
-      evaluate.evaluate(flag, user, featureStore, function(err, detail) {
+      evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail) {
         expect(detail.value).toBe(true);
         done();
       });
@@ -512,7 +508,7 @@ describe('evaluate', function() {
     defineSegment(segment, function() {
       var flag = makeFlagWithSegmentMatch(segment);
       var user = { key: 'foo', email: 'test@example.com' };
-      evaluate.evaluate(flag, user, featureStore, function(err, detail) {
+      evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail) {
         expect(detail.value).toBe(true);
         done();
       });
@@ -539,7 +535,7 @@ describe('evaluate', function() {
     defineSegment(segment, function() {
       var flag = makeFlagWithSegmentMatch(segment);
       var user = { key: 'foo', email: 'test@example.com' };
-      evaluate.evaluate(flag, user, featureStore, function(err, detail) {
+      evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail) {
         expect(detail.value).toBe(false);
         done();
       });
@@ -570,7 +566,7 @@ describe('evaluate', function() {
     defineSegment(segment, function() {
       var flag = makeFlagWithSegmentMatch(segment);
       var user = { key: 'foo', email: 'test@example.com', name: 'bob' };
-      evaluate.evaluate(flag, user, featureStore, function(err, detail) {
+      evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail) {
         expect(detail.value).toBe(true);
         done();
       });
@@ -601,7 +597,7 @@ describe('evaluate', function() {
     defineSegment(segment, function() {
       var flag = makeFlagWithSegmentMatch(segment);
       var user = { key: 'foo', email: 'test@example.com', name: 'bob' };
-      evaluate.evaluate(flag, user, featureStore, function(err, detail) {
+      evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail) {
         expect(detail.value).toBe(false);
         done();
       });
@@ -629,7 +625,7 @@ describe('evaluate', function() {
       rules.push({ clauses: [clause], variation: 1 });
     }
     flag.rules = rules;
-    evaluate.evaluate(flag, {key: 'user'}, featureStore, function(err, detail) {
+    evaluate.evaluate(flag, {key: 'user'}, featureStore, eventFactory, function(err, detail) {
       expect(err).toEqual(null);
       expect(detail.value).toEqual(false);
       done();
@@ -658,7 +654,7 @@ describe('evaluate', function() {
     }
     var rule = { clauses: clauses, variation: 1 };
     flag.rules = [rule];
-    evaluate.evaluate(flag, {key: 'user'}, featureStore, function(err, detail) {
+    evaluate.evaluate(flag, {key: 'user'}, featureStore, eventFactory, function(err, detail) {
       expect(err).toEqual(null);
       expect(detail.value).toEqual(true);
       done();
