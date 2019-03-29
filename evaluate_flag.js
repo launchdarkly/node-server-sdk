@@ -345,7 +345,7 @@ function bucketUser(user, key, attr, salt) {
     return 0;
   }
 
-  if (user.secondary !== null && user.secondary !== undefined) {
+  if (user.secondary) {
     idHash += "." + user.secondary;
   }
 
