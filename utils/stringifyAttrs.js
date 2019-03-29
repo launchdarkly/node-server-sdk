@@ -1,5 +1,8 @@
 
 module.exports = function stringifyAttrs(object, attrs) {
+  if (!object) {
+    return object;
+  }
   var newObject;
   for (var i in attrs) {
     var attr = attrs[i];
