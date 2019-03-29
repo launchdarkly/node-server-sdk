@@ -22,12 +22,6 @@ function defineSegment(segment, cb) {
   setTimeout(cb, 0);
 }
 
-function evalBooleanFlag(flag, user, cb) {
-  evaluate.evaluate(flag, user, featureStore, function(err, result) {
-    cb(result);
-  });
-}
-
 function makeFlagWithRules(rules, fallthrough) {
   if (!fallthrough) {
     fallthrough = { variation: 0 };
@@ -43,19 +37,23 @@ function makeFlagWithRules(rules, fallthrough) {
   };
 }
 
-function makeBooleanFlagWithOneClause(clause) {
+function makeBooleanFlagWithRules(rules) {
   return {
-      key: 'feature',
-      on: true,
-      prerequisites: [],
-      rules: [ { clauses: [ clause ], variation: 1 } ],
-      targets: [],
-      salt: "",
-      fallthrough: { variation: 0 },
-      offVariation: 0,
-      variations: [ false, true ],
-      version: 1
-    };
+    key: 'feature',
+    on: true,
+    prerequisites: [],
+    rules: rules,
+    targets: [],
+    salt: "",
+    fallthrough: { variation: 0 },
+    offVariation: 0,
+    variations: [ false, true ],
+    version: 1
+  };
+}
+
+function makeBooleanFlagWithOneClause(clause) {
+  return makeBooleanFlagWithRules([ { clauses: [ clause ], variation: 1 } ]);
 }
 
 function makeFlagWithSegmentMatch(segment) {
@@ -368,6 +366,37 @@ describe('evaluate', function() {
       expect(err).toEqual(Error('Variation/rollout object with no variation or rollout'));
       expect(detail).toMatchObject({ value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: 'MALFORMED_FLAG' }});
       expect(events).toMatchObject([]);
+      done();
+    });
+  });
+
+  it('coerces user key to string', function(done) {
+    var clause = { 'attribute': 'key', 'op': 'in', 'values': [ '999' ] };
+    var flag = makeBooleanFlagWithOneClause(clause);
+    var user = { 'key': 999 };
+    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+      expect(detail.value).toBe(true);
+      done();
+    });
+  });
+
+  it('coerces secondary key to string', function(done) {
+    // We can't really verify that the rollout calculation works correctly, but we can at least
+    // make sure it doesn't error out if there's a non-string secondary value (ch35189)
+    var rule = {
+      id: 'ruleid',
+      clauses: [
+          { attribute: 'key', op: 'in', values: [ 'userkey' ] }
+      ],
+      rollout: {
+          salt:  '',
+          variations: [ { weight: 100000, variation: 1 } ]
+      }
+    };
+    var flag = makeBooleanFlagWithRules([ rule ]);
+    var user = { key: 'userkey', secondary: 999 };
+    evaluate.evaluate(flag, user, featureStore, function(err, detail, events) {
+      expect(detail.value).toBe(true);
       done();
     });
   });
