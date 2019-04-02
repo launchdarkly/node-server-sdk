@@ -2,6 +2,12 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.7.4] - 2019-04-02
+### Fixed:
+- Setting user attributes to non-string values when a string was expected would cause analytics events not to be processed. The SDK will now convert attribute values to strings as needed. ([#147](https://github.com/launchdarkly/node-client/issues/147))
+- If `track` or `identify` is called without a user, the SDK now logs a warning, and does not send an analytics event to LaunchDarkly (since it would not be processed without a user).
+
+
 ## [5.7.3] - 2019-03-21
 ### Changed:
 - The default value for the configuration property `capacity` (maximum number of events that can be stored at once) is now 10000, consistent with the other SDKs, rather than 1000.
