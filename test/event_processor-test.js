@@ -1,6 +1,5 @@
 var nock = require('nock');
 var EventProcessor = require('../event_processor');
-var EventEmitter = require('events').EventEmitter;
 
 describe('EventProcessor', function() {
 
@@ -20,6 +19,10 @@ describe('EventProcessor', function() {
   };
   var user = { key: 'userKey', name: 'Red' };
   var filteredUser = { key: 'userKey', privateAttrs: [ 'name' ] };
+  var numericUser = { key: 1, secondary: 2, ip: 3, country: 4, email: 5, firstName: 6, lastName: 7,
+    avatar: 8, name: 9, anonymous: false, custom: { age: 99 } };
+  var stringifiedNumericUser = { key: '1', secondary: '2', ip: '3', country: '4', email: '5', firstName: '6',
+    lastName: '7', avatar: '8', name: '9', anonymous: false, custom: { age: 99 } };
 
   afterEach(function() {
     if (ep) {
@@ -70,7 +73,7 @@ describe('EventProcessor', function() {
     if (inlineUser) {
       expect(e.user).toEqual(inlineUser);
     } else {
-      expect(e.userKey).toEqual(source.user.key);
+      expect(e.userKey).toEqual(String(source.user.key));
     }
   }
 
@@ -123,6 +126,22 @@ describe('EventProcessor', function() {
     });
   });
 
+  it('stringifies user attributes in identify event', function(done) {
+    ep = EventProcessor(sdkKey, defaultConfig);
+    var e = { kind: 'identify', creationDate: 1000, user: numericUser };
+    ep.sendEvent(e);
+
+    flushAndGetRequest(function(output) {
+      expect(output).toEqual([{
+        kind: 'identify',
+        creationDate: 1000,
+        key: stringifiedNumericUser.key,
+        user: stringifiedNumericUser
+      }]);
+      done();
+    });
+  });
+
   it('queues individual feature event with index event', function(done) {
     ep = EventProcessor(sdkKey, defaultConfig);
     var e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
@@ -148,6 +167,21 @@ describe('EventProcessor', function() {
     flushAndGetRequest(function(output) {
       expect(output.length).toEqual(3);
       checkIndexEvent(output[0], e, filteredUser);
+      checkFeatureEvent(output[1], e, false);
+      checkSummaryEvent(output[2]);
+      done();
+    });
+  });
+
+  it('stringifies user attributes in index event', function(done) {
+    ep = EventProcessor(sdkKey, defaultConfig);
+    var e = { kind: 'feature', creationDate: 1000, user: numericUser, key: 'flagkey',
+      version: 11, variation: 1, value: 'value', trackEvents: true };
+    ep.sendEvent(e);
+
+    flushAndGetRequest(function(output) {
+      expect(output.length).toEqual(3);
+      checkIndexEvent(output[0], e, stringifiedNumericUser);
       checkFeatureEvent(output[1], e, false);
       checkSummaryEvent(output[2]);
       done();
@@ -180,6 +214,21 @@ describe('EventProcessor', function() {
     flushAndGetRequest(function(output) {
       expect(output.length).toEqual(2);
       checkFeatureEvent(output[0], e, false, filteredUser);
+      checkSummaryEvent(output[1]);
+      done();
+    });
+  });
+
+  it('stringifies user attributes in feature event', function(done) {
+    var config = Object.assign({}, defaultConfig, { inlineUsersInEvents: true });
+    ep = EventProcessor(sdkKey, config);
+    var e = { kind: 'feature', creationDate: 1000, user: numericUser, key: 'flagkey',
+      version: 11, variation: 1, value: 'value', trackEvents: true };
+    ep.sendEvent(e);
+
+    flushAndGetRequest(function(output) {
+      expect(output.length).toEqual(2);
+      checkFeatureEvent(output[0], e, false, stringifiedNumericUser);
       checkSummaryEvent(output[1]);
       done();
     });
@@ -374,6 +423,20 @@ describe('EventProcessor', function() {
     flushAndGetRequest(function(output) {
       expect(output.length).toEqual(1);
       checkCustomEvent(output[0], e, user);
+      done();
+    });
+  });
+
+  it('stringifies user attributes in custom event', function(done) {
+    var config = Object.assign({}, defaultConfig, { inlineUsersInEvents: true });
+    ep = EventProcessor(sdkKey, config);
+    var e = { kind: 'custom', creationDate: 1000, user: numericUser, key: 'eventkey',
+      data: { thing: 'stuff' } };
+    ep.sendEvent(e);
+
+    flushAndGetRequest(function(output) {
+      expect(output.length).toEqual(1);
+      checkCustomEvent(output[0], e, stringifiedNumericUser);
       done();
     });
   });

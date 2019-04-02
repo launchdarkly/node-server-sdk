@@ -3,8 +3,12 @@ var dataKind = require('./versioned_data_kind');
 var util = require('util');
 var sha1 = require('node-sha1');
 var async = require('async');
+var stringifyAttrs = require('./utils/stringifyAttrs');
 
 var builtins = ['key', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name', 'anonymous'];
+var userAttrsToStringifyForEvaluation = [ "key", "secondary" ];
+// Currently we are not stringifying the rest of the built-in attributes prior to evaluation, only for events.
+// This is because it could affect evaluation results for existing users (ch35206).
 
 var noop = function(){};
 
@@ -22,8 +26,9 @@ function evaluate(flag, user, featureStore, cb) {
     return;
   }
 
+  var sanitizedUser = stringifyAttrs(user, userAttrsToStringifyForEvaluation);
   var events = [];
-  evalInternal(flag, user, featureStore, events, function(err, detail) {
+  evalInternal(flag, sanitizedUser, featureStore, events, function(err, detail) {
     cb(err, detail, events);
   });
 }
