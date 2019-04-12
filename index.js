@@ -213,7 +213,6 @@ var newClient = function(sdkKey, config) {
       return resolve(errorResult('FLAG_NOT_FOUND', defaultVal));
     }
 
-    sanitizeUser(user);
     if (user && user.key === "") {
       config.logger.warn("User key is blank. Flag evaluation will proceed, but the user will not be stored in LaunchDarkly");
     }
@@ -286,8 +285,6 @@ var newClient = function(sdkKey, config) {
       options = options || {};
     }
     return wrapPromiseCallback(new Promise(function(resolve, reject) {
-      sanitizeUser(user);
-      
       if (this.isOffline()) {
         config.logger.info("allFlagsState() called in offline mode. Returning empty state.");
         return resolve(FlagsStateBuilder(false).build());
@@ -347,7 +344,6 @@ var newClient = function(sdkKey, config) {
       return;
     }
 
-    sanitizeUser(user);
     var event = {"key": eventName,
                 "user": user,
                 "kind": "custom",
@@ -366,8 +362,7 @@ var newClient = function(sdkKey, config) {
       return;
     }
 
-    sanitizeUser(user);
-    var event = {"key": user.key,
+    var event = {"key": String(user.key),
                  "kind": "identify",
                  "user": user,
                  "creationDate": new Date().getTime()};
@@ -432,15 +427,5 @@ function createProxyAgent(config) {
     return tunnel.httpsOverHttp(options);
   } else {
     return tunnel.httpOverHttp(options);
-  }
-}
-
-
-function sanitizeUser(u) {
-  if (!u) {
-    return;
-  }
-  if (u['key']) {
-    u['key'] = u['key'].toString();
   }
 }

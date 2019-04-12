@@ -4,7 +4,10 @@ var EventSummarizer = require('./event_summarizer');
 var UserFilter = require('./user_filter');
 var errors = require('./errors');
 var messages = require('./messages');
+var stringifyAttrs = require('./utils/stringifyAttrs');
 var wrapPromiseCallback = require('./utils/wrapPromiseCallback');
+
+var userAttrsToStringifyForEvents = [ "key", "secondary", "ip", "country", "email", "firstName", "lastName", "avatar", "name" ];
 
 function EventProcessor(sdkKey, config, errorReporter) {
   var ep = {};
@@ -63,17 +66,17 @@ function EventProcessor(sdkKey, config, errorReporter) {
           out.reason = event.reason;
         }
         if (config.inlineUsersInEvents || debug) {
-          out.user = userFilter.filterUser(event.user);
+          out.user = processUser(event);
         } else {
-          out.userKey = event.user && event.user.key;
+          out.userKey = getUserKey(event);
         }
         return out;
       case 'identify':
         return {
           kind: 'identify',
           creationDate: event.creationDate,
-          key: event.user && event.user.key,
-          user: userFilter.filterUser(event.user)
+          key: getUserKey(event),
+          user: processUser(event)
         };
       case 'custom':
         var out = {
@@ -83,14 +86,23 @@ function EventProcessor(sdkKey, config, errorReporter) {
           data: event.data
         };
         if (config.inlineUsersInEvents) {
-          out.user = userFilter.filterUser(event.user);
+          out.user = processUser(event);
         } else {
-          out.userKey = event.user && event.user.key;
+          out.userKey = getUserKey(event);
         }
         return out;
       default:
         return event;
     }
+  }
+
+  function processUser(event) {
+    var filtered = userFilter.filterUser(event.user);
+    return stringifyAttrs(filtered, userAttrsToStringifyForEvents);
+  }
+
+  function getUserKey(event) {
+    return event.user && String(event.user.key);
   }
 
   ep.sendEvent = function(event) {
@@ -129,7 +141,7 @@ function EventProcessor(sdkKey, config, errorReporter) {
       enqueue({
         kind: 'index',
         creationDate: event.creationDate,
-        user: userFilter.filterUser(event.user)
+        user: processUser(event)
       });
     }
     if (addFullEvent) {
