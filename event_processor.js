@@ -196,7 +196,7 @@ function EventProcessor(sdkKey, config, errorReporter) {
       }
     }
 
-    var options = Object.assign({}, config.tlsOptions, {
+    var options = Object.assign({}, config.tlsParams, {
       method: 'POST',
       url: config.eventsUri + '/bulk',
       headers: {

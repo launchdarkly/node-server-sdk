@@ -23,7 +23,7 @@ function Requestor(sdkKey, config) {
   var requestWithETagCaching = new ETagRequest(cacheConfig);
 
   function makeRequest(resource) {
-    var requestParams = Object.assign({}, config.tlsOptions, {
+    var requestParams = Object.assign({}, config.tlsParams, {
       method: "GET",
       url: config.baseUri + resource,
       headers: {

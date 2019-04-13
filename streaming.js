@@ -20,7 +20,7 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
       {
         agent: config.proxyAgent, 
         headers: {'Authorization': sdkKey,'User-Agent': config.userAgent},
-        tlsOptions: config.tlsOptions
+        tlsParams: config.tlsParams
       });
       
     es.onerror = function(err) {

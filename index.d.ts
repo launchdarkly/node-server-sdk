@@ -346,17 +346,31 @@ declare module 'ldclient-node' {
     userKeysFlushInterval?: number;
 
     /**
-     * Additional parameters for controlling the behavior of secure connections.
-     *
-     * These are defined by the Node `https` API, so are not listed here, but they can be
-     * any of the options that are supported by both `https.request()` and `tls.connect()`,
-     * such as `ca`, `cert`, and `key`. For more information, see the Node API documentation
-     * for [`https.request()`](https://nodejs.org/api/https.html#https_https_request_options_callback)
-     * and [`tls.connect()`](https://nodejs.org/api/tls.html#tls_tls_connect_options_callback).
-     *
-     * These parameters affect all HTTPS requests made by the SDK.
+     * Additional parameters to pass to the Node HTTPS API for secure requests.  These can include any
+     * of the TLS-related parameters supported by `https.request()`, such as `ca`, `cert`, and `key`.
+     * 
+     * For more information, see the Node documentation for `https.request()` and `tls.connect()`.
      */
-    tlsOptions?: object;
+    tlsParams?: LDTLSOptions;
+  }
+
+  /**
+   * Additional parameters to pass to the Node HTTPS API for secure requests.  These can include any
+   * of the TLS-related parameters supported by `https.request()`, such as `ca`, `cert`, and `key`.
+   * 
+   * For more information, see the Node documentation for `https.request()` and `tls.connect()`.
+   */
+  export interface LDTLSOptions {
+    ca?: string | string[] | Buffer | Buffer[];
+    cert?: string | string[] | Buffer | Buffer[];
+    checkServerIdentity?: (servername: string, cert: any) => Error | undefined;
+    ciphers?: string;
+    pfx?: string | string[] | Buffer | Buffer[] | object[];
+    key?: string | string[] | Buffer | Buffer[] | object[];
+    passphrase?: string;
+    rejectUnauthorized?: boolean;
+    secureProtocol: string;
+    servername?: string;
   }
 
   /**
