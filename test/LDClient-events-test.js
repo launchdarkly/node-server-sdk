@@ -352,6 +352,27 @@ describe('LDClient - analytics events', () => {
         key: 'eventkey',
         user: defaultUser
       });
+      expect(e.metricValue).not.toBe(expect.anything());
+      expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    it('generates an event with a metric value', async () => {
+      var data = { thing: 'stuff' };
+      var metricValue = 1.5;
+      var logger = stubs.stubLogger();
+      var client = stubs.createClient({ eventProcessor: eventProcessor, logger: logger }, {});
+      await client.waitForInitialization();
+
+      client.track('eventkey', defaultUser, data, metricValue);
+      expect(eventProcessor.events).toHaveLength(1);
+      var e = eventProcessor.events[0];
+      expect(e).toMatchObject({
+        kind: 'custom',
+        key: 'eventkey',
+        user: defaultUser,
+        data: data,
+        metricValue: metricValue
+      });
       expect(logger.warn).not.toHaveBeenCalled();
     });
 

@@ -861,8 +861,10 @@ declare module 'ldclient-node' {
      *   The user to track.
      * @param data
      *   Optional additional information to associate with the event.
+     * @param metricValue
+     *   An optional numeric value that can be used in analytics.
      */
-    track(key: string, user: LDUser, data?: any): void;
+    track(key: string, user: LDUser, data?: any, metricValue?: number): void;
 
     /**
      * Identifies a user to LaunchDarkly.

@@ -82,6 +82,7 @@ describe('EventProcessor', function() {
     expect(e.creationDate).toEqual(source.creationDate);
     expect(e.key).toEqual(source.key);
     expect(e.data).toEqual(source.data);
+    expect(e.metricValue).toBe(source.metricValue);
     if (inlineUser) {
       expect(e.user).toEqual(inlineUser);
     } else {
@@ -403,6 +404,20 @@ describe('EventProcessor', function() {
     ep = EventProcessor(sdkKey, defaultConfig);
     var e = { kind: 'custom', creationDate: 1000, user: user, key: 'eventkey',
       data: { thing: 'stuff' } };
+    ep.sendEvent(e);
+
+    flushAndGetRequest(function(output) {
+      expect(output.length).toEqual(2);
+      checkIndexEvent(output[0], e, user);
+      checkCustomEvent(output[1], e);
+      done();
+    });
+  });
+
+  it('can include metric value in custom event', function(done) {
+    ep = EventProcessor(sdkKey, defaultConfig);
+    var e = { kind: 'custom', creationDate: 1000, user: user, key: 'eventkey',
+      data: { thing: 'stuff' }, metricValue: 1.5 };
     ep.sendEvent(e);
 
     flushAndGetRequest(function(output) {

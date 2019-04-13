@@ -51,6 +51,11 @@ var user: ld.LDUser = {
 };
 var client: ld.LDClient = ld.init('sdk-key', allOptions);
 
+client.identify(user);
+client.track('key', user);
+client.track('key', user, { ok: 1 });
+client.track('key', user, null, 1.5);
+
 // evaluation methods with callbacks
 client.variation('key', user, false, (value: ld.LDFlagValue) => { });
 client.variation('key', user, 2, (value: ld.LDFlagValue) => { });
