@@ -369,7 +369,7 @@ declare module 'ldclient-node' {
     key?: string | string[] | Buffer | Buffer[] | object[];
     passphrase?: string;
     rejectUnauthorized?: boolean;
-    secureProtocol: string;
+    secureProtocol?: string;
     servername?: string;
   }
 

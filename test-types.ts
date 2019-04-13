@@ -26,7 +26,7 @@ var allOptions: ld.LDOptions = {
   pollInterval: 5,
   timeout: 1,
   logger: logger,
-  tlsOptions: {
+  tlsParams: {
     ca: 'x',
     cert: 'y',
     key: 'z'
