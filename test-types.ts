@@ -31,6 +31,7 @@ var userWithKeyOnly: ld.LDUser = { key: 'user' };
 var user: ld.LDUser = {
   key: 'user',
   name: 'name',
+  secondary: 'otherkey',
   firstName: 'first',
   lastName: 'last',
   email: 'test@example.com',

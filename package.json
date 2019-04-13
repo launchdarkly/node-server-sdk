@@ -1,6 +1,6 @@
 {
   "name": "ldclient-node",
-  "version": "5.7.2",
+  "version": "5.7.4",
   "description": "LaunchDarkly SDK for Node.js",
   "main": "index.js",
   "scripts": {
@@ -44,7 +44,7 @@
     "babel-core": "6.26.3",
     "babel-jest": "22.4.3",
     "babel-preset-env": "1.7.0",
-    "jest": "24.1.0",
+    "jest": "24.5.0",
     "jest-junit": "3.6.0",
     "nock": "9.2.3",
     "tmp": "0.0.33",
