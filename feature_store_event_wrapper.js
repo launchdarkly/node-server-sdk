@@ -19,7 +19,7 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
       featureStore.all(dataKind.features, function(oldFlags){
         featureStore.init(newData, function(){
           var allFlags = {};
-          var newFlags = newData[dataKind.features] || {};
+          var newFlags = newData[dataKind.features.namespace] || {};
           Object.assign(allFlags, oldFlags, newFlags);
           var handledFlags = {};
 
