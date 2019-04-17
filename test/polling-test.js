@@ -1,7 +1,7 @@
-import * as InMemoryFeatureStore from '../feature_store';
-import * as PollingProcessor from '../polling';
-import * as dataKind from '../versioned_data_kind';
-import { asyncify, asyncifyNode, sleepAsync } from './async_utils';
+const InMemoryFeatureStore = require('../feature_store');
+const PollingProcessor = require('../polling');
+const dataKind = require('../versioned_data_kind');
+const { asyncify, asyncifyNode, sleepAsync } = require('./async_utils');
 
 describe('PollingProcessor', () => {
   const longInterval = 100000;

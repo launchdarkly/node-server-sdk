@@ -1,6 +1,6 @@
-var InMemoryFeatureStore = require('../feature_store');
-var StreamProcessor = require('../streaming');
-var dataKind = require('../versioned_data_kind');
+const InMemoryFeatureStore = require('../feature_store');
+const StreamProcessor = require('../streaming');
+const dataKind = require('../versioned_data_kind');
 const { asyncify, sleepAsync } = require('./async_utils');
 
 describe('StreamProcessor', function() {
