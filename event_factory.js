@@ -95,15 +95,18 @@ function EventFactory(withReasons) {
     };
   };
 
-  ef.newCustomEvent = function(eventName, user, data) {
+  ef.newCustomEvent = function(eventName, user, data, metricValue) {
     var e = {
       kind: 'custom',
       creationDate: new Date().getTime(),
       key: eventName,
       user: user
     };
-    if (data) {
+    if (data !== null && data !== undefined) {
       e.data = data;
+    }
+    if (metricValue !== null && metricValue !== undefined) {
+      e.metricValue = metricValue;
     }
     return e;
   };

@@ -342,12 +342,12 @@ var newClient = function(sdkKey, config) {
     return config.offline;
   }
 
-  client.track = function(eventName, user, data) {
+  client.track = function(eventName, user, data, metricValue) {
     if (!userExistsAndHasKey(user)) {
       config.logger.warn(messages.missingUserKeyNoEvent());
       return;
     }
-    eventProcessor.sendEvent(eventFactoryDefault.newCustomEvent(eventName, user, data));
+    eventProcessor.sendEvent(eventFactoryDefault.newCustomEvent(eventName, user, data, metricValue));
   };
 
   client.identify = function(user) {

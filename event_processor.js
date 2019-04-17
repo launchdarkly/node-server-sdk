@@ -82,13 +82,18 @@ function EventProcessor(sdkKey, config, errorReporter) {
         var out = {
           kind: 'custom',
           creationDate: event.creationDate,
-          key: event.key,
-          data: event.data
+          key: event.key
         };
         if (config.inlineUsersInEvents) {
           out.user = processUser(event);
         } else {
           out.userKey = getUserKey(event);
+        }
+        if (event.data !== null && event.data !== undefined) {
+          out.data = event.data;
+        }
+        if (event.metricValue !== null && event.metricValue !== undefined) {
+          out.metricValue = event.metricValue;
         }
         return out;
       default:
