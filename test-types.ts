@@ -25,7 +25,12 @@ var allOptions: ld.LDOptions = {
   userKeysFlushInterval: 1,
   pollInterval: 5,
   timeout: 1,
-  logger: logger
+  logger: logger,
+  tlsParams: {
+    ca: 'x',
+    cert: 'y',
+    key: 'z'
+  }
 };
 var userWithKeyOnly: ld.LDUser = { key: 'user' };
 var user: ld.LDUser = {
