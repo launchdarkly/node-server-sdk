@@ -8,7 +8,7 @@
 # When done you should commit and push the changes made.
 
 set -uxe
-echo "Starting node-client release."
+echo "Starting node-server-sdk release."
 
 VERSION=$1
 npm --version
@@ -31,4 +31,4 @@ else
   ./scripts/release-docs.sh $VERSION
 fi
 
-echo "Done with node-client release"
+echo "Done with node-server-sdk release"
