@@ -3,7 +3,10 @@ var testBase = require('./feature_store_test_base');
 var dataKind = require('../versioned_data_kind');
 var redis = require('redis');
 
-describe('RedisFeatureStore', function() {
+
+const shouldSkip = (process.env.LD_SKIP_DATABASE_TESTS === '1');
+
+(shouldSkip ? describe.skip : describe)('RedisFeatureStore', function() {
   var redisOpts = { url: 'redis://localhost:6379' };
 
   var extraRedisClient = redis.createClient(redisOpts);
