@@ -2,6 +2,20 @@
 
 All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.8.0] - 2019-04-06
+### Added:
+- Generated TypeDoc documentation for all types, properties, and methods is now available online at [https://launchdarkly.github.io/node-server-sdk/](https://launchdarkly.github.io/node-server-sdk/). Currently this will only be for the latest released version.
+- It is now possible to specify any of the TLS configuration parameters supported by Node's `https.request()` in the client configuration, so that they will apply to all HTTPS requests made by the SDK. In your client options, add a property called `tlsParams` whose value is an object containing those parameters, e.g. `tlsParams: { ca: 'my trusted CA certificate data' }`.
+
+### Fixed:
+- Running the SDK unit tests is now simpler in that the Redis integration can be skipped. See `CONTRIBUTING.md`.
+
+# Note on future releases
+
+The LaunchDarkly SDK repositories are being renamed for consistency. This repository is now `node-server-sdk` rather than `node-client`. (Note that `node-client-sdk` also exists, which is the _client-side_ Node SDK.)
+
+The package name will also change. In the 5.8.0 release, it is still `ldclient-node`; in all future releases, it will be `launchdarkly-node-server-sdk`. No further updates to the `ldclient-node` package will be published after this release.
+
 ## [5.7.4] - 2019-04-02
 ### Fixed:
 - Setting user attributes to non-string values when a string was expected would cause analytics events not to be processed. The SDK will now convert attribute values to strings as needed. ([#147](https://github.com/launchdarkly/node-client/issues/147))
