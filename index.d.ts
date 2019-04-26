@@ -1,7 +1,7 @@
 // Type definitions for ldclient-node
 
 /**
- * This is the API reference for the LaunchDarkly SDK for Node.js.
+ * This is the API reference for the LaunchDarkly Server-Side SDK for Node.js.
  *
  * In typical usage, you will call [[init]] once at startup time to obtain an instance of
  * [[LDClient]], which provides access to all of the SDK's functionality.

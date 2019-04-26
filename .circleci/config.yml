@@ -6,7 +6,6 @@ workflows:
     jobs:
       - oldest-long-term-support-release
       - current-release
-      - audit-dependencies
 
 node-template: &node-template
   steps:
@@ -35,10 +34,3 @@ jobs:
     docker:
       - image: circleci/node:latest
       - image: redis
-
-  audit-dependencies:
-    docker:
-      - image: circleci/node:latest
-    steps:
-      - checkout
-      - run: npm audit
