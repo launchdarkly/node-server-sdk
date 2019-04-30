@@ -18,7 +18,7 @@ function InMemoryFeatureStore() {
 
   function callbackResult(cb, result) {
     cb = cb || noop;
-    setTimeout(function() { cb(result); }, 0);  // ensure this is dispatched asynchronously
+    process.nextTick(cb.bind(null, result)); // ensure this is dispatched asynchronously
   }
 
   store.get = function(kind, key, cb) {
