@@ -2,7 +2,7 @@
 // This file exists only so that we can run the TypeScript compiler in the CI build
 // to validate our index.d.ts file.
 
-import * as ld from 'ldclient-node';
+import * as ld from 'launchdarkly-node-server-sdk';
 
 var logger: ld.LDLogger = {
   error: (...args) => { },
@@ -25,7 +25,12 @@ var allOptions: ld.LDOptions = {
   userKeysFlushInterval: 1,
   pollInterval: 5,
   timeout: 1,
-  logger: logger
+  logger: logger,
+  tlsParams: {
+    ca: 'x',
+    cert: 'y',
+    key: 'z'
+  }
 };
 var userWithKeyOnly: ld.LDUser = { key: 'user' };
 var user: ld.LDUser = {
