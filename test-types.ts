@@ -2,7 +2,7 @@
 // This file exists only so that we can run the TypeScript compiler in the CI build
 // to validate our index.d.ts file.
 
-import * as ld from 'ldclient-node';
+import * as ld from 'launchdarkly-node-server-sdk';
 
 var logger: ld.LDLogger = {
   error: (...args) => { },
