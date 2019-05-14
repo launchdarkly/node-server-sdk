@@ -1,4 +1,4 @@
-// Type definitions for ldclient-node
+// Type definitions for launchdarkly-node-server-sdk
 
 /**
  * This is the API reference for the LaunchDarkly Server-Side SDK for Node.js.
@@ -9,7 +9,7 @@
  * For more information, see the [SDK reference guide](http://docs.launchdarkly.com/docs/node-sdk-reference).
  */
 
-declare module 'ldclient-node' {
+declare module 'launchdarkly-node-server-sdk' {
   import { EventEmitter } from 'events';
   import { ClientOpts } from 'redis';
 
@@ -977,12 +977,12 @@ declare module 'ldclient-node' {
 /**
  * @ignore
  */
-declare module 'ldclient-node/streaming' {
+declare module 'launchdarkly-node-server-sdk/streaming' {
   import {
     LDOptions,
     LDFeatureRequestor,
     LDStreamProcessor
-  } from 'ldclient-node';
+  } from 'launchdarkly-node-server-sdk';
 
   function StreamProcessor(
     sdkKey: string,
@@ -995,15 +995,15 @@ declare module 'ldclient-node/streaming' {
 /**
  * @ignore
  */
-declare module 'ldclient-node/requestor' {
-  import { LDOptions, LDFeatureRequestor } from 'ldclient-node';
+declare module 'launchdarkly-node-server-sdk/requestor' {
+  import { LDOptions, LDFeatureRequestor } from 'launchdarkly-node-server-sdk';
 
   function Requestor(sdkKey: string, options: LDOptions): LDFeatureRequestor;
   export = Requestor;
 }
 
-declare module 'ldclient-node/feature_store' {
-  import { LDFeatureStore } from 'ldclient-node';
+declare module 'launchdarkly-node-server-sdk/feature_store' {
+  import { LDFeatureStore } from 'launchdarkly-node-server-sdk';
 
   function InMemoryFeatureStore(): LDFeatureStore;
   export = InMemoryFeatureStore;
