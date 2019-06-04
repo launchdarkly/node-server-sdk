@@ -16,13 +16,12 @@ We encourage pull requests and other contributions from the community. Before su
 
 The project uses `npm`, which is bundled in all supported versions of Node.
 
-### Building
+### Setup
 
-To build, from the project root directory:
+To install project dependencies, from the project root directory:
 
 ```
 npm install
-npm run build
 ```
 
 ### Testing
