@@ -2,6 +2,10 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.9.0] - 2019-08-20
+### Added:
+- Added support for upcoming LaunchDarkly experimentation features. See `LDClient.track()`.
+
 ## [5.8.2] - 2019-06-06
 ### Fixed:
 - Resolved a [low-severity security vulnerability](https://nvd.nist.gov/vuln/detail/CVE-2018-16492) in an `extend` transitive dependency.
