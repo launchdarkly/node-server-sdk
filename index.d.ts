@@ -879,6 +879,11 @@ declare module 'launchdarkly-node-server-sdk' {
      * section of the dashboard. This can be used to track custom goals or other events that do
      * not currently have goals.
      *
+     * As of this version's release date, the LaunchDarkly service does not support the `metricValue`
+     * parameter. As a result, specifying `metricValue` will not yet produce any different behavior
+     * from omitting it. Refer to the [SDK reference guide](https://docs.launchdarkly.com/docs/node-sdk-reference#section-track)
+     * for the latest status.
+     * 
      * If the user is omitted or has no key, the client will log a warning
      * and will not send an event.
      *
