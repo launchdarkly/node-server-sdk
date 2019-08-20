@@ -69,6 +69,136 @@ describe('LDClient - analytics events', () => {
       });
     });
 
+    it('forces tracking when a matched rule has trackEvents set', async () => {
+      var flag = {
+        key: 'flagkey',
+        version: 1,
+        on: true,
+        targets: [],
+        rules: [
+          {
+            clauses: [ { attribute: 'key', op: 'in', values: [ defaultUser.key ] } ],
+            variation: 0,
+            id: 'rule-id',
+            trackEvents: true
+          }
+        ],
+        fallthrough: { variation: 1 },
+        variations: ['a', 'b']
+      };
+      var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
+      await client.waitForInitialization();
+      await client.variation(flag.key, defaultUser, 'c');
+
+      expect(eventProcessor.events).toHaveLength(1);
+      var e = eventProcessor.events[0];
+      expect(e).toEqual({
+        kind: 'feature',
+        creationDate: e.creationDate,
+        key: 'flagkey',
+        version: 1,
+        user: defaultUser,
+        variation: 0,
+        value: 'a',
+        default: 'c',
+        trackEvents: true,
+        reason: { kind: 'RULE_MATCH', ruleIndex: 0, ruleId: 'rule-id' }
+      });
+    });
+
+    it('does not force tracking when a matched rule does not have trackEvents set', async () => {
+      var flag = {
+        key: 'flagkey',
+        version: 1,
+        on: true,
+        targets: [],
+        rules: [
+          {
+            clauses: [ { attribute: 'key', op: 'in', values: [ defaultUser.key ] } ],
+            variation: 0,
+            id: 'rule-id'
+          }
+        ],
+        fallthrough: { variation: 1 },
+        variations: ['a', 'b']
+      };
+      var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
+      await client.waitForInitialization();
+      await client.variation(flag.key, defaultUser, 'c');
+
+      expect(eventProcessor.events).toHaveLength(1);
+      var e = eventProcessor.events[0];
+      expect(e).toEqual({
+        kind: 'feature',
+        creationDate: e.creationDate,
+        key: 'flagkey',
+        version: 1,
+        user: defaultUser,
+        variation: 0,
+        value: 'a',
+        default: 'c'
+      });
+    });
+
+    it('forces tracking for fallthrough result when trackEventsFallthrough is set', async () => {
+      var flag = {
+        key: 'flagkey',
+        version: 1,
+        on: true,
+        targets: [],
+        rules: [],
+        fallthrough: { variation: 1 },
+        variations: ['a', 'b'],
+        trackEventsFallthrough: true
+      };
+      var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
+      await client.waitForInitialization();
+      await client.variation(flag.key, defaultUser, 'c');
+
+      expect(eventProcessor.events).toHaveLength(1);
+      var e = eventProcessor.events[0];
+      expect(e).toEqual({
+        kind: 'feature',
+        creationDate: e.creationDate,
+        key: 'flagkey',
+        version: 1,
+        user: defaultUser,
+        variation: 1,
+        value: 'b',
+        default: 'c',
+        trackEvents: true,
+        reason: { kind: 'FALLTHROUGH' }
+      });
+    });
+
+    it('does not force tracking for fallthrough result when trackEventsFallthrough is not set', async () => {
+      var flag = {
+        key: 'flagkey',
+        version: 1,
+        on: true,
+        targets: [],
+        rules: [],
+        fallthrough: { variation: 1 },
+        variations: ['a', 'b']
+      };
+      var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
+      await client.waitForInitialization();
+      await client.variation(flag.key, defaultUser, 'c');
+
+      expect(eventProcessor.events).toHaveLength(1);
+      var e = eventProcessor.events[0];
+      expect(e).toEqual({
+        kind: 'feature',
+        creationDate: e.creationDate,
+        key: 'flagkey',
+        version: 1,
+        user: defaultUser,
+        variation: 1,
+        value: 'b',
+        default: 'c'
+      });
+    });
+
     it('generates event for unknown feature', async () => {
       var client = stubs.createClient({ eventProcessor: eventProcessor }, {});
       await client.waitForInitialization();
@@ -79,12 +209,9 @@ describe('LDClient - analytics events', () => {
       expect(e).toMatchObject({
         kind: 'feature',
         key: 'flagkey',
-        version: null,
         user: defaultUser,
-        variation: null,
         value: 'c',
-        default: 'c',
-        trackEvents: null
+        default: 'c'
       });
     });
 
@@ -138,7 +265,6 @@ describe('LDClient - analytics events', () => {
         key: 'flagkey',
         version: 1,
         user: null,
-        variation: null,
         value: 'c',
         default: 'c',
         trackEvents: true
@@ -225,6 +351,27 @@ describe('LDClient - analytics events', () => {
         kind: 'custom',
         key: 'eventkey',
         user: defaultUser
+      });
+      expect(e.metricValue).not.toBe(expect.anything());
+      expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    it('generates an event with a metric value', async () => {
+      var data = { thing: 'stuff' };
+      var metricValue = 1.5;
+      var logger = stubs.stubLogger();
+      var client = stubs.createClient({ eventProcessor: eventProcessor, logger: logger }, {});
+      await client.waitForInitialization();
+
+      client.track('eventkey', defaultUser, data, metricValue);
+      expect(eventProcessor.events).toHaveLength(1);
+      var e = eventProcessor.events[0];
+      expect(e).toMatchObject({
+        kind: 'custom',
+        key: 'eventkey',
+        user: defaultUser,
+        data: data,
+        metricValue: metricValue
       });
       expect(logger.warn).not.toHaveBeenCalled();
     });
