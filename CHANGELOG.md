@@ -1,6 +1,6 @@
 # Change log
 
-All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
+All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
 ## [5.8.2] - 2019-06-06
 ### Fixed:
