@@ -1,6 +1,17 @@
 # Change log
 
-All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
+All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
+
+## [5.8.2] - 2019-06-06
+### Fixed:
+- Resolved a [low-severity security vulnerability](https://nvd.nist.gov/vuln/detail/CVE-2018-16492) in an `extend` transitive dependency.
+
+
+## [5.8.1] - 2019-05-13
+### Changed:
+- Changed the package name from `ldclient-node` to `launchdarkly-node-server-sdk`.
+ 
+There are no other changes in this release. Substituting `ldclient-node` version 5.8.0 with `launchdarkly-node-server-sdk` version 5.8.1 (and updating any `require` or `import` lines that referred to the old package name) will not affect functionality.
 
 ## [5.8.0] - 2019-04-06
 ### Added:

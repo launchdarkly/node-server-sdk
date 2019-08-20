@@ -2,10 +2,14 @@
 
 [![Circle CI](https://circleci.com/gh/launchdarkly/node-server-sdk/tree/master.svg?style=svg)](https://circleci.com/gh/launchdarkly/node-server-sdk/tree/master)
 
+The LaunchDarkly Server-Side SDK for Node.js is designed primarily for use in multi-user systems such as web servers and applications. It follows the server-side LaunchDarkly model for multi-user contexts. It is not intended for use in desktop and embedded systems applications.
+
+For using LaunchDarkly in *client-side* Node.js applications, refer to our [Client-side Node.js SDK](https://github.com/launchdarkly/node-client-sdk).
+
 ## LaunchDarkly overview
 
 [LaunchDarkly](https://www.launchdarkly.com) is a feature management platform that serves over 100 billion feature flags daily to help teams build better software, faster. [Get started](https://docs.launchdarkly.com/docs/getting-started) using LaunchDarkly today!
- 
+
 [![Twitter Follow](https://img.shields.io/twitter/follow/launchdarkly.svg?style=social&label=Follow&maxAge=2592000)](https://twitter.com/intent/follow?screen_name=launchdarkly)
 
 ## Supported Node versions
