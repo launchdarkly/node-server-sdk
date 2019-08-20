@@ -249,11 +249,7 @@ var newClient = function(sdkKey, config) {
         // have already been constructed, so we just have to push them onto the queue.
         if (events) {
           for (var i = 0; i < events.length; i++) {
-            var e = events[i];
-            if (!includeReasonsInEvents) {
-              delete e['reason'];
-            }
-            eventProcessor.sendEvent(e);
+            eventProcessor.sendEvent(events[i]);
           }
         }
 
