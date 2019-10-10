@@ -2,6 +2,11 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.9.1] - 2019-10-10
+### Fixed:
+- For an evaluation reason of `RULE_MATCH`, the `ruleIndex` property was always being set to zero rather than to the actual rule index. Note that it is always best to look at `ruleId` rather than `ruleIndex`, since it will never change even if rules are added or deleted.
+
+
 ## [5.9.0] - 2019-08-20
 ### Added:
 - Added support for upcoming LaunchDarkly experimentation features. See `LDClient.track()`.
