@@ -313,12 +313,13 @@ describe('evaluate', function() {
   });
 
   it('matches user from rules', function(done) {
-    var rule = { id: 'id', clauses: [{ attribute: 'key', op: 'in', values: ['userkey'] }], variation: 2 };
-    var flag = makeFlagWithRules([rule]);
+    var rule0 = { id: 'id0', clauses: [{ attribute: 'key', op: 'in', values: ['nope'] }], variation: 1 };
+    var rule1 = { id: 'id1', clauses: [{ attribute: 'key', op: 'in', values: ['userkey'] }], variation: 2 };
+    var flag = makeFlagWithRules([rule0, rule1]);
     var user = { key: 'userkey' };
     evaluate.evaluate(flag, user, featureStore, eventFactory, function(err, detail, events) {
       expect(detail).toMatchObject({ value: 'c', variationIndex: 2,
-        reason: { kind: 'RULE_MATCH', ruleIndex: 0, ruleId: 'id' } });
+        reason: { kind: 'RULE_MATCH', ruleIndex: 1, ruleId: 'id1' } });
       expect(events).toMatchObject([]);
       done();
     });

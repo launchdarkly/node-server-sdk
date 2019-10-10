@@ -114,20 +114,25 @@ function evalRules(flag, user, featureStore, cb) {
     }
   }
 
-  i = 0;
   async.mapSeries(flag.rules || [],
     function(rule, callback) {
       ruleMatchUser(rule, user, featureStore, function(matched) {
-        var match = matched ? { index: i, rule: rule } : null;
-        setImmediate(callback, match, null);
+        setImmediate(callback, matched ? rule : null, null);
       });
     },
     function(err, results) {
       // we use the "error" value to indicate that a rule was successfully matched (since we only care
       // about the first match, and mapSeries terminates on the first "error")
       if (err) {
-        var reason = { kind: 'RULE_MATCH', ruleIndex: err.index, ruleId: err.rule.id };
-        getResultForVariationOrRollout(err.rule, user, flag, reason, cb);
+        var rule = err;
+        var reason = { kind: 'RULE_MATCH', ruleId: rule.id };
+        for (var i = 0; i < flag.rules.length; i++) {
+          if (flag.rules[i].id === rule.id) {
+            reason.ruleIndex = i;
+            break;
+          }
+        }
+        getResultForVariationOrRollout(rule, user, flag, reason, cb);
       } else {
         // no rule matched; check the fallthrough
         getResultForVariationOrRollout(flag.fallthrough, user, flag, { kind: 'FALLTHROUGH' }, cb);
