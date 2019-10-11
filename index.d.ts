@@ -561,7 +561,8 @@ declare module 'launchdarkly-node-server-sdk' {
      *
      * Deletion should be implemented by storing a placeholder object with the property
      * `deleted: true` and a `version` property equal to the provided version. In other words,
-     * it should be exactly the same as calling `upsert` with such an object.
+     * it should be exactly the same as calling `
+     ` with such an object.
      *
      * @param kind
      *   The type of data to be accessed. The `namespace` property of this object indicates which
@@ -599,7 +600,7 @@ declare module 'launchdarkly-node-server-sdk' {
      * @param callback
      *   Will be called after the upsert operation is complete.
      */
-    upsert(kind: object, key: string, data: object, callback: () => void): void;
+    upsert(kind: object, data: object, callback: () => void): void;
 
     /**
      * Tests whether the store is initialized.
