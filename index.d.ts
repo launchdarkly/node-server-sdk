@@ -561,8 +561,7 @@ declare module 'launchdarkly-node-server-sdk' {
      *
      * Deletion should be implemented by storing a placeholder object with the property
      * `deleted: true` and a `version` property equal to the provided version. In other words,
-     * it should be exactly the same as calling `
-     ` with such an object.
+     * it should be exactly the same as calling `upsert` with such an object.
      *
      * @param kind
      *   The type of data to be accessed. The `namespace` property of this object indicates which
