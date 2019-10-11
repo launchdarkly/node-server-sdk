@@ -589,9 +589,6 @@ declare module 'launchdarkly-node-server-sdk' {
      *   collection of entities to use, e.g. `"features"` or `"segments"`. The store should not
      *   make any assumptions about the format of the data, but just return a JSON object.
      *
-     * @param key
-     *   The unique key of the entity within the specified collection.
-     *
      * @param data
      *   The contents of the entity, as an object that can be converted to JSON. The store
      *   should check the `version` property of this object, and should *not* overwrite any
