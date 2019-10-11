@@ -588,9 +588,6 @@ declare module 'launchdarkly-node-server-sdk' {
      *   collection of entities to use, e.g. `"features"` or `"segments"`. The store should not
      *   make any assumptions about the format of the data, but just return a JSON object.
      *
-     * @param key
-     *   The unique key of the entity within the specified collection.
-     *
      * @param data
      *   The contents of the entity, as an object that can be converted to JSON. The store
      *   should check the `version` property of this object, and should *not* overwrite any
@@ -599,7 +596,7 @@ declare module 'launchdarkly-node-server-sdk' {
      * @param callback
      *   Will be called after the upsert operation is complete.
      */
-    upsert(kind: object, key: string, data: object, callback: () => void): void;
+    upsert(kind: object, data: object, callback: () => void): void;
 
     /**
      * Tests whether the store is initialized.
