@@ -3,7 +3,7 @@ var dataKind = require('./versioned_data_kind');
 function NamespacedDataSet() {
   let itemsByNamespace = {};
 
-  function get(namespace, key, defaultVal) {
+  function get(namespace, key) {
     const items = itemsByNamespace[namespace];
     return items && items[key];
   }
