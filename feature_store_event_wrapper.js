@@ -67,8 +67,8 @@ function DependencyTracker() {
       depsToThisDep && depsToThisDep.remove(namespace, key);
     });
 
+    dependenciesFrom.set(namespace, key, newDependencySet);
     if (newDependencySet) {
-      dependenciesFrom.set(namespace, key, newDependencySet);
       newDependencySet && newDependencySet.enumerate(function(depNs, depKey) {
         let depsToThisDep = dependenciesTo.get(depNs, depKey);
         if (!depsToThisDep) {
