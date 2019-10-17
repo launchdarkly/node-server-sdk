@@ -141,13 +141,13 @@ describe('FeatureStoreEventWrapper', () => {
     const allData = {
       features: {
         a: { key: 'a', version: 1 },
-        b: { key: 'a', version: 1, prerequisites: [ { key: 'c' }, { key: 'e' } ] },
+        b: { key: 'b', version: 1, prerequisites: [ { key: 'c' }, { key: 'e' } ] },
         c: { key: 'c', version: 1, prerequisites: [ { key: 'd' } ],
           rules: [
             { clauses: [ { op: 'segmentMatch', values: [ 's0' ] } ] }
           ]
         },
-        d: { key: 'c', version: 1, prerequisites: [ { key: 'e' } ] },
+        d: { key: 'd', version: 1, prerequisites: [ { key: 'e' } ] },
         e: { key: 'e', version: 1 }
       },
       segments: {
