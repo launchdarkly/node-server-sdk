@@ -68,16 +68,14 @@ function DependencyTracker() {
     });
 
     dependenciesFrom.set(namespace, key, newDependencySet);
-    if (newDependencySet) {
-      newDependencySet && newDependencySet.enumerate(function(depNs, depKey) {
-        let depsToThisDep = dependenciesTo.get(depNs, depKey);
-        if (!depsToThisDep) {
-          depsToThisDep = NamespacedDataSet();
-          dependenciesTo.set(depNs, depKey, depsToThisDep);
-        }
-        depsToThisDep && depsToThisDep.set(namespace, key, true);
-      });
-    }
+    newDependencySet && newDependencySet.enumerate(function(depNs, depKey) {
+      let depsToThisDep = dependenciesTo.get(depNs, depKey);
+      if (!depsToThisDep) {
+        depsToThisDep = NamespacedDataSet();
+        dependenciesTo.set(depNs, depKey, depsToThisDep);
+      }
+      depsToThisDep.set(namespace, key, true);
+    });
   }
 
   function updateModifiedItems(inDependencySet, modifiedNamespace, modifiedKey) {
