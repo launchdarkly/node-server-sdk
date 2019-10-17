@@ -17,8 +17,37 @@ function sleepAsync(millis) {
   });
 }
 
+function AsyncQueue() {
+  const items = [];
+  const awaiters = [];
+
+  return {
+    add: item => {
+      if (awaiters.length) {
+        awaiters.shift()(item);
+      } else {
+        items.push(item);
+      }
+    },
+
+    take: () => {
+      if (items.length) {
+        return Promise.resolve(items.shift());
+      }
+      return new Promise(resolve => {
+        awaiters.push(resolve);
+      });
+    },
+
+    isEmpty: () => {
+      return items.length === 0;
+    }
+  };
+}
+
 module.exports = {
   asyncify: asyncify,
   asyncifyNode: asyncifyNode,
-  sleepAsync: sleepAsync
+  sleepAsync: sleepAsync,
+  AsyncQueue: AsyncQueue
 };
