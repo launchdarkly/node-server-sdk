@@ -103,7 +103,7 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
         const results = {},
           items = obj;
 
-        for (var key in items) {
+        for (let key in items) {
           if (Object.hasOwnProperty.call(items, key)) {
             results[key] = JSON.parse(items[key]);
           }
@@ -123,7 +123,7 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
         const items = allData[kindNamespace];
         const stringified = {};
         multi.del(baseKey);
-        for (var key in items) {
+        for (let key in items) {
           if (Object.hasOwnProperty.call(items, key)) {
             stringified[key] = JSON.stringify(items[key]);
           }

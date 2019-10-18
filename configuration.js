@@ -1,10 +1,10 @@
-var winston = require('winston');
-var InMemoryFeatureStore = require('./feature_store');
-var messages = require('./messages');
-var package_json = require('./package.json');
+const winston = require('winston');
+const InMemoryFeatureStore = require('./feature_store');
+const messages = require('./messages');
+const package_json = require('./package.json');
 
 module.exports = (function() {
-  var defaults = function() {
+  const defaults = function() {
     return {
       baseUri: 'https://app.launchdarkly.com',
       streamUri: 'https://stream.launchdarkly.com',
@@ -25,7 +25,7 @@ module.exports = (function() {
     };
   };
 
-  var deprecatedOptions = {
+  const deprecatedOptions = {
     base_uri: 'baseUri',
     stream_uri: 'streamUri',
     events_uri: 'eventsUri',
@@ -44,7 +44,7 @@ module.exports = (function() {
   function checkDeprecatedOptions(config) {
     Object.keys(deprecatedOptions).forEach(function(oldName) {
       if (config[oldName] !== undefined) {
-        var newName = deprecatedOptions[oldName];
+        const newName = deprecatedOptions[oldName];
         config.logger.warn(messages.deprecated(oldName, newName));
         if (config[newName] === undefined) {
           config[newName] = config[oldName];
@@ -57,7 +57,7 @@ module.exports = (function() {
   function applyDefaults(config, defaults) {
     // This works differently from Object.assign() in that it will *not* override a default value
     // if the provided value is explicitly set to null.
-    var ret = Object.assign({}, config);
+    const ret = Object.assign({}, config);
     Object.keys(defaults).forEach(function(name) {
       if (ret[name] === undefined || ret[name] === null) {
         ret[name] = defaults[name];
@@ -71,7 +71,7 @@ module.exports = (function() {
   }
 
   function validate(options) {
-    var config = Object.assign({}, options || {});
+    let config = Object.assign({}, options || {});
     
     config.userAgent = 'NodeJSClient/' + package_json.version;
     config.logger = (config.logger ||

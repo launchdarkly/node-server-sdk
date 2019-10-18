@@ -186,7 +186,7 @@ function CachingStoreWrapper(underlyingStore, ttl) {
     if (!cache) {
       return;
     }
-    for (var kindNamespace in dataKind) {
+    for (let kindNamespace in dataKind) {
       cache.del(allCacheKey(dataKind[kindNamespace]));
     }
   }
@@ -196,7 +196,7 @@ function CachingStoreWrapper(underlyingStore, ttl) {
   function sortAllCollections(dataMap) {
     const result = [];
     Object.keys(dataMap).forEach(function(kindNamespace) {
-      var kind = dataKind[kindNamespace];
+      const kind = dataKind[kindNamespace];
       result.push({ kind: kind, items: sortCollection(kind, dataMap[kindNamespace]) });
     });
     const kindPriority = kind => kind.priority === undefined ? kind.namespace.length : kind.priority;

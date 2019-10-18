@@ -123,7 +123,7 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
       config.logger.debug('Received indirect patch event');
       if (e && e.data) {
         const path = e.data;
-        for (var k in dataKind) {
+        for (let k in dataKind) {
           const kind = dataKind[k];
           const key = getKeyFromPath(kind, path);
           if (key != null) {

@@ -77,7 +77,7 @@ function FileDataSource(options) {
       pendingUpdate = false;
       const allData = {};
       let p = Promise.resolve();
-      for (var i = 0; i < paths.length; i++) {
+      for (let i = 0; i < paths.length; i++) {
         (path => {
           p = p.then(() => loadFilePromise(path, allData))
             .catch(e => {

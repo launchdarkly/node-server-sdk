@@ -10,7 +10,7 @@ const userAttrsToStringifyForEvaluation = [ 'key', 'secondary' ];
 // Currently we are not stringifying the rest of the built-in attributes prior to evaluation, only for events.
 // This is because it could affect evaluation results for existing users (ch35206).
 
-const noop = function(){};
+const noop = () => {};
 
 // Callback receives (err, detail, events) where detail has the properties "value", "variationIndex", and "reason";
 // detail will never be null even if there's an error.
@@ -28,7 +28,7 @@ function evaluate(flag, user, featureStore, eventFactory, cb) {
 
   const sanitizedUser = stringifyAttrs(user, userAttrsToStringifyForEvaluation);
   const events = [];
-  evalInternal(flag, sanitizedUser, featureStore, events, eventFactory, function(err, detail) {
+  evalInternal(flag, sanitizedUser, featureStore, events, eventFactory, (err, detail) => {
     cb(err, detail, events);
   });
 }
@@ -110,7 +110,7 @@ function evalRules(flag, user, featureStore, cb) {
 
   async.mapSeries(flag.rules || [],
     (rule, callback) => {
-      ruleMatchUser(rule, user, featureStore, function(matched) {
+      ruleMatchUser(rule, user, featureStore, matched => {
         setImmediate(callback, matched ? rule : null, null);
       });
     },
@@ -143,7 +143,7 @@ function ruleMatchUser(r, user, featureStore, cb) {
   // A rule matches if all its clauses match
   async.mapSeries(r.clauses,
     (clause, callback) => {
-      clauseMatchUser(clause, user, featureStore, function(matched) {
+      clauseMatchUser(clause, user, featureStore, matched => {
         // on the first clause that does *not* match, we raise an "error" to stop the loop
         setImmediate(callback, matched ? null : clause, null);
       });
@@ -158,7 +158,7 @@ function clauseMatchUser(c, user, featureStore, cb) {
   if (c.op == 'segmentMatch') {
     async.mapSeries(c.values,
       (value, callback) => {
-        featureStore.get(dataKind.segments, value, function(segment) {
+        featureStore.get(dataKind.segments, value, segment => {
           if (segment && segmentMatchUser(segment, user)) {
             // on the first segment that matches, we raise an "error" to stop the loop
             callback(segment, null);
