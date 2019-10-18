@@ -3,14 +3,14 @@ module.exports = function stringifyAttrs(object, attrs) {
   if (!object) {
     return object;
   }
-  var newObject;
-  for (var i in attrs) {
-    var attr = attrs[i];
-    var value = object[attr];
+  let newObject;
+  for (let i in attrs) {
+    const attr = attrs[i];
+    const value = object[attr];
     if (value !== undefined && typeof value !== 'string') {
       newObject = newObject || Object.assign({}, object);
       newObject[attr] = String(value);
     }
   }
   return newObject || object;
-}
+};

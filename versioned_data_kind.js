@@ -9,20 +9,20 @@
   module.exports.
 */
 
-var features = {
+const features = {
   namespace: 'features',
   streamApiPath: '/flags/',
   requestPath: '/sdk/latest-flags/',
   priority: 1,
-  getDependencyKeys: function(flag) {
+  getDependencyKeys: flag => {
     if (!flag.prerequisites || !flag.prerequisites.length) {
       return [];
     }
-    return flag.prerequisites.map(function(p) { return p.key; });
+    return flag.prerequisites.map(p => p.key);
   }
 };
 
-var segments = {
+const segments = {
   namespace: 'segments',
   streamApiPath: '/segments/',
   requestPath: '/sdk/latest-segments/',

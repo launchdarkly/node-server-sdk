@@ -1,10 +1,10 @@
-var dataKind = require('./versioned_data_kind');
+const dataKind = require('./versioned_data_kind');
 
 function FeatureStoreEventWrapper(featureStore, emitter) {
   function differ(key, oldValue, newValue) {
     if(newValue && oldValue && newValue.version < oldValue.version) return;
     setTimeout(function(){
-      emitter.emit("update", newValue);
+      emitter.emit('update', newValue);
       emitter.emit(`update:${key}`, oldValue, newValue);
     }, 0);
   }
@@ -15,15 +15,15 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
     initialized: featureStore.initialized.bind(featureStore),
     close: featureStore.close.bind(featureStore),
 
-    init: function(newData, callback) {
+    init: (newData, callback) => {
       featureStore.all(dataKind.features, function(oldFlags){
         featureStore.init(newData, function(){
-          var allFlags = {};
-          var newFlags = newData[dataKind.features.namespace] || {};
+          const allFlags = {};
+          const newFlags = newData[dataKind.features.namespace] || {};
           Object.assign(allFlags, oldFlags, newFlags);
-          var handledFlags = {};
+          const handledFlags = {};
 
-          for (var key in allFlags) {
+          for (let key in allFlags) {
             if(handledFlags[key]) continue;
             differ(key, oldFlags[key], newFlags[key]);
             handledFlags[key] = true;
@@ -34,7 +34,7 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
       });      
     },
 
-    delete: function(kind, key, version, callback) {
+    delete: (kind, key, version, callback) => {
       featureStore.get(kind, key, function(oldFlag) {
         featureStore.delete(kind, key, version, function() {
           if (kind === dataKind.features) {
@@ -45,7 +45,7 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
       });
     },
 
-    upsert: function(kind, newItem, callback) {
+    upsert: (kind, newItem, callback) => {
       featureStore.get(kind, newItem.key, function(oldItem) {
         featureStore.upsert(kind, newItem, function() {
           if (kind === dataKind.features) {
@@ -55,7 +55,7 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
         });
       });
     }
-  }
+  };
 }
 
 module.exports = FeatureStoreEventWrapper;

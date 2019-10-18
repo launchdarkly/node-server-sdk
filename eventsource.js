@@ -311,7 +311,7 @@ function Event(type, optionalProperties) {
   Object.defineProperty(this, 'type', { writable: false, value: type, enumerable: true });
   if (optionalProperties) {
     for (var f in optionalProperties) {
-      if (optionalProperties.hasOwnProperty(f)) {
+      if (Object.hasOwnProperty.call(optionalProperties, f)) {
         Object.defineProperty(this, f, { writable: false, value: optionalProperties[f], enumerable: true });
       }
     }
@@ -327,7 +327,7 @@ function Event(type, optionalProperties) {
 function MessageEvent(type, eventInitDict) {
   Object.defineProperty(this, 'type', { writable: false, value: type, enumerable: true });
   for (var f in eventInitDict) {
-    if (eventInitDict.hasOwnProperty(f)) {
+    if (Object.hasOwnProperty.call(eventInitDict, f)) {
       Object.defineProperty(this, f, { writable: false, value: eventInitDict[f], enumerable: true });
     }
   }
