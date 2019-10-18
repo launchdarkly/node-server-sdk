@@ -1,8 +1,8 @@
-var InMemoryFeatureStore = require('../feature_store');
-var testBase = require('./feature_store_test_base');
+const InMemoryFeatureStore = require('../feature_store');
+const testBase = require('./feature_store_test_base');
 
-describe('InMemoryFeatureStore', function() {
-  testBase.baseFeatureStoreTests(function() {
+describe('InMemoryFeatureStore', () => {
+  testBase.baseFeatureStoreTests(() => {
     return new InMemoryFeatureStore();
-  })
+  });
 });

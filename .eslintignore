@@ -2,5 +2,4 @@ node_modules/
 docs/
 test-types.js
 test/
-utils/__tests__/
 test.js

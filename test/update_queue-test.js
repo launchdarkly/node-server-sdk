@@ -56,6 +56,6 @@ describe('UpdateQueue', function() {
           }
         });
       });
-    };
+    }
   });
 });
