@@ -1,9 +1,8 @@
-
-var semver = require('semver');
+const semver = require('semver');
 
 function semVerOperator(fn) {
-  return function(a, b) {
-    var av = parseSemVer(a), bv = parseSemVer(b);
+  return (a, b) => {
+    const av = parseSemVer(a), bv = parseSemVer(b);
     return (av && bv) ? fn(av, bv) : false;
   };
 }
@@ -13,12 +12,12 @@ function parseSemVer(input) {
     // the semver library tolerates a leading "v", but the standard does not.
     return null;
   }
-  var ret = semver.parse(input);
+  let ret = semver.parse(input);
   if (!ret) {
-    var versionNumericComponents = new RegExp("^\\d+(\\.\\d+)?(\\.\\d+)?").exec(input);
+    const versionNumericComponents = new RegExp("^\\d+(\\.\\d+)?(\\.\\d+)?").exec(input);
     if (versionNumericComponents) {
-      var transformed = versionNumericComponents[0];
-      for (var i = 1; i < versionNumericComponents.length; i++) {
+      let transformed = versionNumericComponents[0];
+      for (let i = 1; i < versionNumericComponents.length; i++) {
         if (versionNumericComponents[i] == undefined) {
           transformed = transformed + ".0";
         }
@@ -30,35 +29,17 @@ function parseSemVer(input) {
   return ret;
 }
 
-var operators = {
-  "in": function(a, b) {
-    return a === b;
-  },
-  "endsWith": function(a, b) {
-    return typeof a === 'string' && a.endsWith(b);
-  },
-  "startsWith": function(a, b) {
-    return typeof a === 'string' && a.startsWith(b);
-  },
-  "matches": function(a, b) {
-    return typeof b === 'string' && new RegExp(b).test(a);
-  },
-  "contains": function(a, b) {
-    return typeof a === 'string' && a.indexOf(b) > -1;
-  },
-  "lessThan": function(a, b) {
-    return typeof a === 'number' && a < b;
-  },
-  "lessThanOrEqual": function(a, b) {
-    return typeof a === 'number' && a <= b;
-  },
-  "greaterThan": function(a, b) {
-    return typeof a === 'number' && a > b;
-  },
-  "greaterThanOrEqual": function(a, b) {
-    return typeof a === 'number' && a >= b;
-  },
-  "before": function(a, b) {
+const operators = {
+  "in": (a, b) => a === b,
+  "endsWith": (a, b) => typeof a === 'string' && a.endsWith(b),
+  "startsWith": (a, b) => typeof a === 'string' && a.startsWith(b),
+  "matches": (a, b) => typeof b === 'string' && new RegExp(b).test(a),
+  "contains": (a, b) => typeof a === 'string' && a.indexOf(b) > -1,
+  "lessThan": (a, b) => typeof a === 'number' && a < b,
+  "lessThanOrEqual": (a, b) => typeof a === 'number' && a <= b,
+  "greaterThan": (a, b) => typeof a === 'number' && a > b,
+  "greaterThanOrEqual": (a, b) => typeof a === 'number' && a >= b,
+  "before": (a, b) => {
     if (typeof a === 'string') {
       a = Date.parse(a);
     }
@@ -71,7 +52,7 @@ var operators = {
     }
     return false;
   },
-  "after": function(a, b) {
+  "after": (a, b) => {
     if (typeof a === 'string') {
       a = Date.parse(a);
     }
@@ -84,14 +65,12 @@ var operators = {
     }
     return false;
   },
-  "semVerEqual": semVerOperator(function(a, b) { return a.compare(b) == 0; }),
-  "semVerLessThan": semVerOperator(function(a, b) { return a.compare(b) < 0; }),
-  "semVerGreaterThan": semVerOperator(function(a, b) { return a.compare(b) > 0; })
+  "semVerEqual": semVerOperator((a, b) => a.compare(b) == 0),
+  "semVerLessThan": semVerOperator((a, b) => a.compare(b) < 0),
+  "semVerGreaterThan": semVerOperator((a, b) => a.compare(b) > 0)
 };
 
-var operatorNone = function(a, b) {
-  return false;
-}
+const operatorNone = (a, b) => false;
 
 function fn(op) {
   return operators[op] || operatorNone;

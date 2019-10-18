@@ -1,12 +1,11 @@
-var errors = require('./errors');
-
-var EventSource = require('./eventsource');
-var dataKind = require('./versioned_data_kind');
+const errors = require('./errors');
+const EventSource = require('./eventsource');
+const dataKind = require('./versioned_data_kind');
 
 function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
-  var processor = {},
-      featureStore = config.featureStore,
-      es;
+  const processor = {},
+      featureStore = config.featureStore;
+  let es;
 
   eventSourceFactory = eventSourceFactory || EventSource;
 
@@ -14,8 +13,8 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
     return path.startsWith(kind.streamApiPath) ? path.substring(kind.streamApiPath.length) : null;
   }
 
-  processor.start = function(fn) {
-    var cb = fn || function(){};
+  processor.start = fn => {
+    const cb = fn || function(){};
     es = new eventSourceFactory(config.streamUri + "/all", 
       {
         agent: config.proxyAgent, 
@@ -23,7 +22,7 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
         tlsParams: config.tlsParams
       });
       
-    es.onerror = function(err) {
+    es.onerror = err => {
       cb(new errors.LDStreamingError(err.message, err.code));
     };
 
@@ -33,20 +32,20 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
       cb(new errors.LDStreamingError('Malformed JSON data in event stream'));
     }
 
-    es.addEventListener('put', function(e) {
+    es.addEventListener('put', e => {
       config.logger.debug('Received put event');
       if (e && e.data) {
-        var all;
+        let all;
         try {
           all = JSON.parse(e.data);
         } catch (err) {
           reportJsonError('put', e.data);
           return;
         }
-        var initData = {};
+        const initData = {};
         initData[dataKind.features.namespace] = all.data.flags;
         initData[dataKind.segments.namespace] = all.data.segments;
-        featureStore.init(initData, function() {
+        featureStore.init(initData, () => {
           cb();
         });
       } else {
@@ -54,19 +53,19 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
       }
     });
 
-    es.addEventListener('patch', function(e) {
+    es.addEventListener('patch', e => {
       config.logger.debug('Received patch event');
       if (e && e.data) {
-        var patch;
+        let patch;
         try {
           patch = JSON.parse(e.data);
         } catch (err) {
           reportJsonError('patch', e.data);
           return;
         }
-        for (var k in dataKind) {
-          var kind = dataKind[k];
-          var key = getKeyFromPath(kind, patch.path);
+        for (let k in dataKind) {
+          const kind = dataKind[k];
+          const key = getKeyFromPath(kind, patch.path);
           if (key != null) {
             config.logger.debug('Updating ' + key + ' in ' + kind.namespace);
             featureStore.upsert(kind, patch.data);
@@ -78,10 +77,10 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
       }
     });
 
-    es.addEventListener('delete', function(e) {
+    es.addEventListener('delete', e => {
       config.logger.debug('Received delete event');
       if (e && e.data) {        
-        var data, version;
+        let data, version;
         try {
           data = JSON.parse(e.data);
         } catch (err) {
@@ -89,9 +88,9 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
           return;
         }
         version = data.version;
-        for (var k in dataKind) {
-          var kind = dataKind[k];
-          var key = getKeyFromPath(kind, data.path);
+        for (let k in dataKind) {
+          const kind = dataKind[k];
+          const key = getKeyFromPath(kind, data.path);
           if (key != null) {
             config.logger.debug('Deleting ' + key + ' in ' + kind.namespace);
             featureStore.delete(kind, key, version);
@@ -103,32 +102,32 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
       }
     });
 
-    es.addEventListener('indirect/put', function(e) {
+    es.addEventListener('indirect/put', e => {
       config.logger.debug('Received indirect put event')
-      requestor.requestAllData(function (err, resp) {
+      requestor.requestAllData((err, resp) => {
         if (err) {
           cb(err);
         } else {
-          var all = JSON.parse(resp);
-          var initData = {};
+          const all = JSON.parse(resp);
+          const initData = {};
           initData[dataKind.features.namespace] = all.flags;
           initData[dataKind.segments.namespace] = all.segments;
-          featureStore.init(initData, function() {
+          featureStore.init(initData, () => {
             cb();
           });
         }
       })
     });
 
-    es.addEventListener('indirect/patch', function(e) {
+    es.addEventListener('indirect/patch', e => {
       config.logger.debug('Received indirect patch event')
       if (e && e.data) {
-        var path = e.data;
+        const path = e.data;
         for (var k in dataKind) {
-          var kind = dataKind[k];
-          var key = getKeyFromPath(kind, path);
+          const kind = dataKind[k];
+          const key = getKeyFromPath(kind, path);
           if (key != null) {
-            requestor.requestObject(kind, key, function(err, resp) {
+            requestor.requestObject(kind, key, (err, resp) => {
               if (err) {
                 cb(new errors.LDStreamingError('Unexpected error requesting ' + key + ' in ' + kind.namespace));
               } else {
@@ -145,16 +144,15 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
     });
   }
 
-  processor.stop = function() {
+  processor.stop = () => {
     if (es) {
       es.close();
     }
   }
 
-  processor.close = function() {
-    this.stop();
+  processor.close = () => {
+    processor.stop();
   }
-
 
   return processor;
 }

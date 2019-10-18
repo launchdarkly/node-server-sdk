@@ -1,14 +1,14 @@
 
 function EventFactory(withReasons) {
-  var ef = {};
+  const ef = {};
   
   function isExperiment(flag, reason) {
     if (reason) {
       switch (reason.kind) {
         case 'RULE_MATCH':
-          var index = reason.ruleIndex;
+          const index = reason.ruleIndex;
           if (index !== undefined) {
-            var rules = flag.rules || [];
+            const rules = flag.rules || [];
             return index >= 0 && index < rules.length && !!rules[index].trackEvents;
           }
           break;
@@ -20,9 +20,9 @@ function EventFactory(withReasons) {
     return false;
   }
 
-  ef.newEvalEvent = function(flag, user, detail, defaultVal, prereqOfFlag) {
-    var addExperimentData = isExperiment(flag, detail.reason);
-    var e = {
+  ef.newEvalEvent = (flag, user, detail, defaultVal, prereqOfFlag) => {
+    const addExperimentData = isExperiment(flag, detail.reason);
+    const e = {
       kind: 'feature',
       creationDate: new Date().getTime(),
       key: flag.key,
@@ -48,8 +48,8 @@ function EventFactory(withReasons) {
     return e;
   };
 
-  ef.newDefaultEvent = function(flag, user, detail) {
-    var e = {
+  ef.newDefaultEvent = (flag, user, detail) => {
+    const e = {
       kind: 'feature',
       creationDate: new Date().getTime(),
       key: flag.key,
@@ -71,8 +71,8 @@ function EventFactory(withReasons) {
     return e;
   };
 
-  ef.newUnknownFlagEvent = function(key, user, detail) {
-    var e = {
+  ef.newUnknownFlagEvent = (key, user, detail) => {
+    const e = {
       kind: 'feature',
       creationDate: new Date().getTime(),
       key: key,
@@ -86,7 +86,7 @@ function EventFactory(withReasons) {
     return e;
   };
 
-  ef.newIdentifyEvent = function(user) {
+  ef.newIdentifyEvent = user => {
     return {
       kind: 'identify',
       creationDate: new Date().getTime(),
@@ -95,8 +95,8 @@ function EventFactory(withReasons) {
     };
   };
 
-  ef.newCustomEvent = function(eventName, user, data, metricValue) {
-    var e = {
+  ef.newCustomEvent = (eventName, user, data, metricValue) => {
+    const e = {
       kind: 'custom',
       creationDate: new Date().getTime(),
       key: eventName,

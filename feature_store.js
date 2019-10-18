@@ -1,4 +1,4 @@
-var dataKind = require('./versioned_data_kind');
+const dataKind = require('./versioned_data_kind');
 
 // The default in-memory implementation of a feature store, which holds feature flags and
 // other related data received from LaunchDarkly.
@@ -12,19 +12,22 @@ var dataKind = require('./versioned_data_kind');
 //
 // Additional implementations should use CachingStoreWrapper if possible.
 
-var noop = function(){};
+const noop = function(){};
 function InMemoryFeatureStore() {
-  var store = {allData:{}};
+  let allData = {};
+  let initCalled = false;
+
+  const store = {};
 
   function callbackResult(cb, result) {
     cb = cb || noop;
-    setTimeout(function() { cb(result); }, 0);  // ensure this is dispatched asynchronously
+    setTimeout(() => { cb(result); }, 0);  // ensure this is dispatched asynchronously
   }
 
-  store.get = function(kind, key, cb) {
-    var items = this.allData[kind.namespace] || {};
+  store.get = (kind, key, cb) => {
+    const items = allData[kind.namespace] || {};
     if (Object.hasOwnProperty.call(items, key)) {
-      var item = items[key];
+      const item = items[key];
 
       if (!item || item.deleted) {
         callbackResult(cb, null);
@@ -36,13 +39,13 @@ function InMemoryFeatureStore() {
     }
   }
 
-  store.all = function(kind, cb) {
-    var results = {};
-    var items = this.allData[kind.namespace] || {};
+  store.all = (kind, cb) => {
+    const results = {};
+    const items = allData[kind.namespace] || {};
 
-    for (var key in items) {
+    for (let key in items) {
       if (Object.hasOwnProperty.call(items, key)) {
-        var item = items[key];
+        const item = items[key];
         if (item && !item.deleted) {
           results[key] = clone(item);          
         }
@@ -52,21 +55,21 @@ function InMemoryFeatureStore() {
     callbackResult(cb, results);
   }
 
-  store.init = function(allData, cb) {
-    this.allData = allData;
-    this.initCalled = true;
+  store.init = (newData, cb) => {
+    allData = newData;
+    initCalled = true;
     callbackResult(cb);
   }
 
-  store.delete = function(kind, key, version, cb) {
-    var items = this.allData[kind.namespace];
+  store.delete = (kind, key, version, cb) => {
+    let items = allData[kind.namespace];
     if (!items) {
       items = {};
-      this.allData[kind] = items;
+      allData[kind] = items;
     }
-    var deletedItem = { version: version, deleted: true };
+    const deletedItem = { version: version, deleted: true };
     if (Object.hasOwnProperty.call(items, key)) {
-      var old = items[key];
+      const old = items[key];
       if (!old || old.version < version) {
         items[key] = deletedItem;
       } 
@@ -77,16 +80,16 @@ function InMemoryFeatureStore() {
     callbackResult(cb);
   }
 
-  store.upsert = function(kind, item, cb) {
-    var key = item.key;
-    var items = this.allData[kind.namespace];
+  store.upsert = (kind, item, cb) => {
+    const key = item.key;
+    let items = allData[kind.namespace];
     if (!items) {
       items = {};
-      this.allData[kind.namespace] = items;
+      allData[kind.namespace] = items;
     }
 
     if (Object.hasOwnProperty.call(items, key)) {
-      var old = items[key];
+      const old = items[key];
       if (old && old.version < item.version) {
         items[key] = item;
       }
@@ -97,11 +100,11 @@ function InMemoryFeatureStore() {
     callbackResult(cb);
   }
 
-  store.initialized = function(cb) {
-    callbackResult(cb, this.initCalled === true);
+  store.initialized = cb => {
+    callbackResult(cb, initCalled === true);
   }
 
-  store.close = function() {
+  store.close = () => {
     // Close on the in-memory store is a no-op
   }
 
