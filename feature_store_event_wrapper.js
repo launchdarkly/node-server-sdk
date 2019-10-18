@@ -1,4 +1,4 @@
-var dataKind = require('./versioned_data_kind');
+const dataKind = require('./versioned_data_kind');
 
 function NamespacedDataSet() {
   let itemsByNamespace = {};
@@ -29,7 +29,7 @@ function NamespacedDataSet() {
   }
 
   function enumerate(callback) {
-    for (var ns in itemsByNamespace) {
+    for (let ns in itemsByNamespace) {
       const items = itemsByNamespace[ns];
       const keys = Object.keys(items).sort(); // sort to make tests determinate
       for (let i in keys) {
@@ -62,13 +62,13 @@ function DependencyTracker() {
 
   function updateDependenciesFrom(namespace, key, newDependencySet) {
     const oldDependencySet = dependenciesFrom.get(namespace, key);
-    oldDependencySet && oldDependencySet.enumerate(function(depNs, depKey) {
+    oldDependencySet && oldDependencySet.enumerate((depNs, depKey) => {
       const depsToThisDep = dependenciesTo.get(depNs, depKey);
       depsToThisDep && depsToThisDep.remove(namespace, key);
     });
 
     dependenciesFrom.set(namespace, key, newDependencySet);
-    newDependencySet && newDependencySet.enumerate(function(depNs, depKey) {
+    newDependencySet && newDependencySet.enumerate((depNs, depKey) => {
       let depsToThisDep = dependenciesTo.get(depNs, depKey);
       if (!depsToThisDep) {
         depsToThisDep = NamespacedDataSet();
@@ -82,7 +82,7 @@ function DependencyTracker() {
     if (!inDependencySet.get(modifiedNamespace, modifiedKey)) {
       inDependencySet.set(modifiedNamespace, modifiedKey, true);
       const affectedItems = dependenciesTo.get(modifiedNamespace, modifiedKey);
-      affectedItems && affectedItems.enumerate(function(ns, key) {
+      affectedItems && affectedItems.enumerate((ns, key) => {
         updateModifiedItems(inDependencySet, ns, key);
       });
     }
@@ -109,11 +109,11 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
   }
 
   function sendChangeEvents(dataSet) {
-    dataSet.enumerate(function(namespace, key) {
+    dataSet.enumerate((namespace, key) => {
       if (namespace === dataKind.features.namespace) {
         const arg = { key: key };
-        setImmediate(function() { emitter.emit(`update`, arg); });
-        setImmediate(function() { emitter.emit(`update:${key}`, arg); });
+        setImmediate(() => { emitter.emit('update', arg); });
+        setImmediate(() => { emitter.emit(`update:${key}`, arg); });
       }
     });
   }
@@ -140,8 +140,8 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
   }
 
   function getMergedData(callback) {
-    featureStore.all(dataKind.features, function(oldFlags) {
-      featureStore.all(dataKind.segments, function(oldSegments) {
+    featureStore.all(dataKind.features, oldFlags => {
+      featureStore.all(dataKind.segments, oldSegments => {
         const data = {};
         data[dataKind.features.namespace] = oldFlags;
         data[dataKind.segments.namespace] = oldSegments;
@@ -156,9 +156,9 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
     initialized: featureStore.initialized.bind(featureStore),
     close: featureStore.close.bind(featureStore),
 
-    init: function(newData, callback) {
-      getMergedData(function(oldData) {
-        featureStore.init(newData, function() {
+    init: (newData, callback) => {
+      getMergedData(oldData => {
+        featureStore.init(newData, () => {
           dependencyTracker.reset();
 
           for (let namespace in newData) {
@@ -173,9 +173,9 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
           const updatedItems = NamespacedDataSet();
           for (let namespace in newData) {
             const oldDataForKind = oldData[namespace];
-            const newDataForKind = newData[namespace]
+            const newDataForKind = newData[namespace];
             const mergedData = Object.assign({}, oldDataForKind, newDataForKind);
-            for (var key in mergedData) {
+            for (let key in mergedData) {
               addIfModified(namespace, key,
                 oldDataForKind && oldDataForKind[key],
                 newDataForKind && newDataForKind[key],
@@ -189,9 +189,9 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
       }); 
     },
 
-    delete: function(kind, key, version, callback) {
-      featureStore.get(kind, key, function(oldItem) {
-        featureStore.delete(kind, key, version, function() {
+    delete: (kind, key, version, callback) => {
+      featureStore.get(kind, key, oldItem => {
+        featureStore.delete(kind, key, version, () => {
           dependencyTracker.updateDependenciesFrom(kind.namespace, key, null);
           const updatedItems = NamespacedDataSet();
           addIfModified(kind.namespace, key, oldItem, {}, updatedItems);
@@ -201,10 +201,10 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
       });
     },
 
-    upsert: function(kind, newItem, callback) {
+    upsert: (kind, newItem, callback) => {
       const key = newItem.key;
-      featureStore.get(kind, key, function(oldItem) {
-        featureStore.upsert(kind, newItem, function() {
+      featureStore.get(kind, key, oldItem => {
+        featureStore.upsert(kind, newItem, () => {
           dependencyTracker.updateDependenciesFrom(kind.namespace, key, computeDependencies(kind, newItem));
           const updatedItems = NamespacedDataSet();
           addIfModified(kind.namespace, key, oldItem, newItem, updatedItems);
@@ -213,7 +213,7 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
         });
       });
     }
-  }
+  };
 }
 
 module.exports = FeatureStoreEventWrapper;

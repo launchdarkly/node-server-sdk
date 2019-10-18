@@ -2,7 +2,7 @@ var configuration = require('../configuration');
 
 describe('configuration', function() {
   function checkDefault(name, value) {
-    it('applies defaults correctly for "' + name + "'", function() {
+    it('applies defaults correctly for "' + name + '"', function() {
       var configWithUnspecifiedValue = {};
       expect(configuration.validate(configWithUnspecifiedValue)[name]).toEqual(value);
       var configWithNullValue = {};

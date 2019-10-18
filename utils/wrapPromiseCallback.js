@@ -13,15 +13,15 @@
  */
 module.exports = function wrapPromiseCallback(promise, callback) {
   const ret = promise.then(
-    function(value) {
+    value => {
       if (callback) {
-        setTimeout(function() { callback(null, value); }, 0);
+        setTimeout(() => { callback(null, value); }, 0);
       }
       return value;
     },
-    function(error) {
+    error => {
       if (callback) {
-        setTimeout(function() { callback(error, null); }, 0);
+        setTimeout(() => { callback(error, null); }, 0);
       } else {
         return Promise.reject(error);
       }
@@ -29,4 +29,4 @@ module.exports = function wrapPromiseCallback(promise, callback) {
   );
 
   return !callback ? ret : undefined;
-}
+};

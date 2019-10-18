@@ -1,8 +1,8 @@
 
 function UpdateQueue() {
-  var updateQueue = [];
-  this.enqueue = function(updateFn, fnArgs, cb) {
-    updateQueue.push(arguments);
+  const updateQueue = [];
+  this.enqueue = (updateFn, fnArgs, cb) => {
+    updateQueue.push([ updateFn, fnArgs, cb ]);
     if (updateQueue.length === 1) {
       // if nothing else is in progress, we can start this one right away
       executePendingUpdates();
@@ -14,7 +14,7 @@ function UpdateQueue() {
       const fn = entry[0];
       const args = entry[1];
       const cb = entry[2];
-      const newCb = function() {
+      const newCb = () => {
         updateQueue.shift();
         if (updateQueue.length > 0) {
           setImmediate(executePendingUpdates);

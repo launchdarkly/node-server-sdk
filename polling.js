@@ -1,14 +1,14 @@
-var errors = require('./errors');
-var messages = require('./messages');
-var dataKind = require('./versioned_data_kind');
+const errors = require('./errors');
+const messages = require('./messages');
+const dataKind = require('./versioned_data_kind');
 
 function PollingProcessor(config, requestor) {
-  var processor = {},
-      featureStore = config.featureStore,
-      stopped = false;
+  const processor = {},
+    featureStore = config.featureStore;
+  let stopped = false;
 
   function poll(cb) {
-    var startTime, delta;
+    let startTime;
 
     cb = cb || function(){};
 
@@ -17,11 +17,11 @@ function PollingProcessor(config, requestor) {
     }
 
     startTime = new Date().getTime();
-    config.logger.debug("Polling LaunchDarkly for feature flag updates");
-    requestor.requestAllData(function(err, resp) {
+    config.logger.debug('Polling LaunchDarkly for feature flag updates');
+    requestor.requestAllData((err, resp) => {
       const elapsed = new Date().getTime() - startTime;
       const sleepFor = Math.max(config.pollInterval * 1000 - elapsed, 0);
-      config.logger.debug("Elapsed: %d ms, sleeping for %d ms", elapsed, sleepFor);
+      config.logger.debug('Elapsed: %d ms, sleeping for %d ms', elapsed, sleepFor);
       if (err) {
         const message = err.status || err.message;
         cb(new errors.LDPollingError(messages.httpErrorMessage(message, 'polling request', 'will retry')));
@@ -29,33 +29,33 @@ function PollingProcessor(config, requestor) {
           config.logger.error('Received 401 error, no further polling requests will be made since SDK key is invalid');
         } else {
           // Recursively call poll after the appropriate delay
-          setTimeout(function() { poll(cb); }, sleepFor);
+          setTimeout(() => { poll(cb); }, sleepFor);
         }
       } else {
-        var allData = JSON.parse(resp);
-        var initData = {};
+        const allData = JSON.parse(resp);
+        const initData = {};
         initData[dataKind.features.namespace] = allData.flags;
         initData[dataKind.segments.namespace] = allData.segments;
-        featureStore.init(initData, function() {
+        featureStore.init(initData, () => {
           cb();
           // Recursively call poll after the appropriate delay
-          setTimeout(function() { poll(cb); }, sleepFor);
+          setTimeout(() => { poll(cb); }, sleepFor);
         });
       }
     });
+  }
+
+  processor.start = cb => {
+    poll(cb);
   };
 
-  processor.start = function(cb) {
-    poll(cb);
-  }
-
-  processor.stop = function() {
+  processor.stop = () => {
     stopped = true;
-  }
+  };
 
-  processor.close = function() {
-    this.stop();
-  }
+  processor.close = () => {
+    processor.stop();
+  };
 
   return processor;
 }
