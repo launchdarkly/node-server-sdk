@@ -1,4 +1,3 @@
-const dataKind = require('./versioned_data_kind');
 
 // The default in-memory implementation of a feature store, which holds feature flags and
 // other related data received from LaunchDarkly.
@@ -37,7 +36,7 @@ function InMemoryFeatureStore() {
     } else {
       callbackResult(cb, null);
     }
-  }
+  };
 
   store.all = (kind, cb) => {
     const results = {};
@@ -53,13 +52,13 @@ function InMemoryFeatureStore() {
     }
 
     callbackResult(cb, results);
-  }
+  };
 
   store.init = (newData, cb) => {
     allData = newData;
     initCalled = true;
     callbackResult(cb);
-  }
+  };
 
   store.delete = (kind, key, version, cb) => {
     let items = allData[kind.namespace];
@@ -78,7 +77,7 @@ function InMemoryFeatureStore() {
     }
 
     callbackResult(cb);
-  }
+  };
 
   store.upsert = (kind, item, cb) => {
     const key = item.key;
@@ -98,15 +97,15 @@ function InMemoryFeatureStore() {
     }
 
     callbackResult(cb);
-  }
+  };
 
   store.initialized = cb => {
     callbackResult(cb, initCalled === true);
-  }
+  };
 
   store.close = () => {
     // Close on the in-memory store is a no-op
-  }
+  };
 
   return store;
 }

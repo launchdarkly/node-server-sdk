@@ -1,16 +1,16 @@
-var NodeCache = require('node-cache'),
-    dataKind = require('./versioned_data_kind'),
-    UpdateQueue = require('./update_queue');
+const NodeCache = require('node-cache'),
+  dataKind = require('./versioned_data_kind'),
+  UpdateQueue = require('./update_queue');
 
 function cacheKey(kind, key) {
-  return kind.namespace + ":" + key;
+  return kind.namespace + ':' + key;
 }
 
 function allCacheKey(kind) {
-  return "$all:" + kind.namespace;
+  return '$all:' + kind.namespace;
 }
 
-var initializedKey = "$checkedInit";
+const initializedKey = '$checkedInit';
 
 /*
   CachingStoreWrapper provides commonly needed functionality for implementations of an
@@ -61,18 +61,18 @@ var initializedKey = "$checkedInit";
   all of the items provided.
 */
 function CachingStoreWrapper(underlyingStore, ttl) {
-  var cache = ttl ? new NodeCache({ stdTTL: ttl }) : null;
-  var queue = new UpdateQueue();
-  var initialized = false;
+  const cache = ttl ? new NodeCache({ stdTTL: ttl }) : null;
+  const queue = new UpdateQueue();
+  let initialized = false;
 
   this.underlyingStore = underlyingStore;
   
-  this.init = function(allData, cb) {
-    queue.enqueue(function(cb) {
+  this.init = (allData, cb) => {
+    queue.enqueue(cb => {
       // The underlying store can either implement initInternal, which receives unordered  data,
       // or initOrderedInternal, which receives ordered data (for implementations that cannot do
       // an atomic update and therefore need to be told what order to do the operations in).
-      var afterInit = function() {
+      const afterInit = () => {
         initialized = true;
 
         if (cache) {
@@ -80,11 +80,11 @@ function CachingStoreWrapper(underlyingStore, ttl) {
           cache.flushAll();
 
           // populate cache with initial data
-          Object.keys(allData).forEach(function(kindNamespace) {
-            var kind = dataKind[kindNamespace];
-            var items = allData[kindNamespace];
+          Object.keys(allData).forEach(kindNamespace => {
+            const kind = dataKind[kindNamespace];
+            const items = allData[kindNamespace];
             cache.set(allCacheKey(kind), items);
-            Object.keys(items).forEach(function(key) {
+            Object.keys(items).forEach(key => {
               cache.set(cacheKey(kind, key), items[key]);
             });
           });
@@ -94,7 +94,7 @@ function CachingStoreWrapper(underlyingStore, ttl) {
       };
 
       if (underlyingStore.initOrderedInternal) {
-        var orderedData = sortAllCollections(allData);
+        const orderedData = sortAllCollections(allData);
         underlyingStore.initOrderedInternal(orderedData, afterInit);
       } else {
         underlyingStore.initInternal(allData, afterInit);
@@ -102,13 +102,13 @@ function CachingStoreWrapper(underlyingStore, ttl) {
     }, [], cb);
   };
 
-  this.initialized = function(cb) {
+  this.initialized = cb => {
     if (initialized) {
       cb(true);
     } else if (cache && cache.get(initializedKey)) {
       cb(false);
     } else {
-      underlyingStore.initializedInternal(function(inited) {
+      underlyingStore.initializedInternal(inited => {
         initialized = inited;
         if (!initialized) {
           cache && cache.set(initializedKey, true);
@@ -118,21 +118,21 @@ function CachingStoreWrapper(underlyingStore, ttl) {
     }
   };
 
-  this.all = function(kind, cb) {
-    var items = cache && cache.get(allCacheKey(kind));
+  this.all = (kind, cb) => {
+    const items = cache && cache.get(allCacheKey(kind));
     if (items) {
       cb(items);
       return;
     }
 
-    underlyingStore.getAllInternal(kind, function(items) {
+    underlyingStore.getAllInternal(kind, items => {
       if (items === null || items === undefined) {
         cb(items);
         return;
       }
-      var filteredItems = {};
-      Object.keys(items).forEach(function(key) {
-        var item = items[key];
+      const filteredItems = {};
+      Object.keys(items).forEach(key => {
+        const item = items[key];
         if (item && !item.deleted) {
           filteredItems[key] = item;
         }
@@ -142,16 +142,16 @@ function CachingStoreWrapper(underlyingStore, ttl) {
     });
   };
 
-  this.get = function(kind, key, cb) {
+  this.get = (kind, key, cb) => {
     if (cache) {
-      var item = cache.get(cacheKey(kind, key));
+      const item = cache.get(cacheKey(kind, key));
       if (item !== undefined) {
         cb(itemOnlyIfNotDeleted(item));
         return;
       }
     }
 
-    underlyingStore.getInternal(kind, key, function(item) {
+    underlyingStore.getInternal(kind, key, item => {
       cache && cache.set(cacheKey(kind, key), item);
       cb(itemOnlyIfNotDeleted(item));
     });
@@ -161,10 +161,10 @@ function CachingStoreWrapper(underlyingStore, ttl) {
     return (!item || item.deleted) ? null : item;
   }
 
-  this.upsert = function(kind, newItem, cb) {
-    queue.enqueue(function (cb) {
+  this.upsert = (kind, newItem, cb) => {
+    queue.enqueue(cb => {
       flushAllCaches();
-      underlyingStore.upsertInternal(kind, newItem, function(err, updatedItem) {
+      underlyingStore.upsertInternal(kind, newItem, (err, updatedItem) => {
         if (!err) {
           cache && cache.set(cacheKey(kind, newItem.key), updatedItem);
         }
@@ -173,11 +173,11 @@ function CachingStoreWrapper(underlyingStore, ttl) {
     }, [], cb);
   };
 
-  this.delete = function(kind, key, version, cb) {
+  this.delete = (kind, key, version, cb) => {
     this.upsert(kind, { key: key, version: version, deleted: true }, cb);
   };
 
-  this.close = function() {
+  this.close = () => {
     cache && cache.close();
     underlyingStore.close();
   };
@@ -194,29 +194,25 @@ function CachingStoreWrapper(underlyingStore, ttl) {
   // This and the next function are used by init() to provide the best ordering of items
   // to write the underlying store, if the store supports the initOrderedInternal method.
   function sortAllCollections(dataMap) {
-    var result = [];
+    const result = [];
     Object.keys(dataMap).forEach(function(kindNamespace) {
       var kind = dataKind[kindNamespace];
       result.push({ kind: kind, items: sortCollection(kind, dataMap[kindNamespace]) });
     });
-    var kindPriority = function(kind) {
-      return kind.priority === undefined ? kind.namespace.length : kind.priority
-    };
-    result.sort(function(i1, i2) {
-      return kindPriority(i1.kind) - kindPriority(i2.kind);
-    });
+    const kindPriority = kind => kind.priority === undefined ? kind.namespace.length : kind.priority;
+    result.sort((i1, i2) => kindPriority(i1.kind) - kindPriority(i2.kind));
     return result;
   }
 
   function sortCollection(kind, itemsMap) {
-    var itemsOut = [];
-    var remainingItems = new Set(Object.keys(itemsMap));
-    var addWithDependenciesFirst = function(key) {
+    const itemsOut = [];
+    const remainingItems = new Set(Object.keys(itemsMap));
+    const addWithDependenciesFirst = key => {
       if (remainingItems.has(key)) {
         remainingItems.delete(key);
-        var item = itemsMap[key];
+        const item = itemsMap[key];
         if (kind.getDependencyKeys) {
-          kind.getDependencyKeys(item).forEach(function(prereqKey) {
+          kind.getDependencyKeys(item).forEach(prereqKey => {
             addWithDependenciesFirst(prereqKey);
           });
         }
@@ -225,7 +221,7 @@ function CachingStoreWrapper(underlyingStore, ttl) {
     };
     while (remainingItems.size > 0) {
       // pick a random item that hasn't been updated yet
-      var key = remainingItems.values().next().value;
+      const key = remainingItems.values().next().value;
       addWithDependenciesFirst(key);
     }
     return itemsOut;
@@ -233,4 +229,3 @@ function CachingStoreWrapper(underlyingStore, ttl) {
 }
 
 module.exports = CachingStoreWrapper;
-

@@ -7,21 +7,21 @@ const messages = require('./messages');
 const stringifyAttrs = require('./utils/stringifyAttrs');
 const wrapPromiseCallback = require('./utils/wrapPromiseCallback');
 
-const userAttrsToStringifyForEvents = [ "key", "secondary", "ip", "country", "email", "firstName", "lastName", "avatar", "name" ];
+const userAttrsToStringifyForEvents = [ 'key', 'secondary', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name' ];
 
 function EventProcessor(sdkKey, config, errorReporter) {
   const ep = {};
 
   const userFilter = UserFilter(config),
-      summarizer = EventSummarizer(config),
-      userKeysCache = LRUCache(config.userKeysCapacity);
+    summarizer = EventSummarizer(config),
+    userKeysCache = LRUCache(config.userKeysCapacity);
   
   let queue = [],
-      lastKnownPastTime = 0,
-      exceededCapacity = false,
-      shutdown = false,
-      flushTimer,
-      flushUsersTimer;
+    lastKnownPastTime = 0,
+    exceededCapacity = false,
+    shutdown = false,
+    flushTimer,
+    flushUsersTimer;
 
   function enqueue(event) {
     if (queue.length < config.capacity) {
@@ -30,7 +30,7 @@ function EventProcessor(sdkKey, config, errorReporter) {
     } else {
       if (!exceededCapacity) {
         exceededCapacity = true;
-        config.logger.warn("Exceeded event queue capacity. Increase capacity to avoid dropping events.");
+        config.logger.warn('Exceeded event queue capacity. Increase capacity to avoid dropping events.');
       }
     }
   }
@@ -47,58 +47,60 @@ function EventProcessor(sdkKey, config, errorReporter) {
 
   function makeOutputEvent(event) {
     switch (event.kind) {
-      case 'feature':
-        const debug = !!event.debug;
-        const fe = {
-          kind: debug ? 'debug' : 'feature',
-          creationDate: event.creationDate,
-          key: event.key,
-          value: event.value,
-          default: event.default,
-          prereqOf: event.prereqOf
-        };
-        if (event.variation !== undefined && event.variation !== null) {
-          fe.variation = event.variation;
-        }
-        if (event.version) {
-          fe.version = event.version;
-        }
-        if (event.reason) {
-          fe.reason = event.reason;
-        }
-        if (config.inlineUsersInEvents || debug) {
-          fe.user = processUser(event);
-        } else {
-          fe.userKey = getUserKey(event);
-        }
-        return fe;
-      case 'identify':
-        return {
-          kind: 'identify',
-          creationDate: event.creationDate,
-          key: getUserKey(event),
-          user: processUser(event)
-        };
-      case 'custom':
-        const ce = {
-          kind: 'custom',
-          creationDate: event.creationDate,
-          key: event.key
-        };
-        if (config.inlineUsersInEvents) {
-          ce.user = processUser(event);
-        } else {
-          ce.userKey = getUserKey(event);
-        }
-        if (event.data !== null && event.data !== undefined) {
-          ce.data = event.data;
-        }
-        if (event.metricValue !== null && event.metricValue !== undefined) {
-          ce.metricValue = event.metricValue;
-        }
-        return ce;
-      default:
-        return event;
+    case 'feature': {
+      const debug = !!event.debug;
+      const out = {
+        kind: debug ? 'debug' : 'feature',
+        creationDate: event.creationDate,
+        key: event.key,
+        value: event.value,
+        default: event.default,
+        prereqOf: event.prereqOf
+      };
+      if (event.variation !== undefined && event.variation !== null) {
+        out.variation = event.variation;
+      }
+      if (event.version) {
+        out.version = event.version;
+      }
+      if (event.reason) {
+        out.reason = event.reason;
+      }
+      if (config.inlineUsersInEvents || debug) {
+        out.user = processUser(event);
+      } else {
+        out.userKey = getUserKey(event);
+      }
+      return out;
+    }
+    case 'identify':
+      return {
+        kind: 'identify',
+        creationDate: event.creationDate,
+        key: getUserKey(event),
+        user: processUser(event)
+      };
+    case 'custom': {
+      const out = {
+        kind: 'custom',
+        creationDate: event.creationDate,
+        key: event.key
+      };
+      if (config.inlineUsersInEvents) {
+        out.user = processUser(event);
+      } else {
+        out.userKey = getUserKey(event);
+      }
+      if (event.data !== null && event.data !== undefined) {
+        out.data = event.data;
+      }
+      if (event.metricValue !== null && event.metricValue !== undefined) {
+        out.metricValue = event.metricValue;
+      }
+      return out;
+    }
+    default:
+      return event;
     }
   }
 
@@ -113,8 +115,8 @@ function EventProcessor(sdkKey, config, errorReporter) {
 
   ep.sendEvent = event => {
     let addIndexEvent = false,
-        addFullEvent = false,
-        addDebugEvent = false;
+      addFullEvent = false,
+      addDebugEvent = false;
 
     if (shutdown) {
       return;
@@ -157,7 +159,7 @@ function EventProcessor(sdkKey, config, errorReporter) {
       const debugEvent = Object.assign({}, event, { debug: true });
       enqueue(makeOutputEvent(debugEvent));
     }
-  }
+  };
 
   ep.flush = function(callback) {
     return wrapPromiseCallback(new Promise(function(resolve, reject) {
@@ -165,7 +167,7 @@ function EventProcessor(sdkKey, config, errorReporter) {
       let summary;
       
       if (shutdown) {
-        const err = new errors.LDInvalidSDKKeyError("Events cannot be posted because SDK key is invalid");
+        const err = new errors.LDInvalidSDKKeyError('Events cannot be posted because SDK key is invalid');
         reject(err);
         return;
       }
@@ -184,23 +186,23 @@ function EventProcessor(sdkKey, config, errorReporter) {
         return;
       }
 
-      config.logger.debug("Flushing %d events", worklist.length);
+      config.logger.debug('Flushing %d events', worklist.length);
 
       tryPostingEvents(worklist, resolve, reject, true);
     }), callback);
-  }
+  };
 
   function tryPostingEvents(events, resolve, reject, canRetry) {
     const retryOrReject = err => {
       if (canRetry) {
-        config.logger && config.logger.warn("Will retry posting events after 1 second");
+        config.logger && config.logger.warn('Will retry posting events after 1 second');
         setTimeout(() => {
           tryPostingEvents(events, resolve, reject, false);
         }, 1000);
       } else {
         reject(err);
       }
-    }
+    };
 
     const options = Object.assign({}, config.tlsParams, {
       method: 'POST',
@@ -242,14 +244,15 @@ function EventProcessor(sdkKey, config, errorReporter) {
   ep.close = () => {
     clearInterval(flushTimer);
     clearInterval(flushUsersTimer);
-  }
+  };
 
   flushTimer = setInterval(() => {
-      ep.flush().then(() => {} , () => {});
-    }, config.flushInterval * 1000);
+    ep.flush().then(() => {} , () => {});
+  }, config.flushInterval * 1000);
+
   flushUsersTimer = setInterval(() => {
-      userKeysCache.removeAll();
-    }, config.userKeysFlushInterval * 1000);
+    userKeysCache.removeAll();
+  }, config.userKeysFlushInterval * 1000);
 
   return ep;
 }

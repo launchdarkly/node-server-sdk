@@ -4,7 +4,7 @@ const dataKind = require('./versioned_data_kind');
 
 function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
   const processor = {},
-      featureStore = config.featureStore;
+    featureStore = config.featureStore;
   let es;
 
   eventSourceFactory = eventSourceFactory || EventSource;
@@ -15,7 +15,7 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
 
   processor.start = fn => {
     const cb = fn || function(){};
-    es = new eventSourceFactory(config.streamUri + "/all", 
+    es = new eventSourceFactory(config.streamUri + '/all', 
       {
         agent: config.proxyAgent, 
         headers: {'Authorization': sdkKey,'User-Agent': config.userAgent},
@@ -102,8 +102,8 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
       }
     });
 
-    es.addEventListener('indirect/put', e => {
-      config.logger.debug('Received indirect put event')
+    es.addEventListener('indirect/put', () => {
+      config.logger.debug('Received indirect put event');
       requestor.requestAllData((err, resp) => {
         if (err) {
           cb(err);
@@ -116,11 +116,11 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
             cb();
           });
         }
-      })
+      });
     });
 
     es.addEventListener('indirect/patch', e => {
-      config.logger.debug('Received indirect patch event')
+      config.logger.debug('Received indirect patch event');
       if (e && e.data) {
         const path = e.data;
         for (var k in dataKind) {
@@ -142,17 +142,17 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
         cb(new errors.LDStreamingError('Unexpected payload from event stream'));
       }
     });
-  }
+  };
 
   processor.stop = () => {
     if (es) {
       es.close();
     }
-  }
+  };
 
   processor.close = () => {
     processor.stop();
-  }
+  };
 
   return processor;
 }

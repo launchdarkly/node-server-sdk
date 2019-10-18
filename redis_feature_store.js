@@ -1,7 +1,7 @@
 const redis = require('redis'),
-    winston = require('winston'),
-    dataKind = require('./versioned_data_kind'),
-    CachingStoreWrapper = require('./caching_store_wrapper');
+  winston = require('winston'),
+  dataKind = require('./versioned_data_kind'),
+  CachingStoreWrapper = require('./caching_store_wrapper');
 
 const noop = function(){};
 
@@ -13,9 +13,9 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
 function redisFeatureStoreInternal(redisOpts, prefix, logger) {
 
   const client = redis.createClient(redisOpts),
-      store = {},
-      itemsPrefix = (prefix || "launchdarkly") + ":",
-      initedKey = itemsPrefix + "$inited";
+    store = {},
+    itemsPrefix = (prefix || 'launchdarkly') + ':',
+    initedKey = itemsPrefix + '$inited';
 
   logger = (logger ||
     new winston.Logger({
@@ -67,7 +67,7 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
 
     client.hget(itemsKey(kind), key, (err, obj) => {
       if (err) {
-        logger.error("Error fetching key " + key + " from Redis in '" + kind.namespace + "'", err);
+        logger.error('Error fetching key ' + key + ' from Redis in \'' + kind.namespace + '\'', err);
         cb(null);
       } else {
         const item = JSON.parse(obj);
@@ -97,11 +97,11 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
 
     client.hgetall(itemsKey(kind), (err, obj) => {
       if (err) {
-        logger.error("Error fetching '" + kind.namespace + "'' from Redis", err);
+        logger.error('Error fetching \'' + kind.namespace + '\' from Redis', err);
         cb(null);
       } else {
         const results = {},
-            items = obj;
+          items = obj;
 
         for (var key in items) {
           if (Object.hasOwnProperty.call(items, key)) {
@@ -135,11 +135,11 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
       }
     }
 
-    multi.set(initedKey, "");
+    multi.set(initedKey, '');
     
-    multi.exec((err, replies) => {
+    multi.exec(err => {
       if (err) {
-        logger.error("Error initializing Redis store", err);
+        logger.error('Error initializing Redis store', err);
       }
       cb();
     });
@@ -148,11 +148,11 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
   store.upsertInternal = (kind, item, cb) => {
     updateItemWithVersioning(kind, item, (err, attemptedWrite) => {
       if (err) {
-        logger.error("Error upserting key " + key + " in '" + kind.namespace + "'", err);
+        logger.error('Error upserting key ' + item.key + ' in \'' + kind.namespace + '\'', err);
       }
       cb(err, attemptedWrite);
     });
-  }
+  };
 
   function updateItemWithVersioning(kind, newItem, cb) {
     client.watch(itemsKey(kind));
@@ -169,7 +169,7 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
           multi.exec((err, replies) => {
             if (!err && replies === null) {
               // This means the EXEC failed because someone modified the watched key
-              logger.debug("Concurrent modification detected, retrying");
+              logger.debug('Concurrent modification detected, retrying');
               updateItemWithVersioning(kind, newItem, cb);
             } else {
               cb(err, newItem);

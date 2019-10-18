@@ -67,7 +67,7 @@ module.exports = (function() {
   }
 
   function canonicalizeUri(uri) {
-    return uri.replace(/\/+$/, "");
+    return uri.replace(/\/+$/, '');
   }
 
   function validate(options) {

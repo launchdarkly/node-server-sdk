@@ -1,4 +1,3 @@
-const messages = require('./messages');
 
 /**
  * The UserFilter object transforms user objects into objects suitable to be sent as JSON to
@@ -12,10 +11,9 @@ function UserFilter(config) {
   const privateAttributeNames = config.privateAttributeNames || [];
   const ignoreAttrs = { key: true, custom: true, anonymous: true };
   const allowedTopLevelAttrs = { key: true, secondary: true, ip: true, country: true, email: true,
-        firstName: true, lastName: true, avatar: true, name: true, anonymous: true, custom: true };
+    firstName: true, lastName: true, avatar: true, name: true, anonymous: true, custom: true };
 
   filter.filterUser = user => {
-    const allPrivateAttrs = {};
     const userPrivateAttrs = user.privateAttributeNames || [];
     
     const isPrivateAttr = name =>
@@ -39,7 +37,7 @@ function UserFilter(config) {
     const filteredProps = result[0];
     const removedAttrs = result[1];
     if (user.custom) {
-      const customResult = filterAttrs(user.custom, key => true);
+      const customResult = filterAttrs(user.custom, () => true);
       filteredProps.custom = customResult[0];
       Object.assign(removedAttrs, customResult[1]);
     }
@@ -49,7 +47,7 @@ function UserFilter(config) {
       filteredProps.privateAttrs = removedAttrNames;
     }
     return filteredProps;
-  }
+  };
 
   return filter;
 }

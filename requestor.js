@@ -25,7 +25,7 @@ function Requestor(sdkKey, config) {
 
   function makeRequest(resource) {
     const requestParams = Object.assign({}, config.tlsParams, {
-      method: "GET",
+      method: 'GET',
       url: config.baseUri + resource,
       headers: {
         'Authorization': sdkKey,
@@ -63,7 +63,7 @@ function Requestor(sdkKey, config) {
   function processErrorResponse(cb) {
     return err => {
       cb(err, null);
-    }
+    };
   }
 
   requestor.requestObject = (kind, key, cb) => {
@@ -72,7 +72,7 @@ function Requestor(sdkKey, config) {
       processResponse(cb),
       processErrorResponse(cb)
     );
-  }
+  };
 
   requestor.requestAllData = cb => {
     const req = makeRequest('/sdk/latest-all');
@@ -80,7 +80,7 @@ function Requestor(sdkKey, config) {
       processResponse(cb),
       processErrorResponse(cb)
     );
-  }
+  };
 
   return requestor;
 }

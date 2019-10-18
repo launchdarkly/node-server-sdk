@@ -5,16 +5,16 @@ function EventFactory(withReasons) {
   function isExperiment(flag, reason) {
     if (reason) {
       switch (reason.kind) {
-        case 'RULE_MATCH':
-          const index = reason.ruleIndex;
-          if (index !== undefined) {
-            const rules = flag.rules || [];
-            return index >= 0 && index < rules.length && !!rules[index].trackEvents;
-          }
-          break;
-        case 'FALLTHROUGH':
-          return !!flag.trackEventsFallthrough;
-          break;
+      case 'RULE_MATCH': {
+        const index = reason.ruleIndex;
+        if (index !== undefined) {
+          const rules = flag.rules || [];
+          return index >= 0 && index < rules.length && !!rules[index].trackEvents;
+        }
+        break;
+      }
+      case 'FALLTHROUGH':
+        return !!flag.trackEventsFallthrough;
       }
     }
     return false;

@@ -1,10 +1,10 @@
 
-function EventSummarizer(config) {
+function EventSummarizer() {
   const es = {};
 
   let startDate = 0,
-      endDate = 0,
-      counters = {};
+    endDate = 0,
+    counters = {};
   
   es.summarizeEvent = event => {
     if (event.kind === 'feature') {
@@ -33,7 +33,7 @@ function EventSummarizer(config) {
         endDate = event.creationDate;
       }
     }
-  }
+  };
 
   es.getSummary = () => {
     const flagsOut = {};
@@ -66,13 +66,13 @@ function EventSummarizer(config) {
       endDate: endDate,
       features: flagsOut
     };
-  }
+  };
 
   es.clearSummary = () => {
     startDate = 0;
     endDate = 0;
     counters = {};
-  }
+  };
 
   return es;
 }

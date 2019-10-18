@@ -29,4 +29,4 @@ module.exports = function wrapPromiseCallback(promise, callback) {
   );
 
   return !callback ? ret : undefined;
-}
+};

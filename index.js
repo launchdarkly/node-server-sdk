@@ -54,12 +54,12 @@ function NullUpdateProcessor() {
 const newClient = function(sdkKey, originalConfig) {
   const client = new EventEmitter();
   let initComplete = false,
-      failure,
-      requestor,
-      updateProcessor,
-      eventProcessor,
-      eventFactoryDefault,
-      eventFactoryWithReasons;
+    failure,
+    requestor,
+    updateProcessor,
+    eventProcessor,
+    eventFactoryDefault,
+    eventFactoryWithReasons;
 
   const config = configuration.validate(originalConfig);
   
@@ -86,7 +86,7 @@ const newClient = function(sdkKey, originalConfig) {
   }
 
   if (!sdkKey && !config.offline) {
-    throw new Error("You must configure the client with an SDK key");
+    throw new Error('You must configure the client with an SDK key');
   }
 
   const createDefaultUpdateProcessor = config => {
@@ -96,15 +96,15 @@ const newClient = function(sdkKey, originalConfig) {
       requestor = Requestor(sdkKey, config);
   
       if (config.stream) {
-        config.logger.info("Initializing stream processor to receive feature flag updates");
+        config.logger.info('Initializing stream processor to receive feature flag updates');
         return StreamingProcessor(sdkKey, config, requestor);
       } else {
-        config.logger.info("Initializing polling processor to receive feature flag updates");
-        config.logger.warn("You should only disable the streaming API if instructed to do so by LaunchDarkly support");
+        config.logger.info('Initializing polling processor to receive feature flag updates');
+        config.logger.warn('You should only disable the streaming API if instructed to do so by LaunchDarkly support');
         return PollingProcessor(config, requestor);
       }
     }
-  }
+  };
   let updateProcessorFactory = createDefaultUpdateProcessor;
   if (config.updateProcessor) {
     if (typeof config.updateProcessor === 'function') {
@@ -121,7 +121,7 @@ const newClient = function(sdkKey, originalConfig) {
     if (err) {
       let error;
       if ((err.status && err.status === 401) || (err.code && err.code === 401)) {
-        error = new Error("Authentication failed. Double check your SDK key.");
+        error = new Error('Authentication failed. Double check your SDK key.');
       } else {
         error = err;
       }
@@ -138,7 +138,7 @@ const newClient = function(sdkKey, originalConfig) {
   client.initialized = () => initComplete;
 
   client.waitUntilReady = () => {
-    config.logger.warn(messages.deprecated("waitUntilReady", "waitForInitialization"));
+    config.logger.warn(messages.deprecated('waitUntilReady', 'waitForInitialization'));
 
     if (initComplete) {
       return Promise.resolve();
@@ -158,7 +158,7 @@ const newClient = function(sdkKey, originalConfig) {
     }
 
     return new Promise((resolve, reject) => {
-      client.once('ready', () => { resolve(client) });
+      client.once('ready', () => { resolve(client); });
       client.once('failed', reject);
     });
   };
@@ -167,7 +167,7 @@ const newClient = function(sdkKey, originalConfig) {
     return wrapPromiseCallback(new Promise((resolve, reject) => {
       evaluateIfPossible(key, user, defaultVal, eventFactoryDefault,
         detail => {
-          resolve(detail.value)
+          resolve(detail.value);
         },
         reject);
     }), callback);
@@ -181,16 +181,16 @@ const newClient = function(sdkKey, originalConfig) {
 
   function errorResult(errorKind, defaultVal) {
     return { value: defaultVal, variationIndex: null, reason: { kind: 'ERROR', errorKind: errorKind } };
-  };
+  }
 
   function evaluateIfPossible(key, user, defaultVal, eventFactory, resolve, reject) {
     if (!initComplete) {
       config.featureStore.initialized(storeInited => {
         if (storeInited) {
-          config.logger.warn("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using last known values from feature store")
+          config.logger.warn('Variation called before LaunchDarkly client initialization completed (did you wait for the \'ready\' event?) - using last known values from feature store');
           variationInternal(key, user, defaultVal, eventFactory, resolve, reject);
         } else {
-          const err = new errors.LDClientError("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using default value");
+          const err = new errors.LDClientError('Variation called before LaunchDarkly client initialization completed (did you wait for the \'ready\' event?) - using default value');
           maybeReportError(err);
           const result = errorResult('CLIENT_NOT_READY', defaultVal);
           eventProcessor.sendEvent(eventFactory.newUnknownFlagEvent(key, user, result));
@@ -203,9 +203,9 @@ const newClient = function(sdkKey, originalConfig) {
   }
 
   // resolves to a "detail" object with properties "value", "variationIndex", "reason"
-  function variationInternal(key, user, defaultVal, eventFactory, resolve, reject) {
+  function variationInternal(key, user, defaultVal, eventFactory, resolve) {
     if (client.isOffline()) {
-      config.logger.info("Variation called in offline mode. Returning default value.");
+      config.logger.info('Variation called in offline mode. Returning default value.');
       return resolve(errorResult('CLIENT_NOT_READY', defaultVal));
     }
 
@@ -215,8 +215,8 @@ const newClient = function(sdkKey, originalConfig) {
       return resolve(errorResult('FLAG_NOT_FOUND', defaultVal));
     }
 
-    if (user && user.key === "") {
-      config.logger.warn("User key is blank. Flag evaluation will proceed, but the user will not be stored in LaunchDarkly");
+    if (user && user.key === '') {
+      config.logger.warn('User key is blank. Flag evaluation will proceed, but the user will not be stored in LaunchDarkly');
     }
 
     config.featureStore.get(dataKind.features, key, flag => {
@@ -249,7 +249,7 @@ const newClient = function(sdkKey, originalConfig) {
         }
 
         if (detail.variationIndex === null) {
-          config.logger.debug("Result value is null in variation");
+          config.logger.debug('Result value is null in variation');
           detail.value = defaultVal;
         }
         eventProcessor.sendEvent(eventFactory.newEvalEvent(flag, user, detail, defaultVal));
@@ -258,17 +258,12 @@ const newClient = function(sdkKey, originalConfig) {
     });
   }
 
-  client.toggle = (key, user, defaultVal, callback) => {
-    config.logger.warn("toggle() is deprecated. Call 'variation' instead");
-    return client.variation(key, user, defaultVal, callback);
-  }
-
   client.allFlags = (user, callback) => {
-    config.logger.warn("allFlags() is deprecated. Call 'allFlagsState' instead and call toJSON() on the result");
+    config.logger.warn('allFlags() is deprecated. Call \'allFlagsState\' instead and call toJSON() on the result');
     return wrapPromiseCallback(
       client.allFlagsState(user).then(state => state.allValues()),
       callback);
-  }
+  };
 
   client.allFlagsState = (user, options, callback) => {
     if (callback === undefined && typeof(options) === 'function') {
@@ -279,12 +274,12 @@ const newClient = function(sdkKey, originalConfig) {
     }
     return wrapPromiseCallback(new Promise((resolve, reject) => {
       if (client.isOffline()) {
-        config.logger.info("allFlagsState() called in offline mode. Returning empty state.");
+        config.logger.info('allFlagsState() called in offline mode. Returning empty state.');
         return resolve(FlagsStateBuilder(false).build());
       }
 
       if (!user) {
-        config.logger.info("allFlagsState() called without user. Returning empty state.");
+        config.logger.info('allFlagsState() called without user. Returning empty state.');
         return resolve(FlagsStateBuilder(false).build());
       }
 
@@ -298,7 +293,7 @@ const newClient = function(sdkKey, originalConfig) {
             setImmediate(iterateeCb);
           } else {
             // At the moment, we don't send any events here
-            evaluate.evaluate(flag, user, config.featureStore, eventFactoryDefault, (err, detail, events) => {
+            evaluate.evaluate(flag, user, config.featureStore, eventFactoryDefault, (err, detail) => {
               if (err != null) {
                 maybeReportError(new Error('Error for feature flag "' + flag.key + '" while evaluating all flags: ' + err));
               }
@@ -311,13 +306,13 @@ const newClient = function(sdkKey, originalConfig) {
         });
       });
     }), callback);
-  }
+  };
 
   client.secureModeHash = user => {
     const hmac = crypto.createHmac('sha256', sdkKey);
     hmac.update(user.key);
     return hmac.digest('hex');
-  }
+  };
 
   client.close = () => {
     eventProcessor.close();
@@ -325,11 +320,9 @@ const newClient = function(sdkKey, originalConfig) {
       updateProcessor.close();
     }
     config.featureStore.close();
-  }
+  };
 
-  client.isOffline = () => {
-    return config.offline;
-  }
+  client.isOffline = () => config.offline;
 
   client.track = (eventName, user, data, metricValue) => {
     if (!userExistsAndHasKey(user)) {
@@ -354,7 +347,7 @@ const newClient = function(sdkKey, originalConfig) {
   function userExistsAndHasKey(user) {
     if (user) {
       const key = user.key;
-      return key !== undefined && key !== null && key !== "";
+      return key !== undefined && key !== null && key !== '';
     }
     return false;
   }
@@ -369,6 +362,7 @@ const newClient = function(sdkKey, originalConfig) {
   deprecatedMethod('all_flags', 'allFlags');
   deprecatedMethod('is_offline', 'isOffline');
   deprecatedMethod('secure_mode_hash', 'secureModeHash');
+  deprecatedMethod('toggle', 'variation');
 
   return client;
 };
@@ -392,7 +386,7 @@ function createProxyAgent(config) {
 
   if (config.proxyScheme === 'https') {
     if (!config.baseUri || config.baseUri.startsWith('https')) {
-     return tunnel.httpsOverHttps(options);
+      return tunnel.httpsOverHttps(options);
     } else {
       return tunnel.httpOverHttps(options);
     }

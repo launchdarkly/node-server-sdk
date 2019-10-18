@@ -33,7 +33,7 @@ function FlagsStateBuilder(valid) {
       getFlagReason: key => flagMetadata[key] ? flagMetadata[key].reason : null,
       toJSON: () => Object.assign({}, flagValues, { $flagsState: flagMetadata, $valid: valid })
     };
-  }
+  };
 
   return builder;
 }

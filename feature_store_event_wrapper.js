@@ -4,7 +4,7 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
   function differ(key, oldValue, newValue) {
     if(newValue && oldValue && newValue.version < oldValue.version) return;
     setTimeout(function(){
-      emitter.emit("update", newValue);
+      emitter.emit('update', newValue);
       emitter.emit(`update:${key}`, oldValue, newValue);
     }, 0);
   }
@@ -55,7 +55,7 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
         });
       });
     }
-  }
+  };
 }
 
 module.exports = FeatureStoreEventWrapper;

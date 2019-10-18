@@ -1,7 +1,7 @@
 const fs = require('fs'),
-    winston = require('winston'),
-    yaml = require('yaml'),
-    dataKind = require('./versioned_data_kind');
+  winston = require('winston'),
+  yaml = require('yaml'),
+  dataKind = require('./versioned_data_kind');
 
 /*
   FileDataSource provides a way to use local files as a source of feature flag state, instead of
@@ -55,7 +55,7 @@ function FileDataSource(options) {
           } else {
             allData[kind.namespace][item.key] = item;
           }
-        }
+        };
         Object.keys(parsed.flags || {}).forEach(key => {
           addItem(dataKind.features, parsed.flags[key]);
         });
@@ -137,7 +137,7 @@ function FileDataSource(options) {
 
     function startWatching() {
       paths.forEach(path => {
-        const watcher = fs.watch(path, { persistent: false }, (event, filename) => {
+        const watcher = fs.watch(path, { persistent: false }, () => {
           maybeReloadForPath(path);
         });
         watchers.push(watcher);
@@ -176,7 +176,7 @@ function FileDataSource(options) {
     };
 
     return fds;
-  }
+  };
 }
 
 module.exports = FileDataSource;

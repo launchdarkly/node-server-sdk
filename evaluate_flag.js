@@ -6,7 +6,7 @@ const async = require('async');
 const stringifyAttrs = require('./utils/stringifyAttrs');
 
 const builtins = ['key', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name', 'anonymous'];
-const userAttrsToStringifyForEvaluation = [ "key", "secondary" ];
+const userAttrsToStringifyForEvaluation = [ 'key', 'secondary' ];
 // Currently we are not stringifying the rest of the built-in attributes prior to evaluation, only for events.
 // This is because it could affect evaluation results for existing users (ch35206).
 
@@ -58,7 +58,7 @@ function checkPrerequisites(flag, user, featureStore, events, eventFactory, cb) 
           // If the flag does not exist in the store or is not on, the prerequisite
           // is not satisfied
           if (!prereqFlag) {
-            callback({ key: prereq.key, err: new Error("Could not retrieve prerequisite feature flag \"" + prereq.key + "\"") });
+            callback({ key: prereq.key, err: new Error('Could not retrieve prerequisite feature flag "' + prereq.key + '"') });
             return;
           }
           evalInternal(prereqFlag, user, featureStore, events, eventFactory, (err, detail) => {
@@ -92,12 +92,9 @@ function checkPrerequisites(flag, user, featureStore, events, eventFactory, cb) 
 
 // Callback receives (err, detail)
 function evalRules(flag, user, featureStore, cb) {
-  let target;
-  let variation;
-  let rule;
   // Check target matches
   for (let i = 0; i < (flag.targets || []).length; i++) {
-    target = flag.targets[i];
+    const target = flag.targets[i];
 
     if (!target.values) {
       continue;
@@ -117,7 +114,7 @@ function evalRules(flag, user, featureStore, cb) {
         setImmediate(callback, matched ? rule : null, null);
       });
     },
-    (err, results) => {
+    err => {
       // we use the "error" value to indicate that a rule was successfully matched (since we only care
       // about the first match, and mapSeries terminates on the first "error")
       if (err) {
@@ -151,7 +148,7 @@ function ruleMatchUser(r, user, featureStore, cb) {
         setImmediate(callback, matched ? null : clause, null);
       });
     },
-    (err, results) => {
+    err => {
       cb(!err);
     }
   );
@@ -170,7 +167,7 @@ function clauseMatchUser(c, user, featureStore, cb) {
           }
         });
       },
-      (err, results) => {
+      err => {
         // an "error" indicates that a segment *did* match
         cb(maybeNegate(c, !!err));
       }
@@ -187,7 +184,7 @@ function clauseMatchUserNoSegments(c, user) {
     return false;
   }
 
-  const matchFn = operators.fn(c.op)
+  const matchFn = operators.fn(c.op);
 
   // The user's value is an array
   if (Array === uValue.constructor) {
@@ -232,7 +229,7 @@ function segmentRuleMatchUser(rule, user, segmentKey, salt) {
   }
 
   // All of the clauses are met. See if the user buckets in
-  const bucket = bucketUser(user, segmentKey, rule.bucketBy || "key", salt);
+  const bucket = bucketUser(user, segmentKey, rule.bucketBy || 'key', salt);
   const weight = rule.weight / 100000.0;
   return bucket < weight;
 }
@@ -297,7 +294,7 @@ function variationForUser(r, user, flag) {
   } else if (r.rollout != null) {
     // This represents a percentage rollout. Assume
     // we're rolling out by key
-    const bucketBy = r.rollout.bucketBy != null ? r.rollout.bucketBy : "key";
+    const bucketBy = r.rollout.bucketBy != null ? r.rollout.bucketBy : 'key';
     const bucket = bucketUser(user, flag.key, bucketBy, flag.salt);
     let sum = 0;
     for (let i = 0; i < r.rollout.variations.length; i++) {
@@ -315,10 +312,10 @@ function variationForUser(r, user, flag) {
 // Fetch an attribute value from a user object. Automatically
 // navigates into the custom array when necessary
 function userValue(user, attr) {
-  if (builtins.indexOf(attr) >= 0 && user.hasOwnProperty(attr)) {
+  if (builtins.indexOf(attr) >= 0 && Object.hasOwnProperty.call(user, attr)) {
     return user[attr];
   }
-  if (user.custom && user.custom.hasOwnProperty(attr)) {
+  if (user.custom && Object.hasOwnProperty.call(user.custom, attr)) {
     return user.custom[attr];
   }
   return null;
@@ -333,10 +330,10 @@ function bucketUser(user, key, attr, salt) {
   }
 
   if (user.secondary) {
-    idHash += "." + user.secondary;
+    idHash += '.' + user.secondary;
   }
 
-  const hashKey = util.format("%s.%s.%s", key, salt, idHash);
+  const hashKey = util.format('%s.%s.%s', key, salt, idHash);
   const hashVal = parseInt(sha1(hashKey).substring(0,15), 16);
 
   return hashVal / 0xFFFFFFFFFFFFFFF;
