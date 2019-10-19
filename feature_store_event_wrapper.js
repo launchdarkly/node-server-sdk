@@ -209,7 +209,7 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
           dependencyTracker.updateDependenciesFrom(kind.namespace, key, null);
           if (checkForChanges) {
             const updatedItems = NamespacedDataSet();
-            addIfModified(kind.namespace, key, oldItem, {}, updatedItems);
+            addIfModified(kind.namespace, key, oldItem, { version: version, deleted: true }, updatedItems);
             sendChangeEvents(updatedItems);
           }
           callback && callback.apply(null, arguments);
