@@ -184,7 +184,7 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
             sendChangeEvents(updatedItems);
           }
 
-          callback && callback.apply(null, arguments);
+          callback && callback();
         });
       };
 
@@ -212,7 +212,7 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
             addIfModified(kind.namespace, key, oldItem, { version: version, deleted: true }, updatedItems);
             sendChangeEvents(updatedItems);
           }
-          callback && callback.apply(null, arguments);
+          callback && callback();
         });
       };
       if (checkForChanges) {
@@ -233,7 +233,7 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
             addIfModified(kind.namespace, key, oldItem, newItem, updatedItems);
             sendChangeEvents(updatedItems);
           }
-          callback && callback.apply(null, arguments);
+          callback && callback();
         });
       };
       if (checkForChanges) {
