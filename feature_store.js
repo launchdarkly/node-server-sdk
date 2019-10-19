@@ -11,7 +11,13 @@
 //
 // Additional implementations should use CachingStoreWrapper if possible.
 
-const noop = function(){};
+// Note that the contract for feature store methods does *not* require callbacks to be deferred
+// with setImmediate, process.nextTick, etc. It is both allowed and desirable to call them
+// directly whenever possible (i.e. if we don't actually have to do any I/O), since otherwise
+// feature flag retrieval is a major performance bottleneck. These methods are for internal use
+// by the SDK, and the SDK does not make any assumptions about whether a callback executes
+// before or after the next statement.
+
 function InMemoryFeatureStore() {
   let allData = {};
   let initCalled = false;
@@ -19,8 +25,7 @@ function InMemoryFeatureStore() {
   const store = {};
 
   function callbackResult(cb, result) {
-    cb = cb || noop;
-    setTimeout(() => { cb(result); }, 0);  // ensure this is dispatched asynchronously
+    cb && cb(result);
   }
 
   store.get = (kind, key, cb) => {
@@ -31,7 +36,7 @@ function InMemoryFeatureStore() {
       if (!item || item.deleted) {
         callbackResult(cb, null);
       } else {
-        callbackResult(cb, clone(item));
+        callbackResult(cb, item);
       }
     } else {
       callbackResult(cb, null);
@@ -46,7 +51,7 @@ function InMemoryFeatureStore() {
       if (Object.hasOwnProperty.call(items, key)) {
         const item = items[key];
         if (item && !item.deleted) {
-          results[key] = clone(item);          
+          results[key] = item;
         }
       }
     }
@@ -90,10 +95,10 @@ function InMemoryFeatureStore() {
     if (Object.hasOwnProperty.call(items, key)) {
       const old = items[key];
       if (old && old.version < item.version) {
-        items[key] = item;
+        items[key] = clone(item);
       }
     } else {
-      items[key] = item;
+      items[key] = clone(item);
     }
 
     callbackResult(cb);

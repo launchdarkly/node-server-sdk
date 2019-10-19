@@ -13,8 +13,8 @@ const evaluate = require('./evaluate_flag');
 const messages = require('./messages');
 const tunnel = require('tunnel');
 const crypto = require('crypto');
-const async = require('async');
 const errors = require('./errors');
+const { safeAsyncEach } = require('./utils/asyncUtils');
 const wrapPromiseCallback = require('./utils/wrapPromiseCallback');
 const dataKind = require('./versioned_data_kind');
 
@@ -45,7 +45,7 @@ function NullEventProcessor() {
 function NullUpdateProcessor() {
   return {
     start: callback => {
-      setImmediate(callback, null);
+      setImmediate(callback, null); // the start() callback should always be deferred
     },
     close: () => {}
   };
@@ -288,9 +288,9 @@ const newClient = function(sdkKey, originalConfig) {
       const withReasons = options.withReasons;
       const detailsOnlyIfTracked = options.detailsOnlyForTrackedFlags;
       config.featureStore.all(dataKind.features, flags => {
-        async.forEachOf(flags, (flag, key, iterateeCb) => {
+        safeAsyncEach(flags, (flag, iterateeCb) => {
           if (clientOnly && !flag.clientSide) {
-            setImmediate(iterateeCb);
+            iterateeCb();
           } else {
             // At the moment, we don't send any events here
             evaluate.evaluate(flag, user, config.featureStore, eventFactoryDefault, (err, detail) => {
@@ -298,7 +298,7 @@ const newClient = function(sdkKey, originalConfig) {
                 maybeReportError(new Error('Error for feature flag "' + flag.key + '" while evaluating all flags: ' + err));
               }
               builder.addFlag(flag, detail.value, detail.variationIndex, withReasons ? detail.reason : null, detailsOnlyIfTracked);
-              setImmediate(iterateeCb);
+              iterateeCb();
             });
           }
         }, err => {

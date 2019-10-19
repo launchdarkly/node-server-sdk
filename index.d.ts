@@ -508,6 +508,12 @@ declare module 'launchdarkly-node-server-sdk' {
    * from LaunchDarkly. By default, it uses an in-memory implementation; there are also adapters
    * for Redis and other databases (see the [SDK Reference Guide](https://docs.launchdarkly.com/v2.0/docs/using-a-persistent-feature-store)).
    * You will not need to use this interface unless you are writing your own implementation.
+   * 
+   * Feature store methods can and should call their callbacks directly whenever possible, rather
+   * than deferring them with setImmediate() or process.nextTick(). This means that if for any
+   * reason you are updating or querying a feature store directly in your application code (which
+   * is not part of normal use of the SDK) you should be aware that the callback may be executed
+   * immediately.
    */
   export interface LDFeatureStore {
     /**

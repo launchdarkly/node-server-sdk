@@ -15,13 +15,13 @@ module.exports = function wrapPromiseCallback(promise, callback) {
   const ret = promise.then(
     value => {
       if (callback) {
-        setTimeout(() => { callback(null, value); }, 0);
+        setImmediate(() => { callback(null, value); });
       }
       return value;
     },
     error => {
       if (callback) {
-        setTimeout(() => { callback(error, null); }, 0);
+        setImmediate(() => { callback(error, null); });
       } else {
         return Promise.reject(error);
       }

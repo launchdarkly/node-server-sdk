@@ -12,16 +12,14 @@ function defineFeatures(features, cb) {
   for (var i in features) {
     data[dataKind.features.namespace][features[i].key] = features[i];
   }
-  featureStore.init(data);
-  setTimeout(cb, 0);
+  featureStore.init(data, cb)
 }
 
 function defineSegment(segment, cb) {
   var data = {};
   data[dataKind.segments.namespace] = {};
   data[dataKind.segments.namespace][segment.key] = segment;
-  featureStore.init(data);
-  setTimeout(cb, 0);
+  featureStore.init(data, cb);
 }
 
 function makeFlagWithRules(rules, fallthrough) {
