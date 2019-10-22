@@ -2,6 +2,7 @@ const InMemoryFeatureStore = require('../feature_store');
 const StreamProcessor = require('../streaming');
 const dataKind = require('../versioned_data_kind');
 const { asyncify, sleepAsync } = require('./async_utils');
+const stubs = require('./stubs');
 
 describe('StreamProcessor', () => {
   const sdkKey = 'SDK_KEY';
@@ -20,15 +21,6 @@ describe('StreamProcessor', () => {
       es.instance = this;
     };
     return es;
-  }
-
-  function fakeLogger() {
-    return {
-      debug: jest.fn(),
-      info: jest.fn(),
-      warn: jest.fn(),
-      error: jest.fn()
-    };
   }
 
   function expectJsonError(err, config) {
@@ -68,7 +60,7 @@ describe('StreamProcessor', () => {
 
     it('causes flags and segments to be stored', async () => {
       var featureStore = InMemoryFeatureStore();
-      var config = { featureStore: featureStore, logger: fakeLogger() };
+      var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
       var sp = StreamProcessor(sdkKey, config, null, es.constructor);
       sp.start();
@@ -86,7 +78,7 @@ describe('StreamProcessor', () => {
 
     it('calls initialization callback', async () => {
       var featureStore = InMemoryFeatureStore();
-      var config = { featureStore: featureStore, logger: fakeLogger() };
+      var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
       var sp = StreamProcessor(sdkKey, config, null, es.constructor);
       
@@ -98,7 +90,7 @@ describe('StreamProcessor', () => {
 
     it('passes error to callback if data is invalid', async () => {
       var featureStore = InMemoryFeatureStore();
-      var config = { featureStore: featureStore, logger: fakeLogger() };
+      var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
       var sp = StreamProcessor(sdkKey, config, null, es.constructor);
       
@@ -112,7 +104,7 @@ describe('StreamProcessor', () => {
   describe('patch message', function() {
     it('updates flag', async () => {
       var featureStore = InMemoryFeatureStore();
-      var config = { featureStore: featureStore, logger: fakeLogger() };
+      var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
       var sp = StreamProcessor(sdkKey, config, null, es.constructor);
 
@@ -130,7 +122,7 @@ describe('StreamProcessor', () => {
 
     it('updates segment', async () => {
       var featureStore = InMemoryFeatureStore();
-      var config = { featureStore: featureStore, logger: fakeLogger() };
+      var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
       var sp = StreamProcessor(sdkKey, config, null, es.constructor);
 
@@ -148,7 +140,7 @@ describe('StreamProcessor', () => {
 
     it('passes error to callback if data is invalid', async () => {
       var featureStore = InMemoryFeatureStore();
-      var config = { featureStore: featureStore, logger: fakeLogger() };
+      var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
       var sp = StreamProcessor(sdkKey, config, null, es.constructor);
       
@@ -162,7 +154,7 @@ describe('StreamProcessor', () => {
   describe('delete message', function() {
     it('deletes flag', async () => {
       var featureStore = InMemoryFeatureStore();
-      var config = { featureStore: featureStore, logger: fakeLogger() };
+      var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
       var sp = StreamProcessor(sdkKey, config, null, es.constructor);
 
@@ -182,7 +174,7 @@ describe('StreamProcessor', () => {
 
     it('deletes segment', async () => {
       var featureStore = InMemoryFeatureStore();
-      var config = { featureStore: featureStore, logger: fakeLogger() };
+      var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
       var sp = StreamProcessor(sdkKey, config, null, es.constructor);
 
@@ -202,7 +194,7 @@ describe('StreamProcessor', () => {
 
     it('passes error to callback if data is invalid', async () => {
       var featureStore = InMemoryFeatureStore();
-      var config = { featureStore: featureStore, logger: fakeLogger() };
+      var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
       var sp = StreamProcessor(sdkKey, config, null, es.constructor);
       
@@ -230,7 +222,7 @@ describe('StreamProcessor', () => {
 
     it('requests and stores flags and segments', async () => {
       var featureStore = InMemoryFeatureStore();
-      var config = { featureStore: featureStore, logger: fakeLogger() };
+      var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
       var sp = StreamProcessor(sdkKey, config, fakeRequestor, es.constructor);
 
@@ -260,7 +252,7 @@ describe('StreamProcessor', () => {
       };
 
       var featureStore = InMemoryFeatureStore();
-      var config = { featureStore: featureStore, logger: fakeLogger() };
+      var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
       var sp = StreamProcessor(sdkKey, config, fakeRequestor, es.constructor);
 
@@ -284,7 +276,7 @@ describe('StreamProcessor', () => {
       };
 
       var featureStore = InMemoryFeatureStore();
-      var config = { featureStore: featureStore, logger: fakeLogger() };
+      var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
       var sp = StreamProcessor(sdkKey, config, fakeRequestor, es.constructor);
 
@@ -300,7 +292,7 @@ describe('StreamProcessor', () => {
 
   async function testRecoverableError(err) {
     const featureStore = InMemoryFeatureStore();
-    const config = { featureStore: featureStore, logger: fakeLogger() };
+    const config = { featureStore: featureStore, logger: stubs.stubLogger() };
     const es = fakeEventSource();
     const sp = StreamProcessor(sdkKey, config, null, es.constructor);
     
@@ -334,7 +326,7 @@ describe('StreamProcessor', () => {
       const err = new Error('sorry');
       err.status = status;
       const featureStore = InMemoryFeatureStore();
-      const config = { featureStore: featureStore, logger: fakeLogger() };
+      const config = { featureStore: featureStore, logger: stubs.stubLogger() };
       const es = fakeEventSource();
       const sp = StreamProcessor(sdkKey, config, null, es.constructor);
       

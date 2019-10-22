@@ -28,7 +28,7 @@ function PollingProcessor(config, requestor) {
           config.logger.error(message);
           cb(new errors.LDPollingError(message));
         } else {
-          config.logger.info(messages.httpErrorMessage(err.status || err.message, 'polling request', 'will retry'));
+          config.logger.warn(messages.httpErrorMessage(err.status || err.message, 'polling request', 'will retry'));
           // Recursively call poll after the appropriate delay
           setTimeout(() => { poll(cb); }, sleepFor);
         }

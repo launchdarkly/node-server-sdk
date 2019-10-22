@@ -2,6 +2,7 @@ const InMemoryFeatureStore = require('../feature_store');
 const PollingProcessor = require('../polling');
 const dataKind = require('../versioned_data_kind');
 const { asyncify, asyncifyNode, sleepAsync } = require('./async_utils');
+const stubs = require('./stubs');
 
 describe('PollingProcessor', () => {
   const longInterval = 100000;
@@ -14,19 +15,12 @@ describe('PollingProcessor', () => {
 
   beforeEach(() => {
     store = InMemoryFeatureStore();
-    config = { featureStore: store, pollInterval: longInterval, logger: fakeLogger() };
+    config = { featureStore: store, pollInterval: longInterval, logger: stubs.stubLogger() };
   });
 
   afterEach(() => {
     processor && processor.stop();
   });
-
-  function fakeLogger() {
-    return {
-      debug: jest.fn(),
-      error: jest.fn()
-    };
-  }
 
   it('makes no request before start', () => {
     const requestor = {

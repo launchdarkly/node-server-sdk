@@ -31,7 +31,7 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
         cb(new errors.LDStreamingError(err.message, err.status));
       } else {
         const message = messages.httpErrorMessage(err.status, 'streaming request', 'will retry');
-        config.logger.info(message);
+        config.logger.warn(message);
       }
     };
 
