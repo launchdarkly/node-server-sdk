@@ -37,7 +37,7 @@ function PollingProcessor(config, requestor) {
         initData[dataKind.features.namespace] = allData.flags;
         initData[dataKind.segments.namespace] = allData.segments;
         featureStore.init(initData, () => {
-          cb();
+          cb(); // We can call the callback directly here because there's always already at least one level of deferral due to I/O
           // Recursively call poll after the appropriate delay
           setTimeout(() => { poll(cb); }, sleepFor);
         });

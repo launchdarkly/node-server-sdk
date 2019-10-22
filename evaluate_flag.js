@@ -2,8 +2,8 @@ const operators = require('./operators');
 const dataKind = require('./versioned_data_kind');
 const util = require('util');
 const sha1 = require('node-sha1');
-const async = require('async');
 const stringifyAttrs = require('./utils/stringifyAttrs');
+const { safeAsyncEachSeries } = require('./utils/asyncUtils');
 
 const builtins = ['key', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name', 'anonymous'];
 const userAttrsToStringifyForEvaluation = [ 'key', 'secondary' ];
@@ -51,8 +51,8 @@ function evalInternal(flag, user, featureStore, events, eventFactory, cb) {
 
 // Callback receives (err, reason) where reason is null if successful, or a "prerequisite failed" reason
 function checkPrerequisites(flag, user, featureStore, events, eventFactory, cb) {
-  if (flag.prerequisites) {
-    async.mapSeries(flag.prerequisites,
+  if (flag.prerequisites && flag.prerequisites.length) {
+    safeAsyncEachSeries(flag.prerequisites,
       (prereq, callback) => {
         featureStore.get(dataKind.features, prereq.key, prereqFlag => {
           // If the flag does not exist in the store or is not on, the prerequisite
@@ -108,15 +108,17 @@ function evalRules(flag, user, featureStore, cb) {
     }
   }
 
-  async.mapSeries(flag.rules || [],
+  safeAsyncEachSeries(flag.rules,
     (rule, callback) => {
       ruleMatchUser(rule, user, featureStore, matched => {
-        setImmediate(callback, matched ? rule : null, null);
+        // We raise an "error" on the first rule that *does* match, to stop evaluating more rules
+        callback(matched ? rule : null);
       });
     },
+    // The following function executes once all of the rules have been checked
     err => {
       // we use the "error" value to indicate that a rule was successfully matched (since we only care
-      // about the first match, and mapSeries terminates on the first "error")
+      // about the first match, and eachSeries terminates on the first "error")
       if (err) {
         let rule = err;
         const reason = { kind: 'RULE_MATCH', ruleId: rule.id };
@@ -137,15 +139,16 @@ function evalRules(flag, user, featureStore, cb) {
 
 function ruleMatchUser(r, user, featureStore, cb) {
   if (!r.clauses) {
-    return false;
+    cb(false);
+    return;
   }
 
-  // A rule matches if all its clauses match
-  async.mapSeries(r.clauses,
+  // A rule matches if all its clauses match.
+  safeAsyncEachSeries(r.clauses,
     (clause, callback) => {
       clauseMatchUser(clause, user, featureStore, matched => {
         // on the first clause that does *not* match, we raise an "error" to stop the loop
-        setImmediate(callback, matched ? null : clause, null);
+        callback(matched ? null : clause);
       });
     },
     err => {
@@ -156,17 +159,18 @@ function ruleMatchUser(r, user, featureStore, cb) {
 
 function clauseMatchUser(c, user, featureStore, cb) {
   if (c.op == 'segmentMatch') {
-    async.mapSeries(c.values,
+    safeAsyncEachSeries(c.values,
       (value, callback) => {
         featureStore.get(dataKind.segments, value, segment => {
           if (segment && segmentMatchUser(segment, user)) {
             // on the first segment that matches, we raise an "error" to stop the loop
-            callback(segment, null);
+            callback(segment);
           } else {
-            callback(null, null);
+            callback(null);
           }
         });
       },
+      // The following function executes once all of the clauses have been checked
       err => {
         // an "error" indicates that a segment *did* match
         cb(maybeNegate(c, !!err));

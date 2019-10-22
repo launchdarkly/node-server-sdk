@@ -15,6 +15,8 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
 
   processor.start = fn => {
     const cb = fn || function(){};
+    // Note that we can call this callback directly here because there's always already at least one level of deferral due to I/O
+
     es = new eventSourceFactory(config.streamUri + '/all', 
       {
         agent: config.proxyAgent, 
