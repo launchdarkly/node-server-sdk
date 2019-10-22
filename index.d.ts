@@ -681,9 +681,8 @@ declare module 'launchdarkly-node-server-sdk' {
    * - `"error"`: Contains an error object describing some abnormal condition that the client has detected
    *   (such as a network error).
    * - `"update"`: The client has received a change to a feature flag. The event parameter is an object
-   *   containing the flag configuration; its `key` property is the flag key. Note that this does not
-   *   necessarily mean the flag's value has changed for any particular user, only that some part of the
-   *   flag configuration was changed.
+   *   containing a single property, `key`, the flag key. Note that this does not necessarily mean the flag's
+   *   value has changed for any particular user, only that some part of the flag configuration was changed.
    * - `"update:KEY"`: The client has received a change to the feature flag whose key is KEY. This is the
    *   same as `"update"` but allows you to listen for a specific flag.
    * 
