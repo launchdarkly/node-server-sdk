@@ -2,7 +2,9 @@ const semver = require('semver');
 
 // Our reference SDK, Go, parses date/time strings with the time.RFC3339Nano format. This regex should match
 // strings that are valid in that format, and no others.
-const dateRegex = new RegExp('^\\d\\d\\d\\d-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(\\d\\d*)?(Z|-\\d\\d(:\\d\\d)?)');
+// Acceptable: 2019-10-31T23:59:59Z, 2019-10-31T23:59:59.100Z, 2019-10-31T23:59:59-07, 2019-10-31T23:59:59-07:00, etc.
+// Unacceptable: no "T", no time zone designation
+const dateRegex = new RegExp('^\\d\\d\\d\\d-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(\\.\\d\\d*)?(Z|[-+]\\d\\d(:\\d\\d)?)');
 
 function stringOperator(f) {
   return (userValue, clauseValue) =>
