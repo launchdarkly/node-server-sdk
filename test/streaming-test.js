@@ -3,17 +3,21 @@ const StreamProcessor = require('../streaming');
 const dataKind = require('../versioned_data_kind');
 const { asyncify, sleepAsync } = require('./async_utils');
 
-describe('StreamProcessor', function() {
-  var sdkKey = 'SDK_KEY';
+describe('StreamProcessor', () => {
+  const sdkKey = 'SDK_KEY';
 
   function fakeEventSource() {
     var es = { handlers: {} };
     es.constructor = function(url, options) {
       es.url = url;
       es.options = options;
-      this.addEventListener = function(type, handler) {
+      this.addEventListener = (type, handler) => {
         es.handlers[type] = handler;
       };
+      this.close = () => {
+        es.closed = true;
+      };
+      es.instance = this;
     };
     return es;
   }
@@ -21,6 +25,8 @@ describe('StreamProcessor', function() {
   function fakeLogger() {
     return {
       debug: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
       error: jest.fn()
     };
   }
@@ -291,4 +297,59 @@ describe('StreamProcessor', function() {
       expect(s.version).toEqual(1);
     });
   });
+
+  async function testRecoverableError(err) {
+    const featureStore = InMemoryFeatureStore();
+    const config = { featureStore: featureStore, logger: fakeLogger() };
+    const es = fakeEventSource();
+    const sp = StreamProcessor(sdkKey, config, null, es.constructor);
+    
+    let errReceived;
+    sp.start(e => { errReceived = e; });
+
+    es.instance.onerror(err);
+    await sleepAsync(300);
+
+    expect(config.logger.error).not.toHaveBeenCalled();
+    expect(errReceived).toBeUndefined();
+    expect(es.closed).not.toEqual(true);
+  }
+  
+  function testRecoverableHttpError(status) {
+    const err = new Error('sorry');
+    err.status = status;
+    it('continues retrying after error ' + status, async () => await testRecoverableError(err));
+  }
+
+  testRecoverableHttpError(400);
+  testRecoverableHttpError(408);
+  testRecoverableHttpError(429);
+  testRecoverableHttpError(500);
+  testRecoverableHttpError(503);
+
+  it('continues retrying after I/O error', async () => await testRecoverableError(new Error('sorry')));
+
+  function testUnrecoverableHttpError(status) {
+    it('stops retrying after error ' + status, async () => {
+      const err = new Error('sorry');
+      err.status = status;
+      const featureStore = InMemoryFeatureStore();
+      const config = { featureStore: featureStore, logger: fakeLogger() };
+      const es = fakeEventSource();
+      const sp = StreamProcessor(sdkKey, config, null, es.constructor);
+      
+      let errReceived;
+      sp.start(e => { errReceived = e; });
+  
+      es.instance.onerror(err);
+      await sleepAsync(300);
+  
+      expect(config.logger.error).toHaveBeenCalledTimes(1);
+      expect(errReceived).not.toBeUndefined();
+      expect(es.closed).toEqual(true);
+    });
+  }
+
+  testUnrecoverableHttpError(401);
+  testUnrecoverableHttpError(403);
 });

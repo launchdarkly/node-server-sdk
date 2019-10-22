@@ -57,16 +57,6 @@ describe('PollingProcessor', () => {
     await asyncifyNode(cb => processor.start(cb)); // didn't throw -> success
   });
 
-  it('calls callback with error on failure', async () => {
-    const err = new Error('sorry');
-    const requestor = {
-      requestAllData: cb => cb(err)
-    };
-    processor = PollingProcessor(config, requestor);
-
-    await expect(asyncifyNode(cb => processor.start(cb))).rejects.toThrow(/sorry.*will retry/);
-  });
-
   it('initializes feature store', async () => {
     const requestor = {
       requestAllData: cb => cb(null, jsonData)
@@ -94,22 +84,26 @@ describe('PollingProcessor', () => {
     expect(requestor.requestAllData.mock.calls.length).toBeGreaterThanOrEqual(4);
   });
 
+  async function testRecoverableError(err) {
+    const requestor = {
+      requestAllData: jest.fn(cb => cb(err))
+    };
+    config.pollInterval = 0.1;
+    processor = PollingProcessor(config, requestor);
+
+    let errReceived;
+    processor.start(e => { errReceived = e; });
+    await sleepAsync(300);
+
+    expect(requestor.requestAllData.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(config.logger.error).not.toHaveBeenCalled();
+    expect(errReceived).toBeUndefined();
+  }
+  
   function testRecoverableHttpError(status) {
-    it('continues polling after error ' + status, async () => {
-      const err = new Error('sorry');
-      err.status = status;
-      const requestor = {
-        requestAllData: jest.fn(cb => cb(err))
-      };
-      config.pollInterval = 0.1;
-      processor = PollingProcessor(config, requestor);
-
-      processor.start(() => {});
-      await sleepAsync(300);
-
-      expect(requestor.requestAllData.mock.calls.length).toBeGreaterThanOrEqual(2);
-      expect(config.logger.error).not.toHaveBeenCalled();
-    });
+    const err = new Error('sorry');
+    err.status = status;
+    it('continues polling after error ' + status, async () => await testRecoverableError(err));
   }
 
   testRecoverableHttpError(400);
@@ -117,6 +111,8 @@ describe('PollingProcessor', () => {
   testRecoverableHttpError(429);
   testRecoverableHttpError(500);
   testRecoverableHttpError(503);
+
+  it('continues polling after I/O error', async () => await testRecoverableError(new Error('sorry')));
 
   function testUnrecoverableHttpError(status) {
     it('stops polling after error ' + status, async () => {
@@ -128,11 +124,13 @@ describe('PollingProcessor', () => {
       config.pollInterval = 0.1;
       processor = PollingProcessor(config, requestor);
 
-      processor.start(() => {});
+      let errReceived;
+      processor.start(e => { errReceived = e; });
       await sleepAsync(300);
 
       expect(requestor.requestAllData.mock.calls.length).toEqual(1);
       expect(config.logger.error).toHaveBeenCalledTimes(1);
+      expect(errReceived).not.toBeUndefined();
     });
   }
 

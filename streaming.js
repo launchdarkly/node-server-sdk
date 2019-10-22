@@ -1,4 +1,5 @@
 const errors = require('./errors');
+const messages = require('./messages');
 const EventSource = require('./eventsource');
 const dataKind = require('./versioned_data_kind');
 
@@ -15,8 +16,6 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
 
   processor.start = fn => {
     const cb = fn || function(){};
-    // Note that we can call this callback directly here because there's always already at least one level of deferral due to I/O
-
     es = new eventSourceFactory(config.streamUri + '/all', 
       {
         agent: config.proxyAgent, 
@@ -25,7 +24,15 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
       });
       
     es.onerror = err => {
-      cb(new errors.LDStreamingError(err.message, err.code));
+      if (err.status && !errors.isHttpErrorRecoverable(err.status)) {
+        const message = messages.httpErrorMessage(err.status, 'streaming request');
+        config.logger.error(message);
+        es && es.close();
+        cb(new errors.LDStreamingError(err.message, err.status));
+      } else {
+        const message = messages.httpErrorMessage(err.status, 'streaming request', 'will retry');
+        config.logger.info(message);
+      }
     };
 
     function reportJsonError(type, data) {

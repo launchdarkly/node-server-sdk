@@ -23,11 +23,12 @@ function PollingProcessor(config, requestor) {
       const sleepFor = Math.max(config.pollInterval * 1000 - elapsed, 0);
       config.logger.debug('Elapsed: %d ms, sleeping for %d ms', elapsed, sleepFor);
       if (err) {
-        const message = err.status || err.message;
-        cb(new errors.LDPollingError(messages.httpErrorMessage(message, 'polling request', 'will retry')));
-        if (!errors.isHttpErrorRecoverable(err.status)) {
-          config.logger.error('Received 401 error, no further polling requests will be made since SDK key is invalid');
+        if (err.status && !errors.isHttpErrorRecoverable(err.status)) {
+          const message = messages.httpErrorMessage(err.status, 'polling request');
+          config.logger.error(message);
+          cb(new errors.LDPollingError(message));
         } else {
+          config.logger.info(messages.httpErrorMessage(err.status || err.message, 'polling request', 'will retry'));
           // Recursively call poll after the appropriate delay
           setTimeout(() => { poll(cb); }, sleepFor);
         }
@@ -37,7 +38,7 @@ function PollingProcessor(config, requestor) {
         initData[dataKind.features.namespace] = allData.flags;
         initData[dataKind.segments.namespace] = allData.segments;
         featureStore.init(initData, () => {
-          cb(); // We can call the callback directly here because there's always already at least one level of deferral due to I/O
+          cb();
           // Recursively call poll after the appropriate delay
           setTimeout(() => { poll(cb); }, sleepFor);
         });
