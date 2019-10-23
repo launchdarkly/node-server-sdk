@@ -1,19 +1,19 @@
 
-function EventSummarizer(config) {
-  var es = {};
+function EventSummarizer() {
+  const es = {};
 
-  var startDate = 0,
-      endDate = 0,
-      counters = {};
+  let startDate = 0,
+    endDate = 0,
+    counters = {};
   
-  es.summarizeEvent = function(event) {
+  es.summarizeEvent = event => {
     if (event.kind === 'feature') {
-      var counterKey = event.key +
+      const counterKey = event.key +
         ':' +
         ((event.variation !== null && event.variation !== undefined) ? event.variation : '') +
         ':' +
         ((event.version !== null && event.version !== undefined) ? event.version : '');
-      var counterVal = counters[counterKey];
+      const counterVal = counters[counterKey];
       if (counterVal) {
         counterVal.count = counterVal.count + 1;
       } else {
@@ -33,13 +33,13 @@ function EventSummarizer(config) {
         endDate = event.creationDate;
       }
     }
-  }
+  };
 
-  es.getSummary = function() {
-    var flagsOut = {};
-    for (var i in counters) {
-      var c = counters[i];
-      var flag = flagsOut[c.key];
+  es.getSummary = () => {
+    const flagsOut = {};
+    for (let i in counters) {
+      const c = counters[i];
+      let flag = flagsOut[c.key];
       if (!flag) {
         flag = {
           default: c.default,
@@ -47,7 +47,7 @@ function EventSummarizer(config) {
         };
         flagsOut[c.key] = flag;
       }
-      var counterOut = {
+      const counterOut = {
         value: c.value,
         count: c.count
       };
@@ -66,13 +66,13 @@ function EventSummarizer(config) {
       endDate: endDate,
       features: flagsOut
     };
-  }
+  };
 
-  es.clearSummary = function() {
+  es.clearSummary = () => {
     startDate = 0;
     endDate = 0;
     counters = {};
-  }
+  };
 
   return es;
 }

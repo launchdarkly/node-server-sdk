@@ -1,25 +1,25 @@
-var FeatureStoreEventWrapper = require('./feature_store_event_wrapper');
-var RedisFeatureStore = require('./redis_feature_store');
-var FileDataSource = require('./file_data_source');
-var Requestor = require('./requestor');
-var EventEmitter = require('events').EventEmitter;
-var EventFactory = require('./event_factory');
-var EventProcessor = require('./event_processor');
-var PollingProcessor = require('./polling');
-var StreamingProcessor = require('./streaming');
-var FlagsStateBuilder = require('./flags_state');
-var configuration = require('./configuration');
-var evaluate = require('./evaluate_flag');
-var messages = require('./messages');
-var tunnel = require('tunnel');
-var crypto = require('crypto');
-var async = require('async');
-var errors = require('./errors');
-var wrapPromiseCallback = require('./utils/wrapPromiseCallback');
-var dataKind = require('./versioned_data_kind');
+const FeatureStoreEventWrapper = require('./feature_store_event_wrapper');
+const RedisFeatureStore = require('./redis_feature_store');
+const FileDataSource = require('./file_data_source');
+const Requestor = require('./requestor');
+const EventEmitter = require('events').EventEmitter;
+const EventFactory = require('./event_factory');
+const EventProcessor = require('./event_processor');
+const PollingProcessor = require('./polling');
+const StreamingProcessor = require('./streaming');
+const FlagsStateBuilder = require('./flags_state');
+const configuration = require('./configuration');
+const evaluate = require('./evaluate_flag');
+const messages = require('./messages');
+const tunnel = require('tunnel');
+const crypto = require('crypto');
+const errors = require('./errors');
+const { safeAsyncEach } = require('./utils/asyncUtils');
+const wrapPromiseCallback = require('./utils/wrapPromiseCallback');
+const dataKind = require('./versioned_data_kind');
 
 function createErrorReporter(emitter, logger) {
-  return function(error) {
+  return error => {
     if (!error) {
       return;
     }
@@ -36,34 +36,32 @@ global.setImmediate = global.setImmediate || process.nextTick.bind(process);
 
 function NullEventProcessor() {
   return {
-    sendEvent: function() {},
-    flush: function(callback) {
-      return wrapPromiseCallback(Promise.resolve(), callback);
-    },
-    close: function() {}
+    sendEvent: () => {},
+    flush: callback => wrapPromiseCallback(Promise.resolve(), callback),
+    close: () => {}
   };
 }
 
 function NullUpdateProcessor() {
   return {
-    start: function(callback) {
-      setImmediate(callback, null);
+    start: callback => {
+      setImmediate(callback, null); // the start() callback should always be deferred
     },
-    close: function() {}
+    close: () => {}
   };
 }
 
-var newClient = function(sdkKey, config) {
-  var client = new EventEmitter(),
-      initComplete = false,
-      failure,
-      requestor,
-      updateProcessor,
-      eventProcessor,
-      eventFactoryDefault,
-      eventFactoryWithReasons;
+const newClient = function(sdkKey, originalConfig) {
+  const client = new EventEmitter();
+  let initComplete = false,
+    failure,
+    requestor,
+    updateProcessor,
+    eventProcessor,
+    eventFactoryDefault,
+    eventFactoryWithReasons;
 
-  config = configuration.validate(config);
+  const config = configuration.validate(originalConfig);
   
   // Initialize global tunnel if proxy options are set
   if (config.proxyHost && config.proxyPort ) {
@@ -72,7 +70,7 @@ var newClient = function(sdkKey, config) {
 
   config.featureStore = FeatureStoreEventWrapper(config.featureStore, client);
 
-  var maybeReportError = createErrorReporter(client, config.logger);
+  const maybeReportError = createErrorReporter(client, config.logger);
 
   eventFactoryDefault = EventFactory(false);
   eventFactoryWithReasons = EventFactory(true);
@@ -88,26 +86,26 @@ var newClient = function(sdkKey, config) {
   }
 
   if (!sdkKey && !config.offline) {
-    throw new Error("You must configure the client with an SDK key");
+    throw new Error('You must configure the client with an SDK key');
   }
 
-  var createDefaultUpdateProcessor = function(config) {
+  const createDefaultUpdateProcessor = config => {
     if (config.useLdd || config.offline) {
       return NullUpdateProcessor();
     } else {
       requestor = Requestor(sdkKey, config);
   
       if (config.stream) {
-        config.logger.info("Initializing stream processor to receive feature flag updates");
+        config.logger.info('Initializing stream processor to receive feature flag updates');
         return StreamingProcessor(sdkKey, config, requestor);
       } else {
-        config.logger.info("Initializing polling processor to receive feature flag updates");
-        config.logger.warn("You should only disable the streaming API if instructed to do so by LaunchDarkly support");
+        config.logger.info('Initializing polling processor to receive feature flag updates');
+        config.logger.warn('You should only disable the streaming API if instructed to do so by LaunchDarkly support');
         return PollingProcessor(config, requestor);
       }
     }
-  }
-  var updateProcessorFactory = createDefaultUpdateProcessor;
+  };
+  let updateProcessorFactory = createDefaultUpdateProcessor;
   if (config.updateProcessor) {
     if (typeof config.updateProcessor === 'function') {
       updateProcessorFactory = config.updateProcessor;
@@ -119,11 +117,11 @@ var newClient = function(sdkKey, config) {
     updateProcessor = updateProcessorFactory(config);
   }
 
-  updateProcessor.start(function(err) {
+  updateProcessor.start(err => {
     if (err) {
-      var error;
+      let error;
       if ((err.status && err.status === 401) || (err.code && err.code === 401)) {
-        error = new Error("Authentication failed. Double check your SDK key.");
+        error = new Error('Authentication failed. Double check your SDK key.');
       } else {
         error = err;
       }
@@ -137,23 +135,21 @@ var newClient = function(sdkKey, config) {
     }
   });
 
-  client.initialized = function() {
-    return initComplete;
-  };
+  client.initialized = () => initComplete;
 
-  client.waitUntilReady = function() {
-    config.logger.warn(messages.deprecated("waitUntilReady", "waitForInitialization"));
+  client.waitUntilReady = () => {
+    config.logger.warn(messages.deprecated('waitUntilReady', 'waitForInitialization'));
 
     if (initComplete) {
       return Promise.resolve();
     }
 
-    return new Promise(function(resolve) {
+    return new Promise(resolve => {
       client.once('ready', resolve);
     });
   };
 
-  client.waitForInitialization = function() {
+  client.waitForInitialization = () => {
     if (initComplete) {
       return Promise.resolve(client);
     }
@@ -161,42 +157,42 @@ var newClient = function(sdkKey, config) {
       return Promise.reject(failure);
     }
 
-    return new Promise(function(resolve, reject) {
-      client.once('ready', function() { resolve(client) });
+    return new Promise((resolve, reject) => {
+      client.once('ready', () => { resolve(client); });
       client.once('failed', reject);
     });
   };
 
-  client.variation = function(key, user, defaultVal, callback) {
-    return wrapPromiseCallback(new Promise(function(resolve, reject) {
+  client.variation = (key, user, defaultVal, callback) => {
+    return wrapPromiseCallback(new Promise((resolve, reject) => {
       evaluateIfPossible(key, user, defaultVal, eventFactoryDefault,
-        function(detail) {
-          resolve(detail.value)
+        detail => {
+          resolve(detail.value);
         },
         reject);
-    }.bind(this)), callback);
+    }), callback);
   };
 
-  client.variationDetail = function(key, user, defaultVal, callback) {
-    return wrapPromiseCallback(new Promise(function(resolve, reject) {
+  client.variationDetail = (key, user, defaultVal, callback) => {
+    return wrapPromiseCallback(new Promise((resolve, reject) => {
       evaluateIfPossible(key, user, defaultVal, eventFactoryWithReasons, resolve, reject);
-    }.bind(this)), callback);
+    }), callback);
   };
 
   function errorResult(errorKind, defaultVal) {
     return { value: defaultVal, variationIndex: null, reason: { kind: 'ERROR', errorKind: errorKind } };
-  };
+  }
 
   function evaluateIfPossible(key, user, defaultVal, eventFactory, resolve, reject) {
     if (!initComplete) {
-      config.featureStore.initialized(function(storeInited) {
+      config.featureStore.initialized(storeInited => {
         if (storeInited) {
-          config.logger.warn("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using last known values from feature store")
+          config.logger.warn('Variation called before LaunchDarkly client initialization completed (did you wait for the \'ready\' event?) - using last known values from feature store');
           variationInternal(key, user, defaultVal, eventFactory, resolve, reject);
         } else {
-          var err = new errors.LDClientError("Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using default value");
+          const err = new errors.LDClientError('Variation called before LaunchDarkly client initialization completed (did you wait for the \'ready\' event?) - using default value');
           maybeReportError(err);
-          var result = errorResult('CLIENT_NOT_READY', defaultVal);
+          const result = errorResult('CLIENT_NOT_READY', defaultVal);
           eventProcessor.sendEvent(eventFactory.newUnknownFlagEvent(key, user, result));
           return resolve(result);
         }
@@ -207,40 +203,39 @@ var newClient = function(sdkKey, config) {
   }
 
   // resolves to a "detail" object with properties "value", "variationIndex", "reason"
-  function variationInternal(key, user, defaultVal, eventFactory, resolve, reject) {
+  function variationInternal(key, user, defaultVal, eventFactory, resolve) {
     if (client.isOffline()) {
-      config.logger.info("Variation called in offline mode. Returning default value.");
+      config.logger.info('Variation called in offline mode. Returning default value.');
       return resolve(errorResult('CLIENT_NOT_READY', defaultVal));
     }
 
     else if (!key) {
-      var err = new errors.LDClientError('No feature flag key specified. Returning default value.');
+      const err = new errors.LDClientError('No feature flag key specified. Returning default value.');
       maybeReportError(err);
       return resolve(errorResult('FLAG_NOT_FOUND', defaultVal));
     }
 
-    if (user && user.key === "") {
-      config.logger.warn("User key is blank. Flag evaluation will proceed, but the user will not be stored in LaunchDarkly");
+    if (user && user.key === '') {
+      config.logger.warn('User key is blank. Flag evaluation will proceed, but the user will not be stored in LaunchDarkly');
     }
 
-    config.featureStore.get(dataKind.features, key, function(flag) {
-
+    config.featureStore.get(dataKind.features, key, flag => {
       if (!flag) {
         maybeReportError(new errors.LDClientError('Unknown feature flag "' + key + '"; returning default value'));
-        var result = errorResult('FLAG_NOT_FOUND', defaultVal);
+        const result = errorResult('FLAG_NOT_FOUND', defaultVal);
         eventProcessor.sendEvent(eventFactory.newUnknownFlagEvent(key, user, result));
         return resolve(result);
       }
 
       if (!user) {
-        var variationErr = new errors.LDClientError('No user specified. Returning default value.');
+        const variationErr = new errors.LDClientError('No user specified. Returning default value.');
         maybeReportError(variationErr);
-        var result = errorResult('USER_NOT_SPECIFIED', defaultVal);
+        const result = errorResult('USER_NOT_SPECIFIED', defaultVal);
         eventProcessor.sendEvent(eventFactory.newDefaultEvent(flag, user, result));
         return resolve(result);
       }
 
-      evaluate.evaluate(flag, user, config.featureStore, eventFactory, function(err, detail, events) {
+      evaluate.evaluate(flag, user, config.featureStore, eventFactory, (err, detail, events) => {
         if (err) {
           maybeReportError(new errors.LDClientError('Encountered error evaluating feature flag:' + (err.message ? (': ' + err.message) : err)));
         }
@@ -248,13 +243,13 @@ var newClient = function(sdkKey, config) {
         // Send off any events associated with evaluating prerequisites. The events
         // have already been constructed, so we just have to push them onto the queue.
         if (events) {
-          for (var i = 0; i < events.length; i++) {
+          for (let i = 0; i < events.length; i++) {
             eventProcessor.sendEvent(events[i]);
           }
         }
 
         if (detail.variationIndex === null) {
-          config.logger.debug("Result value is null in variation");
+          config.logger.debug('Result value is null in variation');
           detail.value = defaultVal;
         }
         eventProcessor.sendEvent(eventFactory.newEvalEvent(flag, user, detail, defaultVal));
@@ -263,82 +258,73 @@ var newClient = function(sdkKey, config) {
     });
   }
 
-  client.toggle = function(key, user, defaultVal, callback) {
-    config.logger.warn("toggle() is deprecated. Call 'variation' instead");
-    return client.variation(key, user, defaultVal, callback);
-  }
-
-  client.allFlags = function(user, callback) {
-    config.logger.warn("allFlags() is deprecated. Call 'allFlagsState' instead and call toJSON() on the result");
+  client.allFlags = (user, callback) => {
+    config.logger.warn('allFlags() is deprecated. Call \'allFlagsState\' instead and call toJSON() on the result');
     return wrapPromiseCallback(
-      client.allFlagsState(user).then(function(state) {
-        return state.allValues();
-      }),
+      client.allFlagsState(user).then(state => state.allValues()),
       callback);
-  }
+  };
 
-  client.allFlagsState = function(user, options, callback) {
+  client.allFlagsState = (user, options, callback) => {
     if (callback === undefined && typeof(options) === 'function') {
       callback = options;
       options = {};
     } else {
       options = options || {};
     }
-    return wrapPromiseCallback(new Promise(function(resolve, reject) {
-      if (this.isOffline()) {
-        config.logger.info("allFlagsState() called in offline mode. Returning empty state.");
+    return wrapPromiseCallback(new Promise((resolve, reject) => {
+      if (client.isOffline()) {
+        config.logger.info('allFlagsState() called in offline mode. Returning empty state.');
         return resolve(FlagsStateBuilder(false).build());
       }
 
       if (!user) {
-        config.logger.info("allFlagsState() called without user. Returning empty state.");
+        config.logger.info('allFlagsState() called without user. Returning empty state.');
         return resolve(FlagsStateBuilder(false).build());
       }
 
-      var builder = FlagsStateBuilder(true);
-      var clientOnly = options.clientSideOnly;
-      var withReasons = options.withReasons;
-      var detailsOnlyIfTracked = options.detailsOnlyForTrackedFlags;
-      config.featureStore.all(dataKind.features, function(flags) {
-        async.forEachOf(flags, function(flag, key, iterateeCb) {
+      const builder = FlagsStateBuilder(true);
+      const clientOnly = options.clientSideOnly;
+      const withReasons = options.withReasons;
+      const detailsOnlyIfTracked = options.detailsOnlyForTrackedFlags;
+      config.featureStore.all(dataKind.features, flags => {
+        safeAsyncEach(flags, (flag, iterateeCb) => {
           if (clientOnly && !flag.clientSide) {
-            setImmediate(iterateeCb);
+            iterateeCb();
           } else {
             // At the moment, we don't send any events here
-            evaluate.evaluate(flag, user, config.featureStore, eventFactoryDefault, function(err, detail, events) {
+            evaluate.evaluate(flag, user, config.featureStore, eventFactoryDefault, (err, detail) => {
               if (err != null) {
                 maybeReportError(new Error('Error for feature flag "' + flag.key + '" while evaluating all flags: ' + err));
               }
               builder.addFlag(flag, detail.value, detail.variationIndex, withReasons ? detail.reason : null, detailsOnlyIfTracked);
-              setImmediate(iterateeCb);
+              iterateeCb();
             });
           }
-        }, function(err) {
+        }, err => {
           return err ? reject(err) : resolve(builder.build());
         });
       });
-    }.bind(this)), callback);
-  }
+    }), callback);
+  };
 
-  client.secureModeHash = function(user) {
-    var hmac = crypto.createHmac('sha256', sdkKey);
+  client.secureModeHash = user => {
+    const hmac = crypto.createHmac('sha256', sdkKey);
     hmac.update(user.key);
     return hmac.digest('hex');
-  }
+  };
 
-  client.close = function() {
+  client.close = () => {
     eventProcessor.close();
     if (updateProcessor) {
       updateProcessor.close();
     }
     config.featureStore.close();
-  }
+  };
 
-  client.isOffline = function() {
-    return config.offline;
-  }
+  client.isOffline = () => config.offline;
 
-  client.track = function(eventName, user, data, metricValue) {
+  client.track = (eventName, user, data, metricValue) => {
     if (!userExistsAndHasKey(user)) {
       config.logger.warn(messages.missingUserKeyNoEvent());
       return;
@@ -346,7 +332,7 @@ var newClient = function(sdkKey, config) {
     eventProcessor.sendEvent(eventFactoryDefault.newCustomEvent(eventName, user, data, metricValue));
   };
 
-  client.identify = function(user) {
+  client.identify = user => {
     if (!userExistsAndHasKey(user)) {
       config.logger.warn(messages.missingUserKeyNoEvent());
       return;
@@ -354,28 +340,29 @@ var newClient = function(sdkKey, config) {
     eventProcessor.sendEvent(eventFactoryDefault.newIdentifyEvent(user));
   };
 
-  client.flush = function(callback) {
+  client.flush = callback => {
     return eventProcessor.flush(callback);
   };
 
   function userExistsAndHasKey(user) {
     if (user) {
-      var key = user.key;
-      return key !== undefined && key !== null && key !== "";
+      const key = user.key;
+      return key !== undefined && key !== null && key !== '';
     }
     return false;
   }
 
   function deprecatedMethod(oldName, newName) {
-    client[oldName] = function() {
+    client[oldName] = (...args) => {
       config.logger.warn(messages.deprecated(oldName, newName));
-      return client[newName].apply(client, arguments);
+      return client[newName].apply(client, args);
     };
   }
 
   deprecatedMethod('all_flags', 'allFlags');
   deprecatedMethod('is_offline', 'isOffline');
   deprecatedMethod('secure_mode_hash', 'secureModeHash');
+  deprecatedMethod('toggle', 'variation');
 
   return client;
 };
@@ -389,7 +376,7 @@ module.exports = {
 
 
 function createProxyAgent(config) {
-  var options = {
+  const options = {
     proxy: {
       host: config.proxyHost,
       port: config.proxyPort,
@@ -399,7 +386,7 @@ function createProxyAgent(config) {
 
   if (config.proxyScheme === 'https') {
     if (!config.baseUri || config.baseUri.startsWith('https')) {
-     return tunnel.httpsOverHttps(options);
+      return tunnel.httpsOverHttps(options);
     } else {
       return tunnel.httpOverHttps(options);
     }

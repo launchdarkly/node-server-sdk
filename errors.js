@@ -23,4 +23,4 @@ exports.isHttpErrorRecoverable = function(status) {
     return status === 400 || status === 408 || status === 429;
   }
   return true;
-}
+};

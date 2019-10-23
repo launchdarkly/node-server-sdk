@@ -1,26 +1,60 @@
+const semver = require('semver');
 
-var semver = require('semver');
+// Our reference SDK, Go, parses date/time strings with the time.RFC3339Nano format. This regex should match
+// strings that are valid in that format, and no others.
+// Acceptable: 2019-10-31T23:59:59Z, 2019-10-31T23:59:59.100Z, 2019-10-31T23:59:59-07, 2019-10-31T23:59:59-07:00, etc.
+// Unacceptable: no "T", no time zone designation
+const dateRegex = new RegExp('^\\d\\d\\d\\d-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(\\.\\d\\d*)?(Z|[-+]\\d\\d(:\\d\\d)?)');
+
+function stringOperator(f) {
+  return (userValue, clauseValue) =>
+    typeof userValue === 'string' && typeof clauseValue === 'string' && f(userValue, clauseValue);
+}
+
+function numericOperator(f) {
+  return (userValue, clauseValue) =>
+    typeof userValue === 'number' && typeof clauseValue === 'number' && f(userValue, clauseValue);
+}
+
+function dateOperator(f) {
+  return (userValue, clauseValue) => {
+    const userValueNum = parseDate(userValue);
+    const clauseValueNum = parseDate(clauseValue);
+    return userValueNum !== null && clauseValueNum !== null && f(userValueNum, clauseValueNum);
+  };
+}
+
+function parseDate(input) {
+  switch(typeof input) {
+  case 'number':
+    return input;
+  case 'string':
+    return dateRegex.test(input) ? Date.parse(input) : null;
+  default:
+    return null;
+  }
+}
 
 function semVerOperator(fn) {
-  return function(a, b) {
-    var av = parseSemVer(a), bv = parseSemVer(b);
+  return (a, b) => {
+    const av = parseSemVer(a), bv = parseSemVer(b);
     return (av && bv) ? fn(av, bv) : false;
   };
 }
 
 function parseSemVer(input) {
-  if (input.startsWith("v")) {
+  if (input.startsWith('v')) {
     // the semver library tolerates a leading "v", but the standard does not.
     return null;
   }
-  var ret = semver.parse(input);
+  let ret = semver.parse(input);
   if (!ret) {
-    var versionNumericComponents = new RegExp("^\\d+(\\.\\d+)?(\\.\\d+)?").exec(input);
+    const versionNumericComponents = new RegExp('^\\d+(\\.\\d+)?(\\.\\d+)?').exec(input);
     if (versionNumericComponents) {
-      var transformed = versionNumericComponents[0];
-      for (var i = 1; i < versionNumericComponents.length; i++) {
+      let transformed = versionNumericComponents[0];
+      for (let i = 1; i < versionNumericComponents.length; i++) {
         if (versionNumericComponents[i] == undefined) {
-          transformed = transformed + ".0";
+          transformed = transformed + '.0';
         }
       }
       transformed = transformed + input.substring(versionNumericComponents[0].length);
@@ -30,68 +64,33 @@ function parseSemVer(input) {
   return ret;
 }
 
-var operators = {
-  "in": function(a, b) {
-    return a === b;
-  },
-  "endsWith": function(a, b) {
-    return typeof a === 'string' && a.endsWith(b);
-  },
-  "startsWith": function(a, b) {
-    return typeof a === 'string' && a.startsWith(b);
-  },
-  "matches": function(a, b) {
-    return typeof b === 'string' && new RegExp(b).test(a);
-  },
-  "contains": function(a, b) {
-    return typeof a === 'string' && a.indexOf(b) > -1;
-  },
-  "lessThan": function(a, b) {
-    return typeof a === 'number' && a < b;
-  },
-  "lessThanOrEqual": function(a, b) {
-    return typeof a === 'number' && a <= b;
-  },
-  "greaterThan": function(a, b) {
-    return typeof a === 'number' && a > b;
-  },
-  "greaterThanOrEqual": function(a, b) {
-    return typeof a === 'number' && a >= b;
-  },
-  "before": function(a, b) {
-    if (typeof a === 'string') {
-      a = Date.parse(a);
-    }
-    if (typeof b === 'string') {
-      b = Date.parse(b);
-    }
-
-    if (typeof a === 'number' && typeof b === 'number') {
-      return a < b;
-    }
+function safeRegexMatch(pattern, value) {
+  try {
+    return new RegExp(pattern).test(value);
+  } catch(e) {
+    // do not propagate this exception, just treat a bad regex as a non-match for consistency with other SDKs
     return false;
-  },
-  "after": function(a, b) {
-    if (typeof a === 'string') {
-      a = Date.parse(a);
-    }
-    if (typeof b === 'string') {
-      b = Date.parse(b);
-    }
+  }
+}
 
-    if (typeof a === 'number' && typeof b === 'number') {
-      return a > b;
-    }
-    return false;
-  },
-  "semVerEqual": semVerOperator(function(a, b) { return a.compare(b) == 0; }),
-  "semVerLessThan": semVerOperator(function(a, b) { return a.compare(b) < 0; }),
-  "semVerGreaterThan": semVerOperator(function(a, b) { return a.compare(b) > 0; })
+const operators = {
+  in: (a, b) => a === b,
+  endsWith: stringOperator((a, b) => a.endsWith(b)),
+  startsWith: stringOperator((a, b) => a.startsWith(b)),
+  matches: stringOperator((a, b) => safeRegexMatch(b, a)),
+  contains: stringOperator((a, b) => a.indexOf(b) > -1),
+  lessThan: numericOperator((a, b) => a < b),
+  lessThanOrEqual: numericOperator((a, b) => a <= b),
+  greaterThan: numericOperator((a, b) => a > b),
+  greaterThanOrEqual: numericOperator((a, b) => a >= b),
+  before: dateOperator((a, b) => a < b),
+  after: dateOperator((a, b) => a > b),
+  semVerEqual: semVerOperator((a, b) => a.compare(b) == 0),
+  semVerLessThan: semVerOperator((a, b) => a.compare(b) < 0),
+  semVerGreaterThan: semVerOperator((a, b) => a.compare(b) > 0)
 };
 
-var operatorNone = function(a, b) {
-  return false;
-}
+const operatorNone = () => false;
 
 function fn(op) {
   return operators[op] || operatorNone;

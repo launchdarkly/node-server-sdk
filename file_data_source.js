@@ -1,7 +1,7 @@
-var fs = require('fs'),
-    winston = require('winston'),
-    yaml = require('yaml'),
-    dataKind = require('./versioned_data_kind');
+const fs = require('fs'),
+  winston = require('winston'),
+  yaml = require('yaml'),
+  dataKind = require('./versioned_data_kind');
 
 /*
   FileDataSource provides a way to use local files as a source of feature flag state, instead of
@@ -10,16 +10,16 @@ var fs = require('fs'),
   See documentation in index.d.ts.
 */
 function FileDataSource(options) {
-  var paths = (options && options.paths) || [];
-  var autoUpdate = !!options.autoUpdate;
+  const paths = (options && options.paths) || [];
+  const autoUpdate = !!options.autoUpdate;
 
   return config => {
-    var featureStore = config.featureStore;
-    var watchers = [];
-    var timestamps = {};
-    var pendingUpdate = false;
-    var logger = options.logger || config.logger || defaultLogger();
-    var inited = false;
+    const logger = options.logger || config.logger || defaultLogger();
+    const featureStore = config.featureStore;
+    const timestamps = {};
+    let watchers = [];
+    let pendingUpdate = false;
+    let inited = false;
 
     function defaultLogger() {
       return new winston.Logger({
@@ -45,8 +45,8 @@ function FileDataSource(options) {
         fs.readFile(path, 'utf8', (err, data) =>
           err ? reject(err) : resolve(data))
       ).then(data => {
-        var parsed = parseData(data) || {};
-        var addItem = (kind, item) => {
+        const parsed = parseData(data) || {};
+        const addItem = (kind, item) => {
           if (!allData[kind.namespace]) {
             allData[kind.namespace] = {};
           }
@@ -55,7 +55,7 @@ function FileDataSource(options) {
           } else {
             allData[kind.namespace][item.key] = item;
           }
-        }
+        };
         Object.keys(parsed.flags || {}).forEach(key => {
           addItem(dataKind.features, parsed.flags[key]);
         });
@@ -75,9 +75,9 @@ function FileDataSource(options) {
 
     function loadAllPromise() {
       pendingUpdate = false;
-      var allData = {};
-      var p = Promise.resolve();
-      for (var i = 0; i < paths.length; i++) {
+      const allData = {};
+      let p = Promise.resolve();
+      for (let i = 0; i < paths.length; i++) {
         (path => {
           p = p.then(() => loadFilePromise(path, allData))
             .catch(e => {
@@ -114,7 +114,7 @@ function FileDataSource(options) {
       if (pendingUpdate) {
         return; // coalesce updates so we don't do multiple reloads if a whole set of files was just updated
       }
-      var reload = () => {
+      const reload = () => {
         loadAllPromise().then(() => {
           logger.warn('Reloaded flags from file data');
         }).catch(() => {});
@@ -137,7 +137,7 @@ function FileDataSource(options) {
 
     function startWatching() {
       paths.forEach(path => {
-        var watcher = fs.watch(path, { persistent: false }, (event, filename) => {
+        const watcher = fs.watch(path, { persistent: false }, () => {
           maybeReloadForPath(path);
         });
         watchers.push(watcher);
@@ -149,10 +149,10 @@ function FileDataSource(options) {
       watchers = [];
     }
 
-    var fds = {};
+    const fds = {};
 
     fds.start = fn => {
-      var cb = fn || (() => {});
+      const cb = fn || (() => {});
 
       if (autoUpdate) {
         startWatching();
@@ -176,7 +176,7 @@ function FileDataSource(options) {
     };
 
     return fds;
-  }
+  };
 }
 
 module.exports = FileDataSource;
