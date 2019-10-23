@@ -27,8 +27,8 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
     })
   );
 
-  connected = !!redisOpts.client;
-  initialConnect = !redisOpts.client;
+  var connected = !!redisOpts.client;
+  var initialConnect = !redisOpts.client;
 
   client.on('error', function (err) {
     // Note that we *must* have an error listener or else any connection error will trigger an

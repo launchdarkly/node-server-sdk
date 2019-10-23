@@ -1,6 +1,75 @@
 # Change log
 
-All notable changes to the LaunchDarkly Node.js SDK will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
+All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
+
+## [5.9.1] - 2019-10-10
+### Fixed:
+- For an evaluation reason of `RULE_MATCH`, the `ruleIndex` property was always being set to zero rather than to the actual rule index. Note that it is always best to look at `ruleId` rather than `ruleIndex`, since it will never change even if rules are added or deleted.
+
+
+## [5.9.0] - 2019-08-20
+### Added:
+- Added support for upcoming LaunchDarkly experimentation features. See `LDClient.track()`.
+
+## [5.8.2] - 2019-06-06
+### Fixed:
+- Resolved a [low-severity security vulnerability](https://nvd.nist.gov/vuln/detail/CVE-2018-16492) in an `extend` transitive dependency.
+
+
+## [5.8.1] - 2019-05-13
+### Changed:
+- Changed the package name from `ldclient-node` to `launchdarkly-node-server-sdk`.
+ 
+There are no other changes in this release. Substituting `ldclient-node` version 5.8.0 with `launchdarkly-node-server-sdk` version 5.8.1 (and updating any `require` or `import` lines that referred to the old package name) will not affect functionality.
+
+## [5.8.0] - 2019-04-06
+### Added:
+- Generated TypeDoc documentation for all types, properties, and methods is now available online at [https://launchdarkly.github.io/node-server-sdk/](https://launchdarkly.github.io/node-server-sdk/). Currently this will only be for the latest released version.
+- It is now possible to specify any of the TLS configuration parameters supported by Node's `https.request()` in the client configuration, so that they will apply to all HTTPS requests made by the SDK. In your client options, add a property called `tlsParams` whose value is an object containing those parameters, e.g. `tlsParams: { ca: 'my trusted CA certificate data' }`.
+
+### Fixed:
+- Running the SDK unit tests is now simpler in that the Redis integration can be skipped. See `CONTRIBUTING.md`.
+
+# Note on future releases
+
+The LaunchDarkly SDK repositories are being renamed for consistency. This repository is now `node-server-sdk` rather than `node-client`. (Note that `node-client-sdk` also exists, which is the _client-side_ Node SDK.)
+
+The package name will also change. In the 5.8.0 release, it is still `ldclient-node`; in all future releases, it will be `launchdarkly-node-server-sdk`. No further updates to the `ldclient-node` package will be published after this release.
+
+## [5.7.4] - 2019-04-02
+### Fixed:
+- Setting user attributes to non-string values when a string was expected would cause analytics events not to be processed. The SDK will now convert attribute values to strings as needed. ([#147](https://github.com/launchdarkly/node-client/issues/147))
+- If `track` or `identify` is called without a user, the SDK now logs a warning, and does not send an analytics event to LaunchDarkly (since it would not be processed without a user).
+
+
+## [5.7.3] - 2019-03-21
+### Changed:
+- The default value for the configuration property `capacity` (maximum number of events that can be stored at once) is now 10000, consistent with the other SDKs, rather than 1000.
+
+### Fixed:
+- A missing `var` keyword could cause an error in strict mode when evaluating a flag with rollouts. (Thanks, [phillipb](https://github.com/launchdarkly/node-client/pull/145)!)
+- The user attribute `secondary` was not included in the TypeScript declarations and therefore could not be used from TypeScript code.
+
+## [5.7.2] - 2019-02-22
+### Fixed:
+- Calling `identify()` or `track()` with no user object, or with a user that has no key, will now cause the SDK to log a warning (as the other SDKs do). The SDK no longer sends an analytics event in this case, since LaunchDarkly would discard the event as invalid anyway. Also, previously, calling `identify()` with no user object would throw an exception.
+- `FileDataSource`, in auto-update mode, could sometimes reload files more than once when they were only modified once (due to a known issue with Node's `fs.watch`). This should no longer happen. ([#138](https://github.com/launchdarkly/node-client/issues/138))
+- Fixed dependency vulnerabilities flagged by `npm audit`. These were all for test-only dependencies, so would not affect production code.
+- Previously, CI tests were only running on Linux. We have added a CI test suite that runs on Windows, using the latest stable version of Node.
+- A supported user property, `privateAttributeNames`, was not usable from TypeScript because it was omitted from the TypeScript declarations.
+- In TypeScript, asynchronous methods that can either take a callback or return a Promise were not usable in the Promise style, because the return types were declared incorrectly. ([#141](https://github.com/launchdarkly/node-client/issues/141))
+- Some TypeScript declarations that used `type` now use `interface` instead, except for `LDFlagValue` which is a type alias. This should not affect regular usage of the SDK in TypeScript, but it is easier to extend an `interface` than a `type` if desired.
+
+## [5.7.1] - 2019-01-16
+
+Changes are only in test code used by other libraries. There is no need to upgrade to this release.
+
+## [5.7.0] - 2019-01-11
+### Added:
+- It is now possible to inject feature flags into the client from local JSON or YAML files, replacing the normal LaunchDarkly connection. This would typically be for testing purposes. See `FileDataSource` in the [TypeScript API documentation](https://github.com/launchdarkly/node-client/blob/master/index.d.ts), and ["Reading flags from a file"](https://docs.launchdarkly.com/v2.0/docs/reading-flags-from-a-file).
+
+### Fixed:
+- Fixed a potential race condition that could happen when using a DynamoDB or Consul feature store. The Redis feature store was not affected.
 
 ## [5.6.2] - 2018-11-15
 ### Fixed:

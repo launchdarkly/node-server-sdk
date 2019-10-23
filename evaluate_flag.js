@@ -3,14 +3,18 @@ var dataKind = require('./versioned_data_kind');
 var util = require('util');
 var sha1 = require('node-sha1');
 var async = require('async');
+var stringifyAttrs = require('./utils/stringifyAttrs');
 
 var builtins = ['key', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name', 'anonymous'];
+var userAttrsToStringifyForEvaluation = [ "key", "secondary" ];
+// Currently we are not stringifying the rest of the built-in attributes prior to evaluation, only for events.
+// This is because it could affect evaluation results for existing users (ch35206).
 
 var noop = function(){};
 
 // Callback receives (err, detail, events) where detail has the properties "value", "variationIndex", and "reason";
 // detail will never be null even if there's an error.
-function evaluate(flag, user, featureStore, cb) {
+function evaluate(flag, user, featureStore, eventFactory, cb) {
   cb = cb || noop;
   if (!user || user.key === null || user.key === undefined) {
     cb(null, errorResult('USER_NOT_SPECIFIED'), []);
@@ -22,13 +26,14 @@ function evaluate(flag, user, featureStore, cb) {
     return;
   }
 
+  var sanitizedUser = stringifyAttrs(user, userAttrsToStringifyForEvaluation);
   var events = [];
-  evalInternal(flag, user, featureStore, events, function(err, detail) {
+  evalInternal(flag, sanitizedUser, featureStore, events, eventFactory, function(err, detail) {
     cb(err, detail, events);
   });
 }
 
-function evalInternal(flag, user, featureStore, events, cb) {
+function evalInternal(flag, user, featureStore, events, eventFactory, cb) {
   // If flag is off, return the off variation
   if (!flag.on) {
     getOffResult(flag, { kind: 'OFF' }, function(err, detail) {
@@ -37,7 +42,7 @@ function evalInternal(flag, user, featureStore, events, cb) {
     return;
   }
 
-  checkPrerequisites(flag, user, featureStore, events, function(err, failureReason) {
+  checkPrerequisites(flag, user, featureStore, events, eventFactory, function(err, failureReason) {
     if (err != null || failureReason != null) {
       getOffResult(flag, failureReason, cb);
     } else {
@@ -47,34 +52,34 @@ function evalInternal(flag, user, featureStore, events, cb) {
 }
 
 // Callback receives (err, reason) where reason is null if successful, or a "prerequisite failed" reason
-function checkPrerequisites(flag, user, featureStore, events, cb) {
+function checkPrerequisites(flag, user, featureStore, events, eventFactory, cb) {
   if (flag.prerequisites) {
-    async.mapSeries(flag.prerequisites, 
+    async.mapSeries(flag.prerequisites,
       function(prereq, callback) {
-        featureStore.get(dataKind.features, prereq.key, function(f) {
+        featureStore.get(dataKind.features, prereq.key, function(prereqFlag) {
           // If the flag does not exist in the store or is not on, the prerequisite
           // is not satisfied
-          if (!f) {
+          if (!prereqFlag) {
             callback({ key: prereq.key, err: new Error("Could not retrieve prerequisite feature flag \"" + prereq.key + "\"") });
             return;
           }
-          evalInternal(f, user, featureStore, events, function(err, detail) {
-            // If there was an error, the value is null, the variation index is out of range, 
+          evalInternal(prereqFlag, user, featureStore, events, eventFactory, function(err, detail) {
+            // If there was an error, the value is null, the variation index is out of range,
             // or the value does not match the indexed variation the prerequisite is not satisfied
-            events.push(createFlagEvent(f.key, f, user, detail, null, flag.key, true));
+            events.push(eventFactory.newEvalEvent(prereqFlag, user, detail, null, flag));
             if (err) {
               callback({ key: prereq.key, err: err });
-            } else if (!f.on || detail.variationIndex != prereq.variation) {
+            } else if (!prereqFlag.on || detail.variationIndex != prereq.variation) {
               // Note that if the prerequisite flag is off, we don't consider it a match no matter what its
               // off variation was. But we still evaluate it and generate an event.
               callback({ key: prereq.key });
-            } else { 
+            } else {
               // The prerequisite was satisfied
               callback(null);
             }
-          });          
+          });
         });
-      }, 
+      },
       function(errInfo) {
         if (errInfo) {
           cb(errInfo.err, { 'kind': 'PREREQUISITE_FAILED', 'prerequisiteKey': errInfo.key });
@@ -109,20 +114,25 @@ function evalRules(flag, user, featureStore, cb) {
     }
   }
 
-  i = 0;
   async.mapSeries(flag.rules || [],
     function(rule, callback) {
       ruleMatchUser(rule, user, featureStore, function(matched) {
-        var match = matched ? { index: i, rule: rule } : null;
-        setImmediate(callback, match, null);
+        setImmediate(callback, matched ? rule : null, null);
       });
     },
     function(err, results) {
       // we use the "error" value to indicate that a rule was successfully matched (since we only care
       // about the first match, and mapSeries terminates on the first "error")
       if (err) {
-        var reason = { kind: 'RULE_MATCH', ruleIndex: err.index, ruleId: err.rule.id };
-        getResultForVariationOrRollout(err.rule, user, flag, reason, cb);
+        var rule = err;
+        var reason = { kind: 'RULE_MATCH', ruleId: rule.id };
+        for (var i = 0; i < flag.rules.length; i++) {
+          if (flag.rules[i].id === rule.id) {
+            reason.ruleIndex = i;
+            break;
+          }
+        }
+        getResultForVariationOrRollout(rule, user, flag, reason, cb);
       } else {
         // no rule matched; check the fallthrough
         getResultForVariationOrRollout(flag.fallthrough, user, flag, { kind: 'FALLTHROUGH' }, cb);
@@ -301,12 +311,12 @@ function variationForUser(r, user, flag) {
     // This represets a fixed variation; return it
     return r.variation;
   } else if (r.rollout != null) {
-    // This represents a percentage rollout. Assume 
+    // This represents a percentage rollout. Assume
     // we're rolling out by key
     bucketBy = r.rollout.bucketBy != null ? r.rollout.bucketBy : "key";
     bucket = bucketUser(user, flag.key, bucketBy, flag.salt);
     for (i = 0; i < r.rollout.variations.length; i++) {
-      variate = r.rollout.variations[i];
+      var variate = r.rollout.variations[i];
       sum += variate.weight / 100000.0;
       if (bucket < sum) {
         return variate.variation;
@@ -322,7 +332,7 @@ function variationForUser(r, user, flag) {
 function userValue(user, attr) {
   if (builtins.indexOf(attr) >= 0 && user.hasOwnProperty(attr)) {
     return user[attr];
-  } 
+  }
   if (user.custom && user.custom.hasOwnProperty(attr)) {
     return user.custom[attr];
   }
@@ -344,11 +354,10 @@ function bucketUser(user, key, attr, salt) {
     idHash += "." + user.secondary;
   }
 
-  hashKey = util.format("%s.%s.%s", key, salt, idHash);
-  hashVal = parseInt(sha1(hashKey).substring(0,15), 16);
+  var hashKey = util.format("%s.%s.%s", key, salt, idHash);
+  var hashVal = parseInt(sha1(hashKey).substring(0,15), 16);
 
-  result = hashVal / 0xFFFFFFFFFFFFFFF;
-  return result;
+  return hashVal / 0xFFFFFFFFFFFFFFF;
 }
 
 function bucketableStringValue(value) {
@@ -361,24 +370,4 @@ function bucketableStringValue(value) {
   return null;
 }
 
-function createFlagEvent(key, flag, user, detail, defaultVal, prereqOf, includeReason) {
-  var e = {
-    "kind": "feature",
-    "key": key,
-    "user": user,
-    "variation": detail.variationIndex,
-    "value": detail.value,
-    "default": defaultVal,
-    "creationDate": new Date().getTime(),
-    "version": flag ? flag.version : null,
-    "prereqOf": prereqOf,
-    "trackEvents": flag ? flag.trackEvents : null,
-    "debugEventsUntilDate": flag ? flag.debugEventsUntilDate : null
-  };
-  if (includeReason) {
-    e['reason'] = detail.reason;
-  }
-  return e;
-}
-
-module.exports = {evaluate: evaluate, bucketUser: bucketUser, createFlagEvent: createFlagEvent};
+module.exports = {evaluate: evaluate, bucketUser: bucketUser};

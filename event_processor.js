@@ -4,7 +4,10 @@ var EventSummarizer = require('./event_summarizer');
 var UserFilter = require('./user_filter');
 var errors = require('./errors');
 var messages = require('./messages');
+var stringifyAttrs = require('./utils/stringifyAttrs');
 var wrapPromiseCallback = require('./utils/wrapPromiseCallback');
+
+var userAttrsToStringifyForEvents = [ "key", "secondary", "ip", "country", "email", "firstName", "lastName", "avatar", "name" ];
 
 function EventProcessor(sdkKey, config, errorReporter) {
   var ep = {};
@@ -44,7 +47,7 @@ function EventProcessor(sdkKey, config, errorReporter) {
   function makeOutputEvent(event) {
     switch (event.kind) {
       case 'feature':
-        debug = !!event.debug;
+        var debug = !!event.debug;
         var out = {
           kind: debug ? 'debug' : 'feature',
           creationDate: event.creationDate,
@@ -63,34 +66,48 @@ function EventProcessor(sdkKey, config, errorReporter) {
           out.reason = event.reason;
         }
         if (config.inlineUsersInEvents || debug) {
-          out.user = userFilter.filterUser(event.user);
+          out.user = processUser(event);
         } else {
-          out.userKey = event.user && event.user.key;
+          out.userKey = getUserKey(event);
         }
         return out;
       case 'identify':
         return {
           kind: 'identify',
           creationDate: event.creationDate,
-          key: event.user && event.user.key,
-          user: userFilter.filterUser(event.user)
+          key: getUserKey(event),
+          user: processUser(event)
         };
       case 'custom':
         var out = {
           kind: 'custom',
           creationDate: event.creationDate,
-          key: event.key,
-          data: event.data
+          key: event.key
         };
         if (config.inlineUsersInEvents) {
-          out.user = userFilter.filterUser(event.user);
+          out.user = processUser(event);
         } else {
-          out.userKey = event.user && event.user.key;
+          out.userKey = getUserKey(event);
+        }
+        if (event.data !== null && event.data !== undefined) {
+          out.data = event.data;
+        }
+        if (event.metricValue !== null && event.metricValue !== undefined) {
+          out.metricValue = event.metricValue;
         }
         return out;
       default:
         return event;
     }
+  }
+
+  function processUser(event) {
+    var filtered = userFilter.filterUser(event.user);
+    return stringifyAttrs(filtered, userAttrsToStringifyForEvents);
+  }
+
+  function getUserKey(event) {
+    return event.user && String(event.user.key);
   }
 
   ep.sendEvent = function(event) {
@@ -129,7 +146,7 @@ function EventProcessor(sdkKey, config, errorReporter) {
       enqueue({
         kind: 'index',
         creationDate: event.creationDate,
-        user: userFilter.filterUser(event.user)
+        user: processUser(event)
       });
     }
     if (addFullEvent) {
@@ -184,8 +201,8 @@ function EventProcessor(sdkKey, config, errorReporter) {
       }
     }
 
-    request({
-      method: "POST",
+    var options = Object.assign({}, config.tlsParams, {
+      method: 'POST',
       url: config.eventsUri + '/bulk',
       headers: {
         'Authorization': sdkKey,
@@ -196,7 +213,8 @@ function EventProcessor(sdkKey, config, errorReporter) {
       body: events,
       timeout: config.timeout * 1000,
       agent: config.proxyAgent
-    }).on('response', function(resp, body) {
+    });
+    request(options).on('response', function(resp, body) {
       if (resp.headers['date']) {
         var date = Date.parse(resp.headers['date']);
         if (date) {

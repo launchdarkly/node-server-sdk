@@ -63,59 +63,36 @@ describe('LDClient', () => {
   });
 
   describe('waitUntilReady()', () => {
-    it('resolves when ready', done => {
+    it('resolves when ready', async () => {
       var client = stubs.createClient({}, {});
-      client.waitUntilReady().then(done)
-        .catch(done.error)
+      await client.waitUntilReady();
     });
 
-    it('resolves immediately if the client is already ready', done => {
+    it('resolves immediately if the client is already ready', async () => {
       var client = stubs.createClient({}, {});
-      client.waitUntilReady().then(() => {
-        client.waitUntilReady().then(done)
-          .catch(done.error)
-      }).catch(done.error);
+      await client.waitUntilReady();
+      await client.waitUntilReady();
     });
   });
 
   describe('waitForInitialization()', () => {
-    it('resolves when ready', done => {
-      var callback = jest.fn();
+    it('resolves when ready', async () => {
       var client = stubs.createClient({}, {});
-
-      client.waitForInitialization().then(callback)
-        .then(() => {
-          expect(callback).toHaveBeenCalled();
-          expect(callback.mock.calls[0][0]).toBe(client);
-          done();
-        }).catch(done.error)
+      await client.waitForInitialization();
     });
 
-    it('resolves immediately if the client is already ready', done => {
-      var callback = jest.fn();
+    it('resolves immediately if the client is already ready', async () => {
       var client = stubs.createClient({}, {});
-
-      client.waitForInitialization()
-        .then(() => {
-          client.waitForInitialization().then(callback)
-            .then(() => {
-              expect(callback).toHaveBeenCalled();
-              expect(callback.mock.calls[0][0]).toBe(client);
-              done();
-            }).catch(done.error)
-        }).catch(done.error)
+      await client.waitForInitialization();
+      await client.waitForInitialization();
     });
 
-    it('is rejected if initialization fails', done => {
+    it('is rejected if initialization fails', async () => {
+      var err = { status: 403 };
       var updateProcessor = stubs.stubUpdateProcessor();
-      updateProcessor.error = { status: 403 };
+      updateProcessor.error = err;
       var client = stubs.createClient({ updateProcessor: updateProcessor }, {});
-
-      client.waitForInitialization()
-        .catch(err => {
-          expect(err).toEqual(updateProcessor.error);
-          done();
-        });
+      await expect(client.waitForInitialization()).rejects.toBe(err);
     });
   });
 

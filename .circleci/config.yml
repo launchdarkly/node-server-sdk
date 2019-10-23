@@ -17,10 +17,6 @@ node-template: &node-template
         environment:
           JEST_JUNIT_OUTPUT: "reports/junit/js-test-results.xml"
     - run: npm run check-typescript
-    - run: |
-        if [[ $CIRCLE_JOB == current-release ]]; then
-          npm audit
-        fi
     - store_test_results:
         path: reports/junit
     - store_artifacts:

@@ -1,7 +1,7 @@
 {
-  "name": "ldclient-node",
-  "version": "5.6.2",
-  "description": "LaunchDarkly SDK for Node.js",
+  "name": "launchdarkly-node-server-sdk",
+  "version": "5.9.1",
+  "description": "LaunchDarkly Server-Side SDK for Node.js",
   "main": "index.js",
   "scripts": {
     "test": "jest --ci --forceExit",
@@ -10,7 +10,7 @@
   "types": "./index.d.ts",
   "repository": {
     "type": "git",
-    "url": "https://github.com/launchdarkly/node-client.git"
+    "url": "https://github.com/launchdarkly/node-server-sdk.git"
   },
   "keywords": [
     "launchdarkly",
@@ -19,9 +19,9 @@
   ],
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/launchdarkly/node-client/issues"
+    "url": "https://github.com/launchdarkly/node-server-sdk/issues"
   },
-  "homepage": "https://github.com/launchdarkly/node-client",
+  "homepage": "https://github.com/launchdarkly/node-server-sdk",
   "dependencies": {
     "@types/redis": "2.8.6",
     "async": "2.6.0",
@@ -30,19 +30,26 @@
     "node-cache": "^3.2.1",
     "node-sha1": "0.0.1",
     "redis": "^2.6.0-2",
-    "request": "2.87.0",
+    "request": "2.88.0",
     "request-etag": "^2.0.3",
     "semver": "5.5.0",
     "tunnel": "0.0.6",
-    "winston": "2.4.1"
+    "winston": "2.4.1",
+    "yaml": "1.0.1"
   },
   "engines": {
     "node": ">= 0.8.x"
   },
   "devDependencies": {
-    "jest": "22.4.3",
-    "jest-junit": "3.6.0",
+    "@babel/core": "7.4.3",
+    "@babel/preset-env": "7.4.3",
+    "babel-jest": "24.7.1",
+    "jest": "24.7.1",
+    "jest-junit": "6.3.0",
     "nock": "9.2.3",
+    "selfsigned": "1.10.4",
+    "tmp": "0.0.33",
+    "typedoc": "0.14.2",
     "typescript": "3.0.1"
   },
   "jest": {

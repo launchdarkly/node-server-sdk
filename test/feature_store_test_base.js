@@ -1,17 +1,18 @@
 var dataKind = require('../versioned_data_kind');
+const { asyncify } = require('./async_utils');
 
 // The following tests should be run on every feature store implementation. If this type of
 // store supports caching, the tests should be run once with caching enabled and once with
 // caching disabled.
 //
 // Parameters:
-// - makeStore(): creates an instance of the feature store.
+// - makeStore(): creates an instance of the feature store
 // - clearExistingData(callback): if specified, will be called before each test to clear any
-// storage that the store instances may be sharing.
-// - isCached: true if the instances returned by makeStore() have caching enabled. If
-// applicable, 
+// storage that the store instances may be sharing; this also implies that the feature store
+// - isCached: true if the instances returned by makeStore() have caching enabled.
+// - makeStoreWithPrefix(prefix): creates an uncached instance of the store with a key prefix
 
-function baseFeatureStoreTests(makeStore, clearExistingData, isCached) {
+function baseFeatureStoreTests(makeStore, clearExistingData, isCached, makeStoreWithPrefix) {
   var feature1 = {
     key: 'foo',
     version: 10
@@ -21,7 +22,7 @@ function baseFeatureStoreTests(makeStore, clearExistingData, isCached) {
     version: 10
   };
 
-  beforeEach(function(done) {
+  beforeEach(done => {
     if (clearExistingData) {
       clearExistingData(done);
     } else {
@@ -29,28 +30,24 @@ function baseFeatureStoreTests(makeStore, clearExistingData, isCached) {
     }
   });
 
-  function initedStore(cb) {
+  async function initedStore() {
     var store = makeStore();
     var initData = {};
     initData[dataKind.features.namespace] = {
       'foo': feature1,
       'bar': feature2
     };
-    store.init(initData, function() {
-      cb(store);
-    });
+    await asyncify(cb => store.init(initData, cb));
+    return store;
   }
 
-  it('is initialized after calling init()', function(done) {
-    initedStore(function(store) {
-      store.initialized(function(result) {
-        expect(result).toBe(true);
-        done();
-      });
-    });
+  it('is initialized after calling init()', async () => {
+    var store = await initedStore();
+    var result = await asyncify(cb => store.initialized(cb));
+    expect(result).toBe(true);
   });
 
-  it('init() completely replaces previous data', function(done) {
+  it('init() completely replaces previous data', async () => {
     var store = makeStore();
     var flags = {
       first: { key: 'first', version: 1 },
@@ -61,49 +58,37 @@ function baseFeatureStoreTests(makeStore, clearExistingData, isCached) {
     initData[dataKind.features.namespace] = flags;
     initData[dataKind.segments.namespace] = segments;
 
-    store.init(initData, function() {
-      store.all(dataKind.features, function(items) {
-        expect(items).toEqual(flags);
-        store.all(dataKind.segments, function(items) {
-          expect(items).toEqual(segments);
+    await asyncify(cb => store.init(initData, cb));
+    var items = await asyncify(cb => store.all(dataKind.features, cb));
+    expect(items).toEqual(flags);
+    items = await asyncify(cb => store.all(dataKind.segments, cb));
+    expect(items).toEqual(segments);
 
-          var newFlags = { first: { key: 'first', version: 3 } };
-          var newSegments = { first: { key: 'first', version: 4 } };
-          var initData = {};
-          initData[dataKind.features.namespace] = newFlags;
-          initData[dataKind.segments.namespace] = newSegments;
+    var newFlags = { first: { key: 'first', version: 3 } };
+    var newSegments = { first: { key: 'first', version: 4 } };
+    var initData = {};
+    initData[dataKind.features.namespace] = newFlags;
+    initData[dataKind.segments.namespace] = newSegments;
 
-          store.init(initData, function() {
-            store.all(dataKind.features, function(items) {
-              expect(items).toEqual(newFlags);
-              store.all(dataKind.segments, function(items) {
-                expect(items).toEqual(newSegments);
-
-                done();
-              })
-            })
-          });
-        });
-      });
-    });
+    await asyncify(cb => store.init(initData, cb));
+    items = await asyncify(cb => store.all(dataKind.features, cb));
+    expect(items).toEqual(newFlags);
+    items = await asyncify(cb => store.all(dataKind.segments, cb));
+    expect(items).toEqual(newSegments);
   });
 
   if (!isCached && clearExistingData) {
     function testInitStateDetection(desc, initData) {
-      it(desc, function(done) {
+      it(desc, async () => {
         var store1 = makeStore();
         var store2 = makeStore();
 
-        store1.initialized(function(result) {
-          expect(result).toBe(false);
+        var result = await asyncify(cb => store1.initialized(cb));
+        expect(result).toBe(false);
 
-          store2.init(initData, function() {
-            store1.initialized(function(result) {
-              expect(result).toBe(true);
-              done();
-            });
-          });
-        });
+        await asyncify(cb => store2.init(initData, cb));
+        result = await asyncify(cb => store1.initialized(cb));
+        expect(result).toBe(true);
       });
     }
 
@@ -112,78 +97,73 @@ function baseFeatureStoreTests(makeStore, clearExistingData, isCached) {
 
     testInitStateDetection('can detect if another instance has initialized the store, even with empty data',
       { features: {} });
+
+    if (makeStoreWithPrefix) {
+      it('is independent from other instances with different prefixes', async () => {
+        var flag = { key: 'flag', version: 1 };
+        var storeA = makeStoreWithPrefix('a');
+        await asyncify(cb => storeA.init({ features: { flag: flag } }, cb));
+        var storeB = makeStoreWithPrefix('b');
+        await asyncify(cb => storeB.init({ features: { } }, cb));
+        var storeB1 = makeStoreWithPrefix('b');  // this ensures we're not just reading cached data
+        var item = await asyncify(cb => storeB1.get(dataKind.features, 'flag', cb));
+        expect(item).toBe(null);
+        item = await asyncify(cb => storeA.get(dataKind.features, 'flag', cb));
+        expect(item).toEqual(flag);
+      });
+    }
   }
 
-  it('gets existing feature', function(done) {
-    initedStore(function(store) {
-      store.get(dataKind.features, feature1.key, function(result) {
-        expect(result).toEqual(feature1);
-        done();
-      });
+  it('gets existing feature', async () => {
+    var store = await initedStore();
+    var result = await asyncify(cb => store.get(dataKind.features, feature1.key, cb));
+    expect(result).toEqual(feature1);
+  });
+
+  it('does not get nonexisting feature', async () => {
+    var store = await initedStore();
+    var result = await asyncify(cb => store.get(dataKind.features, 'biz', cb));
+    expect(result).toBe(null);
+  });
+
+  it('gets all features', async () => {
+    var store = await initedStore();
+    var result = await asyncify(cb => store.all(dataKind.features, cb));
+    expect(result).toEqual({
+      'foo': feature1,
+      'bar': feature2
     });
   });
 
-  it('does not get nonexisting feature', function(done) {
-    initedStore(function(store) {
-      store.get(dataKind.features, 'biz', function(result) {
-        expect(result).toBe(null);
-        done();
-      });
-    });
-  });
-
-  it('gets all features', function(done) {
-    initedStore(function(store) {
-      store.all(dataKind.features, function(result) {
-        expect(result).toEqual({
-          'foo': feature1,
-          'bar': feature2
-        });
-        done();
-      });
-    });
-  });
-
-  it('upserts with newer version', function(done) {
+  it('upserts with newer version', async () => {
     var newVer = { key: feature1.key, version: feature1.version + 1 };
-    initedStore(function(store) {
-      store.upsert(dataKind.features, newVer, function(result) {
-        store.get(dataKind.features, feature1.key, function(result) {
-          expect(result).toEqual(newVer);
-          done();
-        });
-      });
-    });
+    var store = await initedStore();
+    await asyncify(cb => store.upsert(dataKind.features, newVer, cb));
+    var result = await asyncify(cb => store.get(dataKind.features, feature1.key, cb));
+    expect(result).toEqual(newVer);
   });
 
-  it('does not upsert with older version', function(done) {
+  it('does not upsert with older version', async () => {
     var oldVer = { key: feature1.key, version: feature1.version - 1 };
-    initedStore(function(store) {
-      store.upsert(dataKind.features, oldVer, function(result) {
-        store.get(dataKind.features, feature1.key, function(result) {
-          expect(result).toEqual(feature1);
-          done();
-        });
-      });
-    });
+    var store = await initedStore();
+    await asyncify(cb => store.upsert(dataKind.features, oldVer, cb));
+    var result = await asyncify(cb => store.get(dataKind.features, feature1.key, cb));
+    expect(result).toEqual(feature1);
   });
 
-  it('upserts new feature', function(done) {
+  it('upserts new feature', async () => {
     var newFeature = { key: 'biz', version: 99 };
-    initedStore(function(store) {
-      store.upsert(dataKind.features, newFeature, function(result) {
-        store.get(dataKind.features, newFeature.key, function(result) {
-          expect(result).toEqual(newFeature);
-          done();
-        });
-      });
-    });
+    var store = await initedStore();
+    await asyncify(cb => store.upsert(dataKind.features, newFeature, cb));
+    var result = await asyncify(cb => store.get(dataKind.features, newFeature.key, cb));
+    expect(result).toEqual(newFeature);
   });
 
-  it('handles upsert race condition within same client correctly', function(done) {
+  it('handles upsert race condition within same client correctly', done => {
+    // Not sure if there is a way to do this one with async/await
     var ver1 = { key: feature1.key, version: feature1.version + 1 };
     var ver2 = { key: feature1.key, version: feature1.version + 2 };
-    initedStore(function(store) {
+    initedStore().then(store => {
       var counter = 0;
       var combinedCallback = function() {
         counter++;
@@ -201,50 +181,33 @@ function baseFeatureStoreTests(makeStore, clearExistingData, isCached) {
     });
   });
 
-  it('deletes with newer version', function(done) {
-    initedStore(function(store) {
-      store.delete(dataKind.features, feature1.key, feature1.version + 1, function(result) {
-        store.get(dataKind.features, feature1.key, function(result) {
-          expect(result).toBe(null);
-          done();
-        });
-      });
-    });
+  it('deletes with newer version', async () => {
+    var store = await initedStore();
+    await asyncify(cb => store.delete(dataKind.features, feature1.key, feature1.version + 1, cb));
+    var result = await asyncify(cb => store.get(dataKind.features, feature1.key, cb));
+    expect(result).toBe(null);
   });
 
-  it('does not delete with older version', function(done) {
-    initedStore(function(store) {
-      store.delete(dataKind.features, feature1.key, feature1.version - 1, function(result) {
-        store.get(dataKind.features, feature1.key, function(result) {
-          expect(result).not.toBe(null);
-          done();
-        });
-      });
-    });
+  it('does not delete with older version', async () => {
+    var store = await initedStore();
+    await asyncify(cb => store.delete(dataKind.features, feature1.key, feature1.version - 1, cb));
+    var result = await asyncify(cb => store.get(dataKind.features, feature1.key, cb));
+    expect(result).not.toBe(null);
   });
 
-  it('allows deleting unknown feature', function(done) {
-    initedStore(function(store) {
-      store.delete(dataKind.features, 'biz', 99, function(result) {
-        store.get(dataKind.features, 'biz', function(result) {
-          expect(result).toBe(null);
-          done();
-        });
-      });
-    });
+  it('allows deleting unknown feature', async () => {
+    var store = await initedStore();
+    await asyncify(cb => store.delete(dataKind.features, 'biz', 99, cb));
+    var result = await asyncify(cb => store.get(dataKind.features, 'biz', cb));
+    expect(result).toBe(null);
   });
 
-  it('does not upsert older version after delete', function(done) {
-    initedStore(function(store) {
-      store.delete(dataKind.features, feature1.key, feature1.version + 1, function(result) {
-        store.upsert(dataKind.features, feature1, function(result) {
-          store.get(dataKind.features, feature1.key, function(result) {
-            expect(result).toBe(null);
-            done();
-          });
-        });
-      });
-    });
+  it('does not upsert older version after delete', async () => {
+    var store = await initedStore();
+    await asyncify(cb => store.delete(dataKind.features, feature1.key, feature1.version + 1, cb));
+    await asyncify(cb => store.upsert(dataKind.features, feature1, cb));
+    var result = await asyncify(cb => store.get(dataKind.features, feature1.key, cb));
+    expect(result).toBe(null);
   });
 }
 
@@ -268,10 +231,10 @@ function concurrentModificationTests(makeStore, makeStoreWithHook) {
     return { key: flagKey, version: v };
   }
 
-  function withInitedStore(store, cb) {
+  async function initStore(store) {
     var allData = { features: {} };
     allData['features'][flagKey] = makeFlagWithVersion(initialVersion);
-    store.init(allData, cb);
+    await asyncify(cb => store.init(allData, cb));
   }
 
   function writeCompetingVersions(flagVersionsToWrite) {
@@ -287,36 +250,28 @@ function concurrentModificationTests(makeStore, makeStoreWithHook) {
     };
   }
 
-  it('handles upsert race condition against other client with lower version', function(done) {
+  it('handles upsert race condition against other client with lower version', async () => {
     var myDesiredVersion = 10;
     var competingStoreVersions = [ 2, 3, 4 ]; // proves that we can retry multiple times if necessary
 
     var myStore = makeStoreWithHook(writeCompetingVersions(competingStoreVersions));
 
-    withInitedStore(myStore, function() {
-      myStore.upsert(dataKind.features, makeFlagWithVersion(myDesiredVersion), function() {
-        myStore.get(dataKind.features, flagKey, function(result) {
-          expect(result.version).toEqual(myDesiredVersion);
-          done();
-        });
-      });
-    });
+    await initStore(myStore);
+    await asyncify(cb => myStore.upsert(dataKind.features, makeFlagWithVersion(myDesiredVersion), cb));
+    var result = await asyncify(cb => myStore.get(dataKind.features, flagKey, cb));
+    expect(result.version).toEqual(myDesiredVersion);
   });
 
-  it('handles upsert race condition against other client with higher version', function(done) {
+  it('handles upsert race condition against other client with higher version', async () => {
     var myDesiredVersion = 2;
     var competingStoreVersion = 3;
 
     var myStore = makeStoreWithHook(writeCompetingVersions([ competingStoreVersion ]));
 
-    withInitedStore(myStore, function() {
-      myStore.upsert(dataKind.features, makeFlagWithVersion(myDesiredVersion), function() {
-        myStore.get(dataKind.features, flagKey, function(result) {
-          expect(result.version).toEqual(competingStoreVersion);
-          done();
-        });
-      });
-    });
+    await initStore(myStore);
+    await asyncify(cb => myStore.upsert(dataKind.features, makeFlagWithVersion(myDesiredVersion), cb));
+    var result = await asyncify(cb => myStore.get(dataKind.features, flagKey, cb));
+    expect(result.version).toEqual(competingStoreVersion);
   });
 }
 

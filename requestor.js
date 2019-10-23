@@ -23,7 +23,7 @@ function Requestor(sdkKey, config) {
   var requestWithETagCaching = new ETagRequest(cacheConfig);
 
   function makeRequest(resource) {
-    var requestParams = {
+    var requestParams = Object.assign({}, config.tlsParams, {
       method: "GET",
       url: config.baseUri + resource,
       headers: {
@@ -32,7 +32,7 @@ function Requestor(sdkKey, config) {
       },
       timeout: config.timeout * 1000,
       agent: config.proxyAgent
-    }
+    });
 
     return function(cb, errCb) {
       requestWithETagCaching(requestParams, function(err, resp, body) {
