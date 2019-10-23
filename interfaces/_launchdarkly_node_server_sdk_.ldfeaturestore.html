@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<title>LDFeatureStore | LaunchDarkly Server-Side Node SDK (5.9.1)</title>
+	<title>LDFeatureStore | LaunchDarkly Server-Side Node SDK (5.9.2)</title>
 	<meta name="description" content="">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="../assets/css/main.css">
@@ -22,7 +22,7 @@
 						<li class="state loading">Preparing search index...</li>
 						<li class="state failure">The search index is not available</li>
 					</ul>
-					<a href="../index.html" class="title">LaunchDarkly Server-Side Node SDK (5.9.1)</a>
+					<a href="../index.html" class="title">LaunchDarkly Server-Side Node SDK (5.9.2)</a>
 				</div>
 				<div class="table-cell" id="tsd-widgets">
 					<div id="tsd-filter">
@@ -75,6 +75,11 @@
 						from LaunchDarkly. By default, it uses an in-memory implementation; there are also adapters
 						for Redis and other databases (see the <a href="https://docs.launchdarkly.com/v2.0/docs/using-a-persistent-feature-store">SDK Reference Guide</a>).
 					You will not need to use this interface unless you are writing your own implementation.</p>
+					<p>Feature store methods can and should call their callbacks directly whenever possible, rather
+						than deferring them with setImmediate() or process.nextTick(). This means that if for any
+						reason you are updating or querying a feature store directly in your application code (which
+						is not part of normal use of the SDK) you should be aware that the callback may be executed
+					immediately.</p>
 				</div>
 			</section>
 			<section class="tsd-panel tsd-hierarchy">
@@ -116,7 +121,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/587bdf9/index.d.ts#L545">index.d.ts:545</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/9eb7ea2/index.d.ts#L551">index.d.ts:551</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -175,7 +180,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/587bdf9/index.d.ts#L619">index.d.ts:619</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/9eb7ea2/index.d.ts#L622">index.d.ts:622</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -197,7 +202,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/587bdf9/index.d.ts#L581">index.d.ts:581</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/9eb7ea2/index.d.ts#L587">index.d.ts:587</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -264,7 +269,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/587bdf9/index.d.ts#L529">index.d.ts:529</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/9eb7ea2/index.d.ts#L535">index.d.ts:535</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -328,7 +333,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/587bdf9/index.d.ts#L557">index.d.ts:557</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/9eb7ea2/index.d.ts#L563">index.d.ts:563</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -378,7 +383,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/587bdf9/index.d.ts#L614">index.d.ts:614</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/9eb7ea2/index.d.ts#L617">index.d.ts:617</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -424,13 +429,13 @@
 					<a name="upsert" class="tsd-anchor"></a>
 					<h3>upsert</h3>
 					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
-						<li class="tsd-signature tsd-kind-icon">upsert<span class="tsd-signature-symbol">(</span>kind<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">object</span>, key<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, data<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">object</span>, callback<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">function</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+						<li class="tsd-signature tsd-kind-icon">upsert<span class="tsd-signature-symbol">(</span>kind<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">object</span>, data<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">object</span>, callback<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">function</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/587bdf9/index.d.ts#L602">index.d.ts:602</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/9eb7ea2/index.d.ts#L605">index.d.ts:605</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -446,12 +451,6 @@
 										<p>  The type of data to be accessed. The <code>namespace</code> property of this object indicates which
 											collection of entities to use, e.g. <code>&quot;features&quot;</code> or <code>&quot;segments&quot;</code>. The store should not
 										make any assumptions about the format of the data, but just return a JSON object.</p>
-									</div>
-								</li>
-								<li>
-									<h5>key: <span class="tsd-signature-type">string</span></h5>
-									<div class="tsd-comment tsd-typography">
-										<p>  The unique key of the entity within the specified collection.</p>
 									</div>
 								</li>
 								<li>
@@ -592,6 +591,7 @@
 				<li class="tsd-kind-function tsd-has-type-parameter"><span class="tsd-kind-icon">Function with type parameter</span></li>
 				<li class="tsd-kind-index-signature"><span class="tsd-kind-icon">Index signature</span></li>
 				<li class="tsd-kind-type-alias"><span class="tsd-kind-icon">Type alias</span></li>
+				<li class="tsd-kind-type-alias tsd-has-type-parameter"><span class="tsd-kind-icon">Type alias with type parameter</span></li>
 			</ul>
 			<ul class="tsd-legend">
 				<li class="tsd-kind-enum"><span class="tsd-kind-icon">Enumeration</span></li>
@@ -640,7 +640,7 @@
 	</div>
 </footer>
 <div class="container tsd-generator">
-	<p>Generated using <a href="http://typedoc.org/" target="_blank">TypeDoc</a></p>
+	<p>Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p>
 </div>
 <div class="overlay"></div>
 <script src="../assets/js/main.js"></script>
