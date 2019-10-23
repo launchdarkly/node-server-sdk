@@ -37,13 +37,14 @@ function processItems() {
   flaggedRuntime=0
   flaggedDev=0
   while read -r badPackage topLevelDep; do
-    echo -n "flagged package '$badPackage', referenced via '$topLevelDep' "
+    echo -n "flagged package \"$badPackage\", referenced via \"$topLevelDep\" "
     for category in dependencies peerDependencies devDependencies; do
       if isInList $topLevelDep ${!category}; then
-        echo "-- from $category"
         if [ "$category" == "devDependencies" ]; then
+          echo "-- from \"$category\""
           flaggedDev=1
         else
+          echo "-- from \"$category\" (RUNTIME) ***"
           flaggedRuntime=1
         fi
         break
@@ -52,7 +53,7 @@ function processItems() {
   done
   echo
   if [ "$flaggedRuntime" == "1" ]; then
-    echo "At least one runtime dependency was flagged. These must be fixed by updating package.json."
+    echo "*** At least one runtime dependency was flagged. These must be fixed by updating package.json."
     echo "Do not use 'npm audit fix'."
     exit 1  # return an error, causing the build to fail
   elif [ "$flaggedDev" == "1" ]; then
@@ -69,6 +70,7 @@ echo
 npm audit --json \
   | grep '"path":' \
   | sort | uniq \
-  | sed -n -e 's#.*"path": "\([^>]*\)>.*>\([^"]*\)".*#\2 \1#p' \
+  | sed -n -e 's#.*"path": "\([^"]*\)".*#\1#p' \
+  | awk -F '>' '{ print $NF,$1 }' \
   | sort | uniq \
   | processItems
