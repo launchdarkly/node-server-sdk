@@ -1,37 +1,42 @@
-version: 2
+version: 2.1
 
 workflows:
-  version: 2
-  test:
+  workflow:
     jobs:
-      - oldest-long-term-support-release
-      - current-release
-
-node-template: &node-template
-  steps:
-    - checkout
-    - run: echo "Node version:" `node --version`
-    - run: npm install
-    - run:
-        command: npm test
-        environment:
-          JEST_JUNIT_OUTPUT: "reports/junit/js-test-results.xml"
-    - run: npm run check-typescript
-    - run: npm run lint
-    - store_test_results:
-        path: reports/junit
-    - store_artifacts:
-        path: reports/junit
+      - build-and-test:
+          name: latest Node version
+          run-lint: true
+      - build-and-test:
+          name: oldest supported Node version
+          docker-image: circleci/node:6
+          run-lint: false
 
 jobs:
-  oldest-long-term-support-release:
-    <<: *node-template
+  build-and-test:
+    parameters:
+      run-lint:
+        type: boolean
+        default: false
+      docker-image:
+        type: string
+        default: circleci/node:latest
     docker:
-      - image: circleci/node:6
+      - image: <<parameters.docker-image>>
       - image: redis
-
-  current-release:
-    <<: *node-template
-    docker:
-      - image: circleci/node:latest
-      - image: redis
+    steps:
+      - checkout
+      - run: echo "Node version:" `node --version`
+      - run: npm install
+      - run:
+          command: npm test
+          environment:
+            JEST_JUNIT_OUTPUT: "reports/junit/js-test-results.xml"
+      - run: npm run check-typescript
+      - when:
+          condition: <<parameters.run-lint>>
+          steps:
+            - run: npm run lint
+      - store_test_results:
+          path: reports/junit
+      - store_artifacts:
+          path: reports/junit
