@@ -39,3 +39,13 @@ To verify that the TypeScript declarations compile correctly (this involves comp
 ```
 npm run check-typescript
 ```
+
+### Auditing package dependencies
+
+The `npm audit` tool compares all dependencies and transitive dependencies to a database of package versions with known vulnerabilities. However, the output of this tool includes both runtime and development dependencies.
+
+Runtime dependencies can affect applications using the SDK; they can only be fixed by updating one of the explicit dependencies in `package.json`. Development dependencies cannot affect applications, but will still cause `npm audit` to flag the project; they can be fixed by running `npm audit fix` to add overrides for transitive dependencies in `package-lock.json`.
+
+It is important _not_ to run `npm audit fix` if there are any bad _runtime_ dependencies, because it will hide the problem in our own build, without actually fixing the vulnerability when an application uses the SDK.
+
+The script `scripts/better-audit.sh`, which is run in the CI build and can also be run manually, processes the output of `npm audit` to eliminate all duplicate entries and then determines whether each entry is coming from a runtime dependency or a development dependency. If there are any runtime ones, it terminates with an error code so the build will fail.

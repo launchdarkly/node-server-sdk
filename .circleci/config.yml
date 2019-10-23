@@ -24,6 +24,9 @@ node-template: &node-template
           if [ "$CIRCLE_JOB" == "current-release" ]; then
             npm run lint
           fi
+    - run:
+        name: dependency audit
+        command: ./scripts/better-audit.sh
     - store_test_results:
         path: reports/junit
     - store_artifacts:
