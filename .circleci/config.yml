@@ -17,7 +17,13 @@ node-template: &node-template
         environment:
           JEST_JUNIT_OUTPUT: "reports/junit/js-test-results.xml"
     - run: npm run check-typescript
-    - run: npm run lint
+    - run:
+        name: lint check
+        command: |
+          # current eslint version isn't compatible with Node 6
+          if [ "$CIRCLE_JOB" == "current-release" ]; then
+            npm run lint
+          fi
     - store_test_results:
         path: reports/junit
     - store_artifacts:
