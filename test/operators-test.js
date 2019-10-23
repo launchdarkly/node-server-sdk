@@ -34,13 +34,13 @@ describe('operators', function() {
     // mixed strings and numbers
     [ 'in',                 '99', 99,   false ],
     [ 'in',                 99,   '99', false ],
-    // [ 'contains',           '99', 99,   false ],   // currently returns true - inconsistent with other SDKs
-    // [ 'startsWith',         '99', 99,   false ],   // currently returns true - inconsistent with other SDKs
-    // [ 'endsWith',           '99', 99,   false ],   // currently returns true - inconsistent with other SDKs
+    [ 'contains',           '99', 99,   false ],
+    [ 'startsWith',         '99', 99,   false ],
+    [ 'endsWith',           '99', 99,   false ],
     [ 'lessThanOrEqual',    '99', 99,   false ],
-    // [ 'lessThanOrEqual',    99,   '99', false ],   // currently returns true - inconsistent with other SDKs
+    [ 'lessThanOrEqual',    99,   '99', false ],
     [ 'greaterThanOrEqual', '99', 99,   false ],
-    // [ 'greaterThanOrEqual', 99,   '99', false ],   // currently returns true - inconsistent with other SDKs
+    [ 'greaterThanOrEqual', 99,   '99', false ],
 
     // regex
     [ 'matches', 'hello world', 'hello.*rld',     true ],
@@ -48,7 +48,9 @@ describe('operators', function() {
     [ 'matches', 'hello world', 'l+',             true ],
     [ 'matches', 'hello world', '(world|planet)', true ],
     [ 'matches', 'hello world', 'aloha',          false ],
-    // [ 'matches', 'hello world', '***not a regex', false ],   // currently throws an exception
+    [ 'matches', 'hello world', '***not a regex', false ],
+    [ 'matches', 'hello world', 3,                false ],
+    [ 'matches', 3,             'hello',          false ],
 
     // dates
     [ 'before', 0, 1,                              true ],
@@ -57,7 +59,7 @@ describe('operators', function() {
     [ 'before', '1970-01-01T00:00:00.500Z', 1000,  true ],
     [ 'before', true, 1000,                        false ],  // wrong type
     [ 'after',  '1970-01-01T00:00:02.500Z', 1000,  true ],
-    // [ 'after',  '1970-01-01 00:00:02.500Z', 1000,  false ],  // malformed timestamp - but is currently parsed as valid
+    [ 'after',  '1970-01-01 00:00:02.500Z', 1000,  false ],  // malformed timestamp
     [ 'before', '1970-01-01T00:00:02+01:00', 1000, true ],
     [ 'before', -1000, 1000,                       true ],
     [ 'after',  '1970-01-01T00:00:01.001Z', 1000,  true ],
@@ -92,7 +94,8 @@ describe('operators', function() {
   ];
 
   paramsTable.forEach(function(params) {
-    it('result is ' + params[3] + ' for ' + params[1] + ' ' + params[0] + ' ' + params[2], function() {
+    it('result is ' + params[3] + ' for ' + JSON.stringify(params[1]) + ' ' + params[0] + ' ' +
+      JSON.stringify(params[2]), function() {
       assert.equal(operators.fn(params[0])(params[1], params[2]), params[3]);
     });
   });
