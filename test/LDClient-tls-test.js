@@ -1,6 +1,7 @@
 import * as selfsigned from 'selfsigned';
 
 import * as LDClient from '../index';
+import { sleepAsync } from './async_utils';
 import * as httpServer from './http_server';
 import * as stubs from './stubs';
 
@@ -57,7 +58,9 @@ describe('LDClient TLS configuration', () => {
       logger: stubs.stubLogger(),
     };
     const client = LDClient.init(sdkKey, config);
-    await expect(client.waitForInitialization()).rejects.toThrow(/self signed/);
+    await sleepAsync(300); // the client won't signal an unrecoverable error, but it should log a message
+    expect(config.logger.warn.mock.calls.length).toEqual(2);
+    expect(config.logger.warn.mock.calls[1][0]).toMatch(/self signed/);
   });
 
   it('can use custom TLS options for streaming as well as polling', async () => {
