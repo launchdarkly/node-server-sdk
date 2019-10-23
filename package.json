@@ -34,7 +34,6 @@
     "request-etag": "^2.0.3",
     "semver": "^6.3.0",
     "tunnel": "0.0.6",
-    "typedoc": "0.15.0",
     "winston": "2.4.1",
     "yaml": "1.0.1"
   },
