@@ -2,6 +2,23 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.9.2] - 2019-10-23
+### Changed:
+- Event listeners for `update` events were receiving an entire flag configuration object as an argument. This was not useful for applications (since the SDK does not provide any way to use such an object directly), and was unsafe since the object was shared with internal code and was mutable. The argument for `update` events is now an object with only one property, `key` (the flag key).
+- The CI build will now fail if `npm audit` detects any vulnerabilities in the _runtime_ dependencies (not including `devDependencies`).
+- The CI build now performs code linting.
+
+### Fixed:
+- There were significant performance bottlenecks due to the use of `setTimeout` to defer callbacks. These have been replaced with `setImmediate` for callbacks into application code, or with direct undeferred callbacks in internal code paths where it is safe to do so. (Thanks, [mdgbayly](https://github.com/launchdarkly/node-server-sdk/pull/150)!)
+- When initializing the client, if it gets an HTTP error or network error that is considered retryable (as opposed to for instance a 401 error, which will not be retried), it should not reject the `waitForInitialization` promise and should not emit an `error` event. ([#155](https://github.com/launchdarkly/node-server-sdk/issues/155))
+- Fixed some rule matching behavior for consistency with the other SDKs: string operators such as `startsWith` should only be able to match if both values are strings; numeric operators such as `lessThan` should only be able to match if both values are numbers; strings should only be usable as date/time values if they match RFC3339 format; and invalid regexes should simply cause a non-match, rather than an error.
+- Previously, an `update` event would only be triggered for a flag if that flag's configuration were changed directly; it did not take into account indirect changes that could affect a flag's value, such as a change to one of its prerequisite flags or to a user segment that it references. This has been fixed so that any change potentially affecting a flag's value will produce an `update` event for that flag.
+- The TypeScript declaration for `LDFeatureStore.upsert()` was wrong. (Thanks, [JakeGinnivan](https://github.com/launchdarkly/node-server-sdk/pull/160)!)
+- Removed an unused dependency on the deprecated package `hoek`. ([#158](https://github.com/launchdarkly/node-server-sdk/issues/158))
+- Updated the dependency on `semver`. (Thanks, [mmcgahan](https://github.com/launchdarkly/node-server-sdk/pull/151)!)
+- Fixed various dependency versions that were flagged as vulnerable by `npm audit`.
+
+
 ## [5.9.1] - 2019-10-10
 ### Fixed:
 - For an evaluation reason of `RULE_MATCH`, the `ruleIndex` property was always being set to zero rather than to the actual rule index. Note that it is always best to look at `ruleId` rather than `ruleIndex`, since it will never change even if rules are added or deleted.
