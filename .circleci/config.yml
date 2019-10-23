@@ -36,6 +36,9 @@ jobs:
           condition: <<parameters.run-lint>>
           steps:
             - run: npm run lint
+      - run:
+          name: dependency audit
+          command: ./scripts/better-audit.sh
       - store_test_results:
           path: reports/junit
       - store_artifacts:

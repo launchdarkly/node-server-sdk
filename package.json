@@ -25,9 +25,9 @@
   "homepage": "https://github.com/launchdarkly/node-server-sdk",
   "dependencies": {
     "@types/redis": "2.8.6",
-    "async": "2.6.0",
+    "async": "3.1.0",
     "lrucache": "^1.0.3",
-    "node-cache": "^3.2.1",
+    "node-cache": "^4.2.0",
     "node-sha1": "0.0.1",
     "redis": "^2.6.0-2",
     "request": "2.88.0",
