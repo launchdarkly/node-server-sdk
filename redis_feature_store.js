@@ -1,10 +1,9 @@
-var redis = require('redis'),
-    winston = require('winston'),
-    dataKind = require('./versioned_data_kind'),
-    CachingStoreWrapper = require('./caching_store_wrapper');
+const redis = require('redis'),
+  winston = require('winston'),
+  dataKind = require('./versioned_data_kind'),
+  CachingStoreWrapper = require('./caching_store_wrapper');
 
-
-var noop = function(){};
+const noop = function(){};
 
 
 function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
@@ -13,10 +12,10 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
 
 function redisFeatureStoreInternal(redisOpts, prefix, logger) {
 
-  var client = redisOpts.client || redis.createClient(redisOpts),
-      store = {},
-      itemsPrefix = (prefix || "launchdarkly") + ":",
-      initedKey = itemsPrefix + "$inited";
+  const client = redisOpts.client || redis.createClient(redisOpts),
+    store = {},
+    itemsPrefix = (prefix || 'launchdarkly') + ':',
+    initedKey = itemsPrefix + '$inited';
 
   logger = (logger ||
     new winston.Logger({
@@ -27,26 +26,25 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
     })
   );
 
-  var connected = !!redisOpts.client;
-  var initialConnect = !redisOpts.client;
-
-  client.on('error', function (err) {
+  let connected = !!redisOpts.client;
+  let initialConnect = !redisOpts.client;
+  client.on('error', err => {
     // Note that we *must* have an error listener or else any connection error will trigger an
     // uncaught exception.
     logger.error('Redis error - ' + err);
   });
-  client.on('reconnecting', function (info) {
+  client.on('reconnecting', info => {
     logger.info('Attempting to reconnect to Redis (attempt #' + info.attempt +
       ', delay: ' + info.delay + 'ms)');
   });
-  client.on('connect', function () {
+  client.on('connect', () => {
     if (!initialConnect) {
       logger.warn('Reconnected to Redis');
     }
     initialConnect = false;
     connected = true;
   });
-  client.on('end', function () {
+  client.on('end', () => {
     connected = false;
   });
 
@@ -61,7 +59,6 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
 
   // A helper that performs a get with the redis client
   function doGet(kind, key, cb) {
-    var item;
     cb = cb || noop;
 
     if (!connected) {
@@ -70,20 +67,20 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
       return;
     }
 
-    client.hget(itemsKey(kind), key, function(err, obj) {
+    client.hget(itemsKey(kind), key, (err, obj) => {
       if (err) {
-        logger.error("Error fetching key " + key + " from Redis in '" + kind.namespace + "'", err);
+        logger.error('Error fetching key ' + key + ' from Redis in \'' + kind.namespace + '\'', err);
         cb(null);
       } else {
-        item = JSON.parse(obj);
+        const item = JSON.parse(obj);
         cb(item);
       }
     });
   }
 
-  store.getInternal = function(kind, key, cb) {
+  store.getInternal = (kind, key, cb) => {
     cb = cb || noop;
-    doGet(kind, key, function(item) {
+    doGet(kind, key, item => {
       if (item && !item.deleted) {
         cb(item);
       } else {
@@ -92,7 +89,7 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
     });
   };
 
-  store.getAllInternal = function(kind, cb) {
+  store.getAllInternal = (kind, cb) => {
     cb = cb || noop;
     if (!connected) {
       logger.warn('Attempted to fetch all keys while Redis connection is down');
@@ -100,15 +97,15 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
       return;
     }
 
-    client.hgetall(itemsKey(kind), function(err, obj) {
+    client.hgetall(itemsKey(kind), (err, obj) => {
       if (err) {
-        logger.error("Error fetching '" + kind.namespace + "'' from Redis", err);
+        logger.error('Error fetching \'' + kind.namespace + '\' from Redis', err);
         cb(null);
       } else {
-        var results = {},
-            items = obj;
+        const results = {},
+          items = obj;
 
-        for (var key in items) {
+        for (let key in items) {
           if (Object.hasOwnProperty.call(items, key)) {
             results[key] = JSON.parse(items[key]);
           }
@@ -118,17 +115,17 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
     });
   };
 
-  store.initInternal = function(allData, cb) {
-    var multi = client.multi();
+  store.initInternal = (allData, cb) => {
+    const multi = client.multi();
 
-    for (var kindNamespace in allData) {
+    for (let kindNamespace in allData) {
       if (Object.hasOwnProperty.call(allData, kindNamespace)) {
-        var kind = dataKind[kindNamespace];
-        var baseKey = itemsKey(kind);
-        var items = allData[kindNamespace];
-        var stringified = {};
+        const kind = dataKind[kindNamespace];
+        const baseKey = itemsKey(kind);
+        const items = allData[kindNamespace];
+        const stringified = {};
         multi.del(baseKey);
-        for (var key in items) {
+        for (let key in items) {
           if (Object.hasOwnProperty.call(items, key)) {
             stringified[key] = JSON.stringify(items[key]);
           }
@@ -140,41 +137,41 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
       }
     }
 
-    multi.set(initedKey, "");
-
-    multi.exec(function(err, replies) {
+    multi.set(initedKey, '');
+    
+    multi.exec(err => {
       if (err) {
-        logger.error("Error initializing Redis store", err);
+        logger.error('Error initializing Redis store', err);
       }
       cb();
     });
   };
 
-  store.upsertInternal = function(kind, item, cb) {
-    updateItemWithVersioning(kind, item, function(err, attemptedWrite) {
+  store.upsertInternal = (kind, item, cb) => {
+    updateItemWithVersioning(kind, item, (err, attemptedWrite) => {
       if (err) {
-        logger.error("Error upserting key " + key + " in '" + kind.namespace + "'", err);
+        logger.error('Error upserting key ' + item.key + ' in \'' + kind.namespace + '\'', err);
       }
       cb(err, attemptedWrite);
     });
-  }
+  };
 
   function updateItemWithVersioning(kind, newItem, cb) {
     client.watch(itemsKey(kind));
-    var multi = client.multi();
+    const multi = client.multi();
     // testUpdateHook is instrumentation, used only by the unit tests
-    var prepare = store.testUpdateHook || function(prepareCb) { prepareCb(); };
-    prepare(function() {
-      doGet(kind, newItem.key, function(oldItem) {
+    const prepare = store.testUpdateHook || function(prepareCb) { prepareCb(); };
+    prepare(() => {
+      doGet(kind, newItem.key, oldItem => {
         if (oldItem && oldItem.version >= newItem.version) {
           multi.discard();
           cb(null, oldItem);
         } else {
           multi.hset(itemsKey(kind), newItem.key, JSON.stringify(newItem));
-          multi.exec(function(err, replies) {
+          multi.exec((err, replies) => {
             if (!err && replies === null) {
               // This means the EXEC failed because someone modified the watched key
-              logger.debug("Concurrent modification detected, retrying");
+              logger.debug('Concurrent modification detected, retrying');
               updateItemWithVersioning(kind, newItem, cb);
             } else {
               cb(err, newItem);
@@ -185,14 +182,14 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
     });
   }
 
-  store.initializedInternal = function(cb) {
+  store.initializedInternal = cb => {
     cb = cb || noop;
     client.exists(initedKey, function(err, obj) {
       cb(Boolean(!err && obj));
     });
   };
 
-  store.close = function() {
+  store.close = () => {
     client.quit();
   };
 

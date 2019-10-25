@@ -40,7 +40,7 @@ describe('user_filter', function() {
   var userWithSomeAttrsHidden = {
     'key': 'abc',
     'custom': {
-        'dizzle': 'ghi'
+      'dizzle': 'ghi'
     },
     'privateAttrs': [ 'bizzle',  'firstName' ]
   };

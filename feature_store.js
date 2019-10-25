@@ -1,4 +1,3 @@
-var dataKind = require('./versioned_data_kind');
 
 // The default in-memory implementation of a feature store, which holds feature flags and
 // other related data received from LaunchDarkly.
@@ -12,61 +11,69 @@ var dataKind = require('./versioned_data_kind');
 //
 // Additional implementations should use CachingStoreWrapper if possible.
 
-var noop = function(){};
+// Note that the contract for feature store methods does *not* require callbacks to be deferred
+// with setImmediate, process.nextTick, etc. It is both allowed and desirable to call them
+// directly whenever possible (i.e. if we don't actually have to do any I/O), since otherwise
+// feature flag retrieval is a major performance bottleneck. These methods are for internal use
+// by the SDK, and the SDK does not make any assumptions about whether a callback executes
+// before or after the next statement.
+
 function InMemoryFeatureStore() {
-  var store = {allData:{}};
+  let allData = {};
+  let initCalled = false;
+
+  const store = {};
 
   function callbackResult(cb, result) {
-    cb = cb || noop;
-    setTimeout(function() { cb(result); }, 0);  // ensure this is dispatched asynchronously
+    cb && cb(result);
   }
 
-  store.get = function(kind, key, cb) {
-    var items = this.allData[kind.namespace] || {};
+  store.get = (kind, key, cb) => {
+    const items = allData[kind.namespace] || {};
     if (Object.hasOwnProperty.call(items, key)) {
-      var item = items[key];
+      const item = items[key];
 
       if (!item || item.deleted) {
         callbackResult(cb, null);
       } else {
-        callbackResult(cb, clone(item));
+        callbackResult(cb, item);
       }
     } else {
       callbackResult(cb, null);
     }
-  }
+  };
 
-  store.all = function(kind, cb) {
-    var results = {};
-    var items = this.allData[kind.namespace] || {};
+  store.all = (kind, cb) => {
+    const results = {};
+    const items = allData[kind.namespace] || {};
 
-    for (var key in items) {
+    for (let key in items) {
       if (Object.hasOwnProperty.call(items, key)) {
-        var item = items[key];
+        const item = items[key];
         if (item && !item.deleted) {
-          results[key] = clone(item);          
+          results[key] = item;
         }
       }
     }
 
     callbackResult(cb, results);
-  }
+  };
 
-  store.init = function(allData, cb) {
-    this.allData = allData;
-    this.initCalled = true;
+  store.init = (newData, cb) => {
+    allData = newData;
+    initCalled = true;
     callbackResult(cb);
-  }
+  };
 
-  store.delete = function(kind, key, version, cb) {
-    var items = this.allData[kind.namespace];
+  store.delete = (kind, key, version, cb) => {
+    let items = allData[kind.namespace];
     if (!items) {
       items = {};
-      this.allData[kind] = items;
+      allData[kind] = items;
     }
-    var deletedItem = { version: version, deleted: true };
+    const deletedItem = { version: version, deleted: true };
     if (Object.hasOwnProperty.call(items, key)) {
-      var old = items[key];
+      const old = items[key];
       if (!old || old.version < version) {
         items[key] = deletedItem;
       } 
@@ -75,35 +82,35 @@ function InMemoryFeatureStore() {
     }
 
     callbackResult(cb);
-  }
+  };
 
-  store.upsert = function(kind, item, cb) {
-    var key = item.key;
-    var items = this.allData[kind.namespace];
+  store.upsert = (kind, item, cb) => {
+    const key = item.key;
+    let items = allData[kind.namespace];
     if (!items) {
       items = {};
-      this.allData[kind.namespace] = items;
+      allData[kind.namespace] = items;
     }
 
     if (Object.hasOwnProperty.call(items, key)) {
-      var old = items[key];
+      const old = items[key];
       if (old && old.version < item.version) {
-        items[key] = item;
+        items[key] = clone(item);
       }
     } else {
-      items[key] = item;
+      items[key] = clone(item);
     }
 
     callbackResult(cb);
-  }
+  };
 
-  store.initialized = function(cb) {
-    callbackResult(cb, this.initCalled === true);
-  }
+  store.initialized = cb => {
+    callbackResult(cb, initCalled === true);
+  };
 
-  store.close = function() {
+  store.close = () => {
     // Close on the in-memory store is a no-op
-  }
+  };
 
   return store;
 }

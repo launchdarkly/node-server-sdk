@@ -508,6 +508,12 @@ declare module 'launchdarkly-node-server-sdk' {
    * from LaunchDarkly. By default, it uses an in-memory implementation; there are also adapters
    * for Redis and other databases (see the [SDK Reference Guide](https://docs.launchdarkly.com/v2.0/docs/using-a-persistent-feature-store)).
    * You will not need to use this interface unless you are writing your own implementation.
+   * 
+   * Feature store methods can and should call their callbacks directly whenever possible, rather
+   * than deferring them with setImmediate() or process.nextTick(). This means that if for any
+   * reason you are updating or querying a feature store directly in your application code (which
+   * is not part of normal use of the SDK) you should be aware that the callback may be executed
+   * immediately.
    */
   export interface LDFeatureStore {
     /**
@@ -681,9 +687,8 @@ declare module 'launchdarkly-node-server-sdk' {
    * - `"error"`: Contains an error object describing some abnormal condition that the client has detected
    *   (such as a network error).
    * - `"update"`: The client has received a change to a feature flag. The event parameter is an object
-   *   containing the flag configuration; its `key` property is the flag key. Note that this does not
-   *   necessarily mean the flag's value has changed for any particular user, only that some part of the
-   *   flag configuration was changed.
+   *   containing a single property, `key`, the flag key. Note that this does not necessarily mean the flag's
+   *   value has changed for any particular user, only that some part of the flag configuration was changed.
    * - `"update:KEY"`: The client has received a change to the feature flag whose key is KEY. This is the
    *   same as `"update"` but allows you to listen for a specific flag.
    * 

@@ -1,11 +1,12 @@
 {
   "name": "launchdarkly-node-server-sdk",
-  "version": "5.9.1",
+  "version": "5.9.2",
   "description": "LaunchDarkly Server-Side SDK for Node.js",
   "main": "index.js",
   "scripts": {
     "test": "jest --ci --forceExit",
-    "check-typescript": "node_modules/typescript/bin/tsc"
+    "check-typescript": "node_modules/typescript/bin/tsc",
+    "lint": "eslint --format 'node_modules/eslint-formatter-pretty' --ignore-path .eslintignore ."
   },
   "types": "./index.d.ts",
   "repository": {
@@ -24,15 +25,14 @@
   "homepage": "https://github.com/launchdarkly/node-server-sdk",
   "dependencies": {
     "@types/redis": "2.8.6",
-    "async": "2.6.0",
-    "hoek": "4.2.1",
+    "async": "3.1.0",
     "lrucache": "^1.0.3",
-    "node-cache": "^3.2.1",
+    "node-cache": "^4.2.0",
     "node-sha1": "0.0.1",
     "redis": "^2.6.0-2",
     "request": "2.88.0",
     "request-etag": "^2.0.3",
-    "semver": "5.5.0",
+    "semver": "^6.3.0",
     "tunnel": "0.0.6",
     "winston": "2.4.1",
     "yaml": "1.0.1"
@@ -44,12 +44,13 @@
     "@babel/core": "7.4.3",
     "@babel/preset-env": "7.4.3",
     "babel-jest": "24.7.1",
+    "eslint": "^6.5.1",
+    "eslint-formatter-pretty": "2.1.1",
     "jest": "24.7.1",
     "jest-junit": "6.3.0",
     "nock": "9.2.3",
     "selfsigned": "1.10.4",
     "tmp": "0.0.33",
-    "typedoc": "0.14.2",
     "typescript": "3.0.1"
   },
   "jest": {

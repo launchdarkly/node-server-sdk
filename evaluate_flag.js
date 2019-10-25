@@ -1,16 +1,16 @@
-var operators = require('./operators');
-var dataKind = require('./versioned_data_kind');
-var util = require('util');
-var sha1 = require('node-sha1');
-var async = require('async');
-var stringifyAttrs = require('./utils/stringifyAttrs');
+const operators = require('./operators');
+const dataKind = require('./versioned_data_kind');
+const util = require('util');
+const sha1 = require('node-sha1');
+const stringifyAttrs = require('./utils/stringifyAttrs');
+const { safeAsyncEachSeries } = require('./utils/asyncUtils');
 
-var builtins = ['key', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name', 'anonymous'];
-var userAttrsToStringifyForEvaluation = [ "key", "secondary" ];
+const builtins = ['key', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name', 'anonymous'];
+const userAttrsToStringifyForEvaluation = [ 'key', 'secondary' ];
 // Currently we are not stringifying the rest of the built-in attributes prior to evaluation, only for events.
 // This is because it could affect evaluation results for existing users (ch35206).
 
-var noop = function(){};
+const noop = () => {};
 
 // Callback receives (err, detail, events) where detail has the properties "value", "variationIndex", and "reason";
 // detail will never be null even if there's an error.
@@ -26,9 +26,9 @@ function evaluate(flag, user, featureStore, eventFactory, cb) {
     return;
   }
 
-  var sanitizedUser = stringifyAttrs(user, userAttrsToStringifyForEvaluation);
-  var events = [];
-  evalInternal(flag, sanitizedUser, featureStore, events, eventFactory, function(err, detail) {
+  const sanitizedUser = stringifyAttrs(user, userAttrsToStringifyForEvaluation);
+  const events = [];
+  evalInternal(flag, sanitizedUser, featureStore, events, eventFactory, (err, detail) => {
     cb(err, detail, events);
   });
 }
@@ -36,13 +36,11 @@ function evaluate(flag, user, featureStore, eventFactory, cb) {
 function evalInternal(flag, user, featureStore, events, eventFactory, cb) {
   // If flag is off, return the off variation
   if (!flag.on) {
-    getOffResult(flag, { kind: 'OFF' }, function(err, detail) {
-      cb(err, detail);
-    });
+    getOffResult(flag, { kind: 'OFF' }, cb);
     return;
   }
 
-  checkPrerequisites(flag, user, featureStore, events, eventFactory, function(err, failureReason) {
+  checkPrerequisites(flag, user, featureStore, events, eventFactory, (err, failureReason) => {
     if (err != null || failureReason != null) {
       getOffResult(flag, failureReason, cb);
     } else {
@@ -53,17 +51,17 @@ function evalInternal(flag, user, featureStore, events, eventFactory, cb) {
 
 // Callback receives (err, reason) where reason is null if successful, or a "prerequisite failed" reason
 function checkPrerequisites(flag, user, featureStore, events, eventFactory, cb) {
-  if (flag.prerequisites) {
-    async.mapSeries(flag.prerequisites,
-      function(prereq, callback) {
-        featureStore.get(dataKind.features, prereq.key, function(prereqFlag) {
+  if (flag.prerequisites && flag.prerequisites.length) {
+    safeAsyncEachSeries(flag.prerequisites,
+      (prereq, callback) => {
+        featureStore.get(dataKind.features, prereq.key, prereqFlag => {
           // If the flag does not exist in the store or is not on, the prerequisite
           // is not satisfied
           if (!prereqFlag) {
-            callback({ key: prereq.key, err: new Error("Could not retrieve prerequisite feature flag \"" + prereq.key + "\"") });
+            callback({ key: prereq.key, err: new Error('Could not retrieve prerequisite feature flag "' + prereq.key + '"') });
             return;
           }
-          evalInternal(prereqFlag, user, featureStore, events, eventFactory, function(err, detail) {
+          evalInternal(prereqFlag, user, featureStore, events, eventFactory, (err, detail) => {
             // If there was an error, the value is null, the variation index is out of range,
             // or the value does not match the indexed variation the prerequisite is not satisfied
             events.push(eventFactory.newEvalEvent(prereqFlag, user, detail, null, flag));
@@ -80,7 +78,7 @@ function checkPrerequisites(flag, user, featureStore, events, eventFactory, cb) 
           });
         });
       },
-      function(errInfo) {
+      errInfo => {
         if (errInfo) {
           cb(errInfo.err, { 'kind': 'PREREQUISITE_FAILED', 'prerequisiteKey': errInfo.key });
         } else {
@@ -94,19 +92,15 @@ function checkPrerequisites(flag, user, featureStore, events, eventFactory, cb) 
 
 // Callback receives (err, detail)
 function evalRules(flag, user, featureStore, cb) {
-  var i, j;
-  var target;
-  var variation;
-  var rule;
   // Check target matches
-  for (i = 0; i < (flag.targets || []).length; i++) {
-    target = flag.targets[i];
+  for (let i = 0; i < (flag.targets || []).length; i++) {
+    const target = flag.targets[i];
 
     if (!target.values) {
       continue;
     }
 
-    for (j = 0; j < target.values.length; j++) {
+    for (let j = 0; j < target.values.length; j++) {
       if (user.key === target.values[j]) {
         getVariation(flag, target.variation, { kind: 'TARGET_MATCH' }, cb);
         return;
@@ -114,19 +108,21 @@ function evalRules(flag, user, featureStore, cb) {
     }
   }
 
-  async.mapSeries(flag.rules || [],
-    function(rule, callback) {
-      ruleMatchUser(rule, user, featureStore, function(matched) {
-        setImmediate(callback, matched ? rule : null, null);
+  safeAsyncEachSeries(flag.rules,
+    (rule, callback) => {
+      ruleMatchUser(rule, user, featureStore, matched => {
+        // We raise an "error" on the first rule that *does* match, to stop evaluating more rules
+        callback(matched ? rule : null);
       });
     },
-    function(err, results) {
+    // The following function executes once all of the rules have been checked
+    err => {
       // we use the "error" value to indicate that a rule was successfully matched (since we only care
-      // about the first match, and mapSeries terminates on the first "error")
+      // about the first match, and eachSeries terminates on the first "error")
       if (err) {
-        var rule = err;
-        var reason = { kind: 'RULE_MATCH', ruleId: rule.id };
-        for (var i = 0; i < flag.rules.length; i++) {
+        let rule = err;
+        const reason = { kind: 'RULE_MATCH', ruleId: rule.id };
+        for (let i = 0; i < flag.rules.length; i++) {
           if (flag.rules[i].id === rule.id) {
             reason.ruleIndex = i;
             break;
@@ -142,21 +138,20 @@ function evalRules(flag, user, featureStore, cb) {
 }
 
 function ruleMatchUser(r, user, featureStore, cb) {
-  var i;
-
   if (!r.clauses) {
-    return false;
+    cb(false);
+    return;
   }
 
-  // A rule matches if all its clauses match
-  async.mapSeries(r.clauses,
-    function(clause, callback) {
-      clauseMatchUser(clause, user, featureStore, function(matched) {
+  // A rule matches if all its clauses match.
+  safeAsyncEachSeries(r.clauses,
+    (clause, callback) => {
+      clauseMatchUser(clause, user, featureStore, matched => {
         // on the first clause that does *not* match, we raise an "error" to stop the loop
-        setImmediate(callback, matched ? null : clause, null);
+        callback(matched ? null : clause);
       });
     },
-    function(err, results) {
+    err => {
       cb(!err);
     }
   );
@@ -164,18 +159,19 @@ function ruleMatchUser(r, user, featureStore, cb) {
 
 function clauseMatchUser(c, user, featureStore, cb) {
   if (c.op == 'segmentMatch') {
-    async.mapSeries(c.values,
-      function(value, callback) {
-        featureStore.get(dataKind.segments, value, function(segment) {
+    safeAsyncEachSeries(c.values,
+      (value, callback) => {
+        featureStore.get(dataKind.segments, value, segment => {
           if (segment && segmentMatchUser(segment, user)) {
             // on the first segment that matches, we raise an "error" to stop the loop
-            callback(segment, null);
+            callback(segment);
           } else {
-            callback(null, null);
+            callback(null);
           }
         });
       },
-      function(err, results) {
+      // The following function executes once all of the clauses have been checked
+      err => {
         // an "error" indicates that a segment *did* match
         cb(maybeNegate(c, !!err));
       }
@@ -186,21 +182,17 @@ function clauseMatchUser(c, user, featureStore, cb) {
 }
 
 function clauseMatchUserNoSegments(c, user) {
-  var uValue;
-  var matchFn;
-  var i;
-
-  uValue = userValue(user, c.attribute);
+  const uValue = userValue(user, c.attribute);
 
   if (uValue === null || uValue === undefined) {
     return false;
   }
 
-  matchFn = operators.fn(c.op)
+  const matchFn = operators.fn(c.op);
 
   // The user's value is an array
   if (Array === uValue.constructor) {
-    for (i = 0; i < uValue.length; i++) {
+    for (let i = 0; i < uValue.length; i++) {
       if (matchAny(matchFn, uValue[i], c.values)) {
         return maybeNegate(c, true);
       }
@@ -219,7 +211,7 @@ function segmentMatchUser(segment, user) {
     if ((segment.excluded || []).indexOf(user.key) >= 0) {
       return false;
     }
-    for (var i = 0; i < (segment.rules || []).length; i++) {
+    for (let i = 0; i < (segment.rules || []).length; i++) {
       if (segmentRuleMatchUser(segment.rules[i], user, segment.key, segment.salt)) {
         return true;
       }
@@ -229,7 +221,7 @@ function segmentMatchUser(segment, user) {
 }
 
 function segmentRuleMatchUser(rule, user, segmentKey, salt) {
-  for (var i = 0; i < (rule.clauses || []).length; i++) {
+  for (let i = 0; i < (rule.clauses || []).length; i++) {
     if (!clauseMatchUserNoSegments(rule.clauses[i], user)) {
       return false;
     }
@@ -241,8 +233,8 @@ function segmentRuleMatchUser(rule, user, segmentKey, salt) {
   }
 
   // All of the clauses are met. See if the user buckets in
-  var bucket = bucketUser(user, segmentKey, rule.bucketBy || "key", salt);
-  var weight = rule.weight / 100000.0;
+  const bucket = bucketUser(user, segmentKey, rule.bucketBy || 'key', salt);
+  const weight = rule.weight / 100000.0;
   return bucket < weight;
 }
 
@@ -255,9 +247,7 @@ function maybeNegate(c, b) {
 }
 
 function matchAny(matchFn, value, values) {
-  var i = 0;
-
-  for (i = 0; i < values.length; i++) {
+  for (let i = 0; i < values.length; i++) {
     if (matchFn(value, values[i])) {
       return true;
     }
@@ -286,7 +276,7 @@ function getResultForVariationOrRollout(r, user, flag, reason, cb) {
   if (!r) {
     cb(new Error('Fallthrough variation undefined'), errorResult('MALFORMED_FLAG'));
   } else {
-    var index = variationForUser(r, user, flag);
+    const index = variationForUser(r, user, flag);
     if (index === null) {
       cb(new Error('Variation/rollout object with no variation or rollout'), errorResult('MALFORMED_FLAG'));
     } else {
@@ -302,21 +292,17 @@ function errorResult(errorKind) {
 // Given a variation or rollout 'r', select
 // the variation for the given user
 function variationForUser(r, user, flag) {
-  var bucketBy;
-  var bucket;
-  var sum = 0;
-  var i;
-  var variation;
   if (r.variation != null) {
     // This represets a fixed variation; return it
     return r.variation;
   } else if (r.rollout != null) {
     // This represents a percentage rollout. Assume
     // we're rolling out by key
-    bucketBy = r.rollout.bucketBy != null ? r.rollout.bucketBy : "key";
-    bucket = bucketUser(user, flag.key, bucketBy, flag.salt);
-    for (i = 0; i < r.rollout.variations.length; i++) {
-      var variate = r.rollout.variations[i];
+    const bucketBy = r.rollout.bucketBy != null ? r.rollout.bucketBy : 'key';
+    const bucket = bucketUser(user, flag.key, bucketBy, flag.salt);
+    let sum = 0;
+    for (let i = 0; i < r.rollout.variations.length; i++) {
+      const variate = r.rollout.variations[i];
       sum += variate.weight / 100000.0;
       if (bucket < sum) {
         return variate.variation;
@@ -330,10 +316,10 @@ function variationForUser(r, user, flag) {
 // Fetch an attribute value from a user object. Automatically
 // navigates into the custom array when necessary
 function userValue(user, attr) {
-  if (builtins.indexOf(attr) >= 0 && user.hasOwnProperty(attr)) {
+  if (builtins.indexOf(attr) >= 0 && Object.hasOwnProperty.call(user, attr)) {
     return user[attr];
   }
-  if (user.custom && user.custom.hasOwnProperty(attr)) {
+  if (user.custom && Object.hasOwnProperty.call(user.custom, attr)) {
     return user.custom[attr];
   }
   return null;
@@ -341,21 +327,18 @@ function userValue(user, attr) {
 
 // Compute a percentile for a user
 function bucketUser(user, key, attr, salt) {
-  var uValue;
-  var idHash;
-
-  idHash = bucketableStringValue(userValue(user, attr));
+  let idHash = bucketableStringValue(userValue(user, attr));
 
   if (idHash === null) {
     return 0;
   }
 
   if (user.secondary) {
-    idHash += "." + user.secondary;
+    idHash += '.' + user.secondary;
   }
 
-  var hashKey = util.format("%s.%s.%s", key, salt, idHash);
-  var hashVal = parseInt(sha1(hashKey).substring(0,15), 16);
+  const hashKey = util.format('%s.%s.%s', key, salt, idHash);
+  const hashVal = parseInt(sha1(hashKey).substring(0,15), 16);
 
   return hashVal / 0xFFFFFFFFFFFFFFF;
 }
