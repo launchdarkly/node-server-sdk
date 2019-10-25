@@ -12,7 +12,7 @@ function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
 
 function redisFeatureStoreInternal(redisOpts, prefix, logger) {
 
-  const client = redis.createClient(redisOpts),
+  const client = redisOpts.client || redis.createClient(redisOpts),
     store = {},
     itemsPrefix = (prefix || 'launchdarkly') + ':',
     initedKey = itemsPrefix + '$inited';
@@ -26,8 +26,8 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
     })
   );
 
-  let connected = false;
-  let initialConnect = true;
+  let connected = !!redisOpts.client;
+  let initialConnect = !redisOpts.client;
   client.on('error', err => {
     // Note that we *must* have an error listener or else any connection error will trigger an
     // uncaught exception.
@@ -48,8 +48,10 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger) {
     connected = false;
   });
 
-  // Allow driver programs to exit, even if the Redis socket is active
-  client.unref();
+  if (!redisOpts.client) {
+    // Allow driver programs to exit, even if the Redis socket is active
+    client.unref();
+  }
 
   function itemsKey(kind) {
     return itemsPrefix + kind.namespace;
