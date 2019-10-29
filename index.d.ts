@@ -11,7 +11,7 @@
 
 declare module 'launchdarkly-node-server-sdk' {
   import { EventEmitter } from 'events';
-  import { ClientOpts } from 'redis';
+  import { ClientOpts, RedisClient } from 'redis';
 
   namespace errors {
     export const LDPollingError: ErrorConstructor;
@@ -52,6 +52,9 @@ declare module 'launchdarkly-node-server-sdk' {
    *   A string that should be prepended to all Redis keys used by the feature store.
    * @param logger
    *   A custom logger for warnings and errors, if you are not using the default logger.
+   * @param client
+   *   Pass this parameter if you already have a Redis client instance that you wish to reuse. In this case,
+   *   `redisOpts` will be ignored.
    *
    * @returns
    *   An object to put in the `featureStore` property for [[LDOptions]].
@@ -60,7 +63,8 @@ declare module 'launchdarkly-node-server-sdk' {
     redisOpts?: ClientOpts,
     cacheTTL?: number,
     prefix?: string,
-    logger?: LDLogger | object
+    logger?: LDLogger | object,
+    client?: RedisClient
   ): LDFeatureStore;
 
   /**
