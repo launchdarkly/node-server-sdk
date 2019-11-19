@@ -25,6 +25,20 @@ module.exports = (function() {
     };
   };
 
+  const typesForPropertiesWithNoDefault = {
+    eventProcessor: 'object',
+    featureStore: 'object',
+    logger: 'object', // winston.Logger
+    proxyAgent: 'object',
+    proxyAuth: 'string',
+    proxyHost: 'string',
+    proxyPort: 'number',
+    proxyScheme: 'string',
+    tlsParams: 'object', // LDTLSOptions
+    updateProcessor: 'factory', // gets special handling in validation
+    userAgent: 'string'
+  };
+
   const deprecatedOptions = {
     base_uri: 'baseUri',
     stream_uri: 'streamUri',
@@ -58,7 +72,7 @@ module.exports = (function() {
     // This works differently from Object.assign() in that it will *not* override a default value
     // if the provided value is explicitly set to null.
     const ret = Object.assign({}, config);
-    Object.keys(defaults).forEach(function(name) {
+    Object.keys(defaults).forEach(name => {
       if (ret[name] === undefined || ret[name] === null) {
         ret[name] = defaults[name];
       }
@@ -68,6 +82,52 @@ module.exports = (function() {
 
   function canonicalizeUri(uri) {
     return uri.replace(/\/+$/, '');
+  }
+
+  function isKnownProperty(name, defaultConfig) {
+    return ;
+  }
+
+  function validateTypesAndNames(config, defaultConfig) {
+    const typeDescForValue = value => {
+      if (value === null || value === undefined) {
+        return undefined;
+      }
+      if (Array.isArray(value)) {
+        return 'array';
+      }
+      const t = typeof(value);
+      if (t === 'boolean' || t === 'string' || t === 'number') {
+        return t;
+      }
+      return 'object';
+    };
+    Object.keys(config).forEach(name => {
+      const value = config[name];
+      if (value !== null && value !== undefined) {
+        const defaultValue = defaultConfig[name];
+        const typeDesc = typesForPropertiesWithNoDefault[name];
+        if (defaultValue === undefined && typeDesc === undefined) {
+          config.logger.warn(messages.unknownOption(name));
+        } else {
+          const expectedType = typeDesc || typeDescForValue(defaultValue);
+          const actualType = typeDescForValue(value);
+          if (actualType !== expectedType) {
+            if (expectedType == 'factory' && (typeof value === 'function' || typeof value === 'object')) {
+              // for some properties, we allow either a factory function or an instance
+              return;
+            }
+            if (expectedType === 'boolean') {
+              config[name] = !!value;
+              config.logger.warn(messages.wrongOptionTypeBoolean(name, expectedType, actualType));
+            } else {
+              config.logger.warn(messages.wrongOptionType(name, expectedType, actualType));
+              config[name] = defaultConfig[name];
+            }
+          }
+        }
+      }
+    });
   }
 
   function validate(options) {
@@ -89,7 +149,10 @@ module.exports = (function() {
     
     checkDeprecatedOptions(config);
 
-    config = applyDefaults(config, defaults());
+    const defaultConfig = defaults();
+    config = applyDefaults(config, defaultConfig);
+
+    validateTypesAndNames(config, defaultConfig);
 
     config.baseUri = canonicalizeUri(config.baseUri);
     config.streamUri = canonicalizeUri(config.streamUri);
@@ -100,6 +163,7 @@ module.exports = (function() {
   }
 
   return {
-    validate: validate
+    validate: validate,
+    defaults: defaults
   };
 })();
