@@ -1,6 +1,7 @@
 const InMemoryFeatureStore = require('../feature_store');
 const StreamProcessor = require('../streaming');
 const dataKind = require('../versioned_data_kind');
+const httpUtils = require('../utils/httpUtils');
 const { asyncify, sleepAsync } = require('./async_utils');
 const stubs = require('./stubs');
 
@@ -38,12 +39,11 @@ describe('StreamProcessor', () => {
   });
 
   it('sets expected headers', function() {
-    var config = { streamUri: 'http://test', userAgent: 'agent' };
+    var config = { streamUri: 'http://test' };
     var es = fakeEventSource();
     var sp = StreamProcessor(sdkKey, config, null, es.constructor);
     sp.start();
-    expect(es.options.headers['Authorization']).toEqual(sdkKey);
-    expect(es.options.headers['User-Agent']).toEqual(config.userAgent);
+    expect(es.options.headers).toMatchObject(httpUtils.getDefaultHeaders(sdkKey, config));
   });
 
   describe('put message', function() {

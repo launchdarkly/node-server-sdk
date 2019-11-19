@@ -1,4 +1,5 @@
 const errors = require('./errors');
+const httpUtils = require('./utils/httpUtils');
 const messages = require('./messages');
 const EventSource = require('./eventsource');
 const dataKind = require('./versioned_data_kind');
@@ -7,6 +8,8 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
   const processor = {},
     featureStore = config.featureStore;
   let es;
+
+  const headers = httpUtils.getDefaultHeaders(sdkKey, config);
 
   eventSourceFactory = eventSourceFactory || EventSource;
 
@@ -19,7 +22,7 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
     es = new eventSourceFactory(config.streamUri + '/all', 
       {
         agent: config.proxyAgent, 
-        headers: {'Authorization': sdkKey,'User-Agent': config.userAgent},
+        headers,
         tlsParams: config.tlsParams
       });
       

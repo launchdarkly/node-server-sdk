@@ -33,7 +33,11 @@ var allOptions: ld.LDOptions = {
     ca: 'x',
     cert: 'y',
     key: 'z'
-  }
+  },
+  diagnosticOptOut: true,
+  diagnosticRecordingInterval: 100,
+  wrapperName: 'x',
+  wrapperVersion: 'y'
 };
 var userWithKeyOnly: ld.LDUser = { key: 'user' };
 var user: ld.LDUser = {

@@ -1,5 +1,6 @@
 import Requestor from '../requestor';
 import * as dataKind from '../versioned_data_kind';
+import * as httpUtils from '../utils/httpUtils';
 import { asyncifyNode } from './async_utils';
 import * as httpServer from './http_server';
 
@@ -36,6 +37,14 @@ describe('Requestor', () => {
       await asyncifyNode(cb => r.requestObject(dataKind.segments, 'key', cb));
       expect(server.requests.length).toEqual(1);
       expect(server.requests[0].url).toEqual('/sdk/latest-segments/key');
+    });
+
+    it('passes expected headers', async () => {
+      httpServer.autoRespond(server, res => httpServer.respondJson(res, {}));
+      const r = Requestor(sdkKey, config);
+      await asyncifyNode(cb => r.requestObject(dataKind.features, 'key', cb));
+      expect(server.requests.length).toEqual(1);
+      expect(server.requests[0].headers).toMatchObject(httpUtils.getDefaultHeaders(sdkKey, config));
     });
 
     it('returns successful result', async () => {

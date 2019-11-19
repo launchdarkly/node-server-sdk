@@ -79,6 +79,7 @@ describe('configuration', function() {
   checkBooleanProperty('offline');
   checkBooleanProperty('useLdd');
   checkBooleanProperty('allAttributesPrivate');
+  checkBooleanProperty('diagnosticOptOut');
 
   function checkNumericProperty(name, validValue) {
     it('enforces numeric type and default for "' + name + '"', () => {
@@ -104,7 +105,32 @@ describe('configuration', function() {
   checkNumericProperty('pollInterval', 45);
   checkNumericProperty('userKeysCapacity', 500);
   checkNumericProperty('userKeysFlushInterval', 45);
+  checkNumericProperty('diagnosticRecordingInterval', 110);
   
+  function checkNumericRange(name, minimum, maximum) {
+    if (minimum !== undefined) {
+      it('enforces minimum for "' + name + '"', () => {
+        const configIn = emptyConfigWithMockLogger();
+        configIn[name] = minimum - 1;
+        const config = configuration.validate(configIn);
+        expect(config[name]).toBe(minimum);
+        expect(configIn.logger.warn).toHaveBeenCalledTimes(1);
+      });
+    }
+    if (maximum !== undefined) {
+      it('enforces maximum for "' + name + '"', () => {
+        const configIn = emptyConfigWithMockLogger();
+        configIn[name] = maximum + 1;
+        const config = configuration.validate(configIn);
+        expect(config[name]).toBe(maximum);
+        expect(configIn.logger.warn).toHaveBeenCalledTimes(1);
+      });
+    }
+  }
+
+  checkNumericRange('pollInterval', 30);
+  checkNumericRange('diagnosticRecordingInterval', 60);
+
   function checkUriProperty(name) {
     expectDefault(name);
 
@@ -142,16 +168,6 @@ describe('configuration', function() {
     const config2 = configuration.validate(configIn2);
     expect(config2.privateAttributeNames).toEqual([]);
     expect(configIn2.logger.warn).toHaveBeenCalledTimes(1);
-  });
-
-  it('enforces minimum poll interval', () => {
-    var config = configuration.validate({ pollInterval: 29 });
-    expect(config.pollInterval).toEqual(30);
-  });
-
-  it('allows larger poll interval', () => {
-    var config = configuration.validate({ pollInterval: 31 });
-    expect(config.pollInterval).toEqual(31);
   });
 
   it('should not share the default featureStore across different config instances', () => {

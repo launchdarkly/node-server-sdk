@@ -3,6 +3,7 @@ const request = require('request');
 const EventSummarizer = require('./event_summarizer');
 const UserFilter = require('./user_filter');
 const errors = require('./errors');
+const httpUtils = require('./utils/httpUtils');
 const messages = require('./messages');
 const stringifyAttrs = require('./utils/stringifyAttrs');
 const wrapPromiseCallback = require('./utils/wrapPromiseCallback');
@@ -204,14 +205,13 @@ function EventProcessor(sdkKey, config, errorReporter) {
       }
     };
 
+    const headers = Object.assign({ 'X-LaunchDarkly-Event-Schema': '3' },
+      httpUtils.getDefaultHeaders(sdkKey, config));
+
     const options = Object.assign({}, config.tlsParams, {
       method: 'POST',
       url: config.eventsUri + '/bulk',
-      headers: {
-        'Authorization': sdkKey,
-        'User-Agent': config.userAgent,
-        'X-LaunchDarkly-Event-Schema': '3'
-      },
+      headers,
       json: true,
       body: events,
       timeout: config.timeout * 1000,
