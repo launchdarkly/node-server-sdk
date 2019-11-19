@@ -211,7 +211,7 @@ function EventProcessor(sdkKey, config, errorReporter) {
     const options = Object.assign({}, config.tlsParams, {
       method: 'POST',
       url: config.eventsUri + '/bulk',
-      headers: headers,
+      headers,
       json: true,
       body: events,
       timeout: config.timeout * 1000,

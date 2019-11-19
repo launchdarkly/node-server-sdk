@@ -30,7 +30,7 @@ function Requestor(sdkKey, config) {
     const requestParams = Object.assign({}, config.tlsParams, {
       method: 'GET',
       url: config.baseUri + resource,
-      headers: headers,
+      headers,
       timeout: config.timeout * 1000,
       agent: config.proxyAgent
     });
