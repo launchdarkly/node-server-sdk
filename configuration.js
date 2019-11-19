@@ -84,10 +84,6 @@ module.exports = (function() {
     return uri.replace(/\/+$/, '');
   }
 
-  function isKnownProperty(name, defaultConfig) {
-    return ;
-  }
-
   function validateTypesAndNames(config, defaultConfig) {
     const typeDescForValue = value => {
       if (value === null || value === undefined) {
