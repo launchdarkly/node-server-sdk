@@ -18,3 +18,6 @@ exports.wrongOptionType = (name, expectedType, actualType) =>
 
 exports.wrongOptionTypeBoolean = (name, expectedType, actualType) =>
   'Config option "' + name + '" should be a ' + expectedType + ', got ' + actualType + ', converting to boolean';
+
+exports.optionBelowMinimum = (name, value, min) =>
+  'Config option "' + name + '" had invalid value of ' + value + ', using minimum of ' + min + ' instead';

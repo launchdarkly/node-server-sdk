@@ -1,7 +1,6 @@
 const winston = require('winston');
 const InMemoryFeatureStore = require('./feature_store');
 const messages = require('./messages');
-const package_json = require('./package.json');
 
 module.exports = (function() {
   const defaults = function() {
@@ -21,6 +20,8 @@ module.exports = (function() {
       privateAttributeNames: [],
       userKeysCapacity: 1000,
       userKeysFlushInterval: 300,
+      diagnosticOptOut: false,
+      diagnosticRecordingInterval: 900,
       featureStore: InMemoryFeatureStore()
     };
   };
@@ -36,7 +37,8 @@ module.exports = (function() {
     proxyScheme: 'string',
     tlsParams: 'object', // LDTLSOptions
     updateProcessor: 'factory', // gets special handling in validation
-    userAgent: 'string'
+    wrapperName: 'string',
+    wrapperVersion: 'string'
   };
 
   const deprecatedOptions = {
@@ -126,10 +128,15 @@ module.exports = (function() {
     });
   }
 
+  function enforceMinimum(config, name, min) {
+    if (config[name] < min) {
+      config.logger.warn(messages.optionBelowMinimum(name, config[name], min));
+      config[name] = min;
+    }
+  }
   function validate(options) {
     let config = Object.assign({}, options || {});
     
-    config.userAgent = 'NodeJSClient/' + package_json.version;
     config.logger = (config.logger ||
       new winston.Logger({
         level: 'info',
@@ -153,7 +160,9 @@ module.exports = (function() {
     config.baseUri = canonicalizeUri(config.baseUri);
     config.streamUri = canonicalizeUri(config.streamUri);
     config.eventsUri = canonicalizeUri(config.eventsUri);
-    config.pollInterval = config.pollInterval > 30 ? config.pollInterval : 30;
+    
+    enforceMinimum(config, 'pollInterval', 30);
+    enforceMinimum(config, 'diagnosticRecordingInterval', 60);
 
     return config;
   }

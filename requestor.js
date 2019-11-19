@@ -1,4 +1,5 @@
 const ETagRequest = require('request-etag');
+const httpUtils = require('./utils/httpUtils');
 
 /**
  * Creates a new Requestor object, which handles remote requests to fetch feature flags or segments for LaunchDarkly.
@@ -14,6 +15,8 @@ const ETagRequest = require('request-etag');
 function Requestor(sdkKey, config) {
   const requestor = {};
 
+  const headers = httpUtils.getDefaultHeaders(sdkKey, config);
+
   const cacheConfig = {
     max: 100,
     // LRUCache passes each cached item through the "length" function to determine how many units it should
@@ -27,10 +30,7 @@ function Requestor(sdkKey, config) {
     const requestParams = Object.assign({}, config.tlsParams, {
       method: 'GET',
       url: config.baseUri + resource,
-      headers: {
-        'Authorization': sdkKey,
-        'User-Agent': config.userAgent
-      },
+      headers: headers,
       timeout: config.timeout * 1000,
       agent: config.proxyAgent
     });
