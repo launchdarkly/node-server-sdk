@@ -108,7 +108,7 @@ function baseFeatureStoreTests(makeStore, clearExistingData, isCached, makeStore
         var storeB1 = makeStoreWithPrefix('b');  // this ensures we're not just reading cached data
         var item = await promisifySingle(storeB1.get)(dataKind.features, 'flag');
         expect(item).toBe(null);
-        item = await promisifySingle(storeA.get)(dataKind.features);
+        item = await promisifySingle(storeA.get)(dataKind.features, 'flag');
         expect(item).toEqual(flag);
       });
     }
@@ -183,7 +183,7 @@ function baseFeatureStoreTests(makeStore, clearExistingData, isCached, makeStore
 
   it('deletes with newer version', async () => {
     var store = await initedStore();
-    await promisifySingle(store.delete)(dataKind.features, feature1.key);
+    await promisifySingle(store.delete)(dataKind.features, feature1.key, feature1.version + 1);
     var result = await promisifySingle(store.get)(dataKind.features, feature1.key);
     expect(result).toBe(null);
   });

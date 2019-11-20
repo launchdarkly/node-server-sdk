@@ -118,7 +118,7 @@ describe('FileDataSource', function() {
     var fds = setupDataSource({ paths: [path] });
 
     expect(fds.initialized()).toBe(false);
-    expect(await promisifySingle(store.initialized)().toBe(false);
+    expect(await promisifySingle(store.initialized)()).toBe(false);
     expect(await promisifySingle(store.all)(dataKind.features)).toEqual({});
     expect(await promisifySingle(store.all)(dataKind.segments)).toEqual({});
   });
@@ -129,7 +129,7 @@ describe('FileDataSource', function() {
     await promisifySingle(fds.start)();
 
     expect(fds.initialized()).toBe(true);
-    expect(await promisifySingle(store.initialized)().toBe(true);
+    expect(await promisifySingle(store.initialized)()).toBe(true);
     var items = await promisifySingle(store.all)(dataKind.features);
     expect(sorted(Object.keys(items))).toEqual([ flag1Key, flag2Key ]);
     var flag = await promisifySingle(store.get)(dataKind.features, flag1Key);
@@ -147,7 +147,7 @@ describe('FileDataSource', function() {
     await promisifySingle(fds.start)();
 
     expect(fds.initialized()).toBe(false);
-    expect(await promisifySingle(store.initialized)().toBe(false);
+    expect(await promisifySingle(store.initialized)()).toBe(false);
   });
 
   it('does not load if file data is malformed', async () => {
@@ -156,7 +156,7 @@ describe('FileDataSource', function() {
     await promisifySingle(fds.start)();
 
     expect(fds.initialized()).toBe(false);
-    expect(await promisifySingle(store.initialized)().toBe(false);
+    expect(await promisifySingle(store.initialized)()).toBe(false);
   });
 
   it('can load multiple files', async () => {
@@ -166,7 +166,7 @@ describe('FileDataSource', function() {
     await promisifySingle(fds.start)();
 
     expect(fds.initialized()).toBe(true);
-    expect(await promisifySingle(store.initialized)().toBe(true);
+    expect(await promisifySingle(store.initialized)()).toBe(true);
 
     var items = await promisifySingle(store.all)(dataKind.features);
     expect(Object.keys(items)).toEqual([ flag1Key ]);
@@ -181,7 +181,7 @@ describe('FileDataSource', function() {
     await promisifySingle(fds.start)();
 
     expect(fds.initialized()).toBe(false);
-    expect(await promisifySingle(store.initialized)().toBe(false);
+    expect(await promisifySingle(store.initialized)()).toBe(false);
   });
 
   it('does not reload modified file if auto-update is off', async () => {
