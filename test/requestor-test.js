@@ -1,6 +1,7 @@
+import { promisify } from 'util';
 import Requestor from '../requestor';
 import * as dataKind from '../versioned_data_kind';
-import { asyncifyNode, withCloseable } from './async_utils';
+import { withCloseable } from './async_utils';
 import { createServer, respond, respondJson } from './http_server';
 
 describe('Requestor', () => {
@@ -14,7 +15,7 @@ describe('Requestor', () => {
       await withCloseable(createServer, async server => {
         server.forMethodAndPath('get', '/sdk/latest-flags/key', respondJson(someData));
         const r = Requestor(sdkKey, { baseUri: server.url });
-        const result = await asyncifyNode(cb => r.requestObject(dataKind.features, 'key', cb));
+        const result = await promisify(r.requestObject)(dataKind.features, 'key');
         expect(JSON.parse(result)).toEqual(someData);
       })
     );
@@ -23,7 +24,7 @@ describe('Requestor', () => {
       await withCloseable(createServer, async server => {
         server.forMethodAndPath('get', '/sdk/latest-segments/key', respondJson(someData));
         const r = Requestor(sdkKey, { baseUri: server.url });
-        const result = await asyncifyNode(cb => r.requestObject(dataKind.segments, 'key', cb));
+        const result = await promisify(r.requestObject)(dataKind.segments, 'key');
         expect(JSON.parse(result)).toEqual(someData);
       })
     );
@@ -32,14 +33,14 @@ describe('Requestor', () => {
       await withCloseable(createServer, async server => {
         server.forMethodAndPath('get', '/sdk/latest-flags/key', respond(404));
         const r = Requestor(sdkKey, { baseUri: server.url });
-        const req = asyncifyNode(cb => r.requestObject(dataKind.features, 'key', cb));
+        const req = promisify(r.requestObject)(dataKind.features, 'key');
         await expect(req).rejects.toThrow(/404/);
       })
     );
 
     it('returns error result for network error', async () => {
       const r = Requestor(sdkKey, { baseUri: badUri });
-      const req = asyncifyNode(cb => r.requestObject(dataKind.features, 'key', cb));
+      const req = promisify(r.requestObject)(dataKind.features, 'key');
       await expect(req).rejects.toThrow(/bad-uri/);
     });
   });
@@ -49,7 +50,7 @@ describe('Requestor', () => {
       await withCloseable(createServer, async server => {
         server.forMethodAndPath('get', '/sdk/latest-all', respondJson(allData));
         const r = Requestor(sdkKey, { baseUri: server.url });
-        const result = await asyncifyNode(cb => r.requestAllData(cb));
+        const result = await promisify(r.requestAllData)();
         expect(JSON.parse(result)).toEqual(allData);
       })
     );
@@ -58,14 +59,14 @@ describe('Requestor', () => {
       await withCloseable(createServer, async server => {
         server.forMethodAndPath('get', '/sdk/latest-all', respond(401));
         const r = Requestor(sdkKey, { baseUri: server.url });
-        const req = asyncifyNode(cb => r.requestAllData(cb));
+        const req = promisify(r.requestAllData)();
         await expect(req).rejects.toThrow(/401/);
       })
     );
 
     it('returns error result for network error', async () => {
       const r = Requestor(sdkKey, { baseUri: badUri });
-      const req = asyncifyNode(cb => r.requestAllData(cb));
+      const req = promisify(r.requestAllData)();
       await expect(req).rejects.toThrow(/bad-uri/);
     });
   });

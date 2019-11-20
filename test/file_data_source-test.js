@@ -1,18 +1,20 @@
-var fs = require('fs');
-var tmp = require('tmp');
-var dataKind = require('../versioned_data_kind');
-const { asyncify, asyncifyNode, sleepAsync } = require('./async_utils');
+const fs = require('fs');
+const tmp = require('tmp');
+const { promisify } = require('util');
+const dataKind = require('../versioned_data_kind');
+const { asyncify, sleepAsync } = require('./async_utils');
+const { stubLogger } = require('./stubs');
 
-var LaunchDarkly = require('../index');
-var FileDataSource = require('../file_data_source');
-var InMemoryFeatureStore = require('../feature_store');
+const LaunchDarkly = require('../index');
+const FileDataSource = require('../file_data_source');
+const InMemoryFeatureStore = require('../feature_store');
 
-var flag1Key = 'flag1';
-var flag2Key = 'flag2';
-var flag2Value = 'value2';
-var segment1Key = 'seg1';
+const flag1Key = 'flag1';
+const flag2Key = 'flag2';
+const flag2Value = 'value2';
+const segment1Key = 'seg1';
 
-var flag1 = {
+const flag1 = {
   "key": flag1Key,
   "on": true,
   "fallthrough": {
@@ -21,26 +23,26 @@ var flag1 = {
   "variations": [ "fall", "off", "on" ]
 };
 
-var segment1 = {
+const segment1 = {
   "key": segment1Key,
   "include": ["user1"]
 };
 
-var flagOnlyJson = `
+const flagOnlyJson = `
 {
   "flags": {
     "${flag1Key}": ${ JSON.stringify(flag1) }
   }
 }`;
 
-var segmentOnlyJson = `
+const segmentOnlyJson = `
 {
   "segments": {
     "${segment1Key}": ${ JSON.stringify(segment1) }
   }
 }`;
 
-var allPropertiesJson = `
+const allPropertiesJson = `
 {
   "flags": {
     "${flag1Key}": ${ JSON.stringify(flag1) }
@@ -53,7 +55,7 @@ var allPropertiesJson = `
   }
 }`;
 
-var allPropertiesYaml = `
+const allPropertiesYaml = `
 flags:
   ${flag1Key}:
     key: ${flag1Key}
@@ -81,10 +83,7 @@ describe('FileDataSource', function() {
   beforeEach(() => {
     store = InMemoryFeatureStore();
     dataSources = [];
-    logger = {
-      info: jest.fn(),
-      warn: jest.fn()
-    };
+    logger = stubLogger();
   });
 
   afterEach(() => {
@@ -92,14 +91,14 @@ describe('FileDataSource', function() {
   });
 
   function makeTempFile(content) {
-    return asyncifyNode(tmp.file)
+    return promisify(tmp.file)()
       .then(path => {
         return replaceFileContent(path, content).then(() => path);
       });
   }
 
   function replaceFileContent(path, content) {
-    return asyncifyNode(cb => fs.writeFile(path, content, cb));
+    return promisify(fs.writeFile)(path, content);
   }
 
   function setupDataSource(options) {
@@ -226,7 +225,7 @@ describe('FileDataSource', function() {
   it('evaluates simplified flag with client as expected', async () => {
     var path = await makeTempFile(allPropertiesJson);
     var factory = FileDataSource({ paths: [ path ]});
-    var config = { updateProcessor: factory, sendEvents: false };
+    var config = { updateProcessor: factory, sendEvents: false, logger: logger };
     var client = LaunchDarkly.init('dummy-key', config);
     var user = { key: 'userkey' };
 
@@ -242,7 +241,7 @@ describe('FileDataSource', function() {
   it('evaluates full flag with client as expected', async () => {
     var path = await makeTempFile(allPropertiesJson);
     var factory = FileDataSource({ paths: [ path ]});
-    var config = { updateProcessor: factory, sendEvents: false };
+    var config = { updateProcessor: factory, sendEvents: false, logger: logger };
     var client = LaunchDarkly.init('dummy-key', config);
     var user = { key: 'userkey' };
 

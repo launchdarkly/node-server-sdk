@@ -1,14 +1,9 @@
 
 // Converts a function that takes a single-parameter callback (like most SDK methods) into a Promise.
+// This is different from util.promisify, which uses Node-style callbacks with two parameters.
 // Usage: await asyncify(callback => doSomething(params, callback))
 function asyncify(f) {
   return new Promise(resolve => f(resolve));
-}
-
-// Converts a function that takes a Node-style callback (err, result) into a Promise.
-// Usage: await asyncifyNode(callback => doSomething(params, callback))
-function asyncifyNode(f) {
-  return new Promise((resolve, reject) => f((err, result) => err ? reject(err) : resolve(result)));
 }
 
 // Usage: await sleepAsync(5000)
@@ -88,7 +83,6 @@ function AsyncQueue() {
 
 module.exports = {
   asyncify,
-  asyncifyNode,
   sleepAsync,
   withCloseable,
   AsyncQueue,
