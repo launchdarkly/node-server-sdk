@@ -1,53 +1,86 @@
 
 // Converts a function that takes a single-parameter callback (like most SDK methods) into a Promise.
-// Usage: asyncify(callback => doSomething(params, callback))
+// Usage: await asyncify(callback => doSomething(params, callback))
 function asyncify(f) {
   return new Promise(resolve => f(resolve));
 }
 
 // Converts a function that takes a Node-style callback (err, result) into a Promise.
-// Usage: asyncifyNode(callback => doSomething(params, callback))
+// Usage: await asyncifyNode(callback => doSomething(params, callback))
 function asyncifyNode(f) {
   return new Promise((resolve, reject) => f((err, result) => err ? reject(err) : resolve(result)));
 }
 
+// Usage: await sleepAsync(5000)
 function sleepAsync(millis) {
   return new Promise(resolve => {
     setTimeout(resolve, millis);
   });
 }
 
+// Calls the entity's close() method after passing the entity to the callback. Usages:
+//     await withCloseable(myExistingObject, async o => doSomething(o));
+//     await withCloseable(() => makeNewObject(), async o => doSomething(o));
+//     await withCloseable(async () => await makeObjectAsync(), async o => doSomething(o));
+function withCloseable(entityOrCreateFn, asyncCallback) {
+  // Using Promise.resolve allows promises and simple values to be treated as promises
+  return Promise.resolve(typeof entityOrCreateFn === 'function' ? entityOrCreateFn() : entityOrCreateFn)
+    .then(entity =>
+      asyncCallback(entity).finally(() => entity.close())
+    );
+}
+
+// Promise-based blocking queue. 
 function AsyncQueue() {
   const items = [];
   const awaiters = [];
+  let closed = false;
+  const closedError = () => new Error("queue was closed");
 
   return {
+    // Adds an item.
     add: item => {
       if (awaiters.length) {
-        awaiters.shift()(item);
+        awaiters.shift().resolve(item);
       } else {
         items.push(item);
       }
     },
 
+    // Blocks for the next item (async). Throws an exception if there are no more items and the queue has
+    // been closed.
     take: () => {
       if (items.length) {
         return Promise.resolve(items.shift());
       }
-      return new Promise(resolve => {
-        awaiters.push(resolve);
+      if (closed) {
+        return Promise.reject(closedError());
+      }
+      return new Promise((resolve, reject) => {
+        awaiters.push({ resolve, reject });
       });
     },
 
     isEmpty: () => {
       return items.length === 0;
+    },
+
+    length: () => items.length,
+
+    // Allows any remaining items to be consumed, but causes take() to throw an exception after that.
+    close: () => {
+      while (awaiters.length > 0) {
+        awaiters.shift().reject(closedError());
+      }
+      closed = true;
     }
   };
 }
 
 module.exports = {
-  asyncify: asyncify,
-  asyncifyNode: asyncifyNode,
-  sleepAsync: sleepAsync,
-  AsyncQueue: AsyncQueue
+  asyncify,
+  asyncifyNode,
+  sleepAsync,
+  withCloseable,
+  AsyncQueue,
 };
