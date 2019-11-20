@@ -1,7 +1,7 @@
 const InMemoryFeatureStore = require('../feature_store');
 const StreamProcessor = require('../streaming');
 const dataKind = require('../versioned_data_kind');
-const { asyncify, sleepAsync } = require('./async_utils');
+const { promisifySingle, sleepAsync } = require('./async_utils');
 const stubs = require('./stubs');
 
 describe('StreamProcessor', () => {
@@ -67,12 +67,12 @@ describe('StreamProcessor', () => {
 
       es.handlers.put({ data: JSON.stringify(putData) });
 
-      var flag = await asyncify(cb => featureStore.initialized(cb));
+      var flag = await promisifySingle(featureStore.initialized)();
       expect(flag).toEqual(true);
       
-      var f = await asyncify(cb => featureStore.get(dataKind.features, 'flagkey', cb));
+      var f = await promisifySingle(featureStore.get)(dataKind.features, 'flagkey');
       expect(f.version).toEqual(1);
-      var s = await asyncify(cb => featureStore.get(dataKind.segments, 'segkey', cb));
+      var s = await promisifySingle(featureStore.get)(dataKind.segments, 'segkey');
       expect(s.version).toEqual(2);
     });
 
@@ -82,7 +82,7 @@ describe('StreamProcessor', () => {
       var es = fakeEventSource();
       var sp = StreamProcessor(sdkKey, config, null, es.constructor);
       
-      var waitUntilStarted = asyncify(cb => sp.start(cb));
+      var waitUntilStarted = promisifySingle(sp.start)();
       es.handlers.put({ data: JSON.stringify(putData) });
       var result = await waitUntilStarted;
       expect(result).toBe(undefined);
@@ -94,7 +94,7 @@ describe('StreamProcessor', () => {
       var es = fakeEventSource();
       var sp = StreamProcessor(sdkKey, config, null, es.constructor);
       
-      var waitUntilStarted = asyncify(cb => sp.start(cb));
+      var waitUntilStarted = promisifySingle(sp.start)();
       es.handlers.put({ data: '{not-good' });
       var result = await waitUntilStarted;
       expectJsonError(result, config);
@@ -116,7 +116,7 @@ describe('StreamProcessor', () => {
       sp.start();
       es.handlers.patch({ data: JSON.stringify(patchData) });
 
-      var f = await asyncify(cb => featureStore.get(dataKind.features, 'flagkey', cb));
+      var f = await promisifySingle(featureStore.get)(dataKind.features, 'flagkey');
       expect(f.version).toEqual(1);
     });
 
@@ -134,7 +134,7 @@ describe('StreamProcessor', () => {
       sp.start();
       es.handlers.patch({ data: JSON.stringify(patchData) });
 
-      var s = await asyncify(cb => featureStore.get(dataKind.segments, 'segkey', cb));
+      var s = await promisifySingle(featureStore.get)(dataKind.segments, 'segkey');
       expect(s.version).toEqual(1);
     });
 
@@ -144,7 +144,7 @@ describe('StreamProcessor', () => {
       var es = fakeEventSource();
       var sp = StreamProcessor(sdkKey, config, null, es.constructor);
       
-      var waitForCallback = asyncify(cb => sp.start(cb));
+      var waitForCallback = promisifySingle(sp.start)();
       es.handlers.patch({ data: '{not-good' });
       var result = await waitForCallback;
       expectJsonError(result, config);
@@ -161,14 +161,14 @@ describe('StreamProcessor', () => {
       sp.start();
 
       var flag = { key: 'flagkey', version: 1 }
-      await asyncify(cb => featureStore.upsert(dataKind.features, flag, cb));
-      var f = await asyncify(cb => featureStore.get(dataKind.features, flag.key, cb));
+      await promisifySingle(featureStore.upsert)(dataKind.features, flag);
+      var f = await promisifySingle(featureStore.get)(dataKind.features, flag.key);
       expect(f).toEqual(flag);
 
       var deleteData = { path: '/flags/' + flag.key, version: 2 };
       es.handlers.delete({ data: JSON.stringify(deleteData) });
 
-      var f = await asyncify(cb => featureStore.get(dataKind.features, flag.key, cb));
+      var f = await promisifySingle(featureStore.get)(dataKind.features, flag.key);
       expect(f).toBe(null);
     });
 
@@ -181,14 +181,14 @@ describe('StreamProcessor', () => {
       sp.start();
 
       var segment = { key: 'segkey', version: 1 }
-      await asyncify(cb => featureStore.upsert(dataKind.segments, segment, cb));
-      var s = await asyncify(cb => featureStore.get(dataKind.segments, segment.key, cb));
+      await promisifySingle(featureStore.upsert)(dataKind.segments, segment);
+      var s = await promisifySingle(featureStore.get)(dataKind.segments, segment.key);
       expect(s).toEqual(segment);
 
       var deleteData = { path: '/segments/' + segment.key, version: 2 };
       es.handlers.delete({ data: JSON.stringify(deleteData) });
 
-      s = await asyncify(cb => featureStore.get(dataKind.segments, segment.key, cb));
+      s = await promisifySingle(featureStore.get)(dataKind.segments, segment.key);
       expect(s).toBe(null);
     });
 
@@ -198,7 +198,7 @@ describe('StreamProcessor', () => {
       var es = fakeEventSource();
       var sp = StreamProcessor(sdkKey, config, null, es.constructor);
       
-      var waitForResult = asyncify(cb => sp.start(cb));
+      var waitForResult = promisifySingle(sp.start)();
       es.handlers.delete({ data: '{not-good' });
       var result = await waitForResult;
       expectJsonError(result, config);
@@ -231,11 +231,11 @@ describe('StreamProcessor', () => {
       es.handlers['indirect/put']({});
 
       await sleepAsync(0);
-      var f = await asyncify(cb => featureStore.get(dataKind.features, 'flagkey', cb));
+      var f = await promisifySingle(featureStore.get)(dataKind.features, 'flagkey');
       expect(f.version).toEqual(1);
-      var s = await asyncify(cb => featureStore.get(dataKind.segments, 'segkey', cb));
+      var s = await promisifySingle(featureStore.get)(dataKind.segments, 'segkey');
       expect(s.version).toEqual(2);
-      var value = await asyncify(cb => featureStore.initialized(cb));
+      var value = await promisifySingle(featureStore.initialized)();
       expect(value).toBe(true);
     });
   });
@@ -261,7 +261,7 @@ describe('StreamProcessor', () => {
       es.handlers['indirect/patch']({ data: '/flags/flagkey' });
 
       await sleepAsync(0);
-      var f = await asyncify(cb => featureStore.get(dataKind.features, 'flagkey', cb));
+      var f = await promisifySingle(featureStore.get)(dataKind.features, 'flagkey');
       expect(f.version).toEqual(1);
     });
 
@@ -285,7 +285,7 @@ describe('StreamProcessor', () => {
       es.handlers['indirect/patch']({ data: '/segments/segkey' });
 
       await sleepAsync(0);
-      var s = await asyncify(cb => featureStore.get(dataKind.segments, 'segkey', cb));
+      var s = await promisifySingle(featureStore.get)(dataKind.segments, 'segkey');
       expect(s.version).toEqual(1);
     });
   });

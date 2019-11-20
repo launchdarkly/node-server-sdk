@@ -2,7 +2,7 @@ const EventEmitter = require('events').EventEmitter;
 const FeatureStoreEventWrapper = require('../feature_store_event_wrapper');
 const InMemoryFeatureStore = require('../feature_store');
 const dataKind = require('../versioned_data_kind');
-const { AsyncQueue, asyncify } = require('./async_utils');
+const { AsyncQueue, promisifySingle } = require('./async_utils');
 
 describe('FeatureStoreEventWrapper', () => {
   function listenAndStoreEvents(emitter, queue, eventName) {
@@ -28,7 +28,7 @@ describe('FeatureStoreEventWrapper', () => {
 
     const wrapper = FeatureStoreEventWrapper(store, emitter);
 
-    await asyncify(f => wrapper.init(allData, f));
+    await promisifySingle(wrapper.init)(allData);
 
     expect(await queue.take()).toEqual(['update', { key: 'a' }]);
     expect(await queue.take()).toEqual(['update:a', { key: 'a' }]);
@@ -63,7 +63,7 @@ describe('FeatureStoreEventWrapper', () => {
 
     const wrapper = FeatureStoreEventWrapper(store, emitter);
 
-    await asyncify(f => wrapper.init(allData0, f));
+    await promisifySingle(wrapper.init)(allData0);
 
     expect(await queue.take()).toEqual(['update', { key: 'a' }]);
     expect(await queue.take()).toEqual(['update:a', { key: 'a' }]);
@@ -73,7 +73,7 @@ describe('FeatureStoreEventWrapper', () => {
     expect(await queue.take()).toEqual(['update:c', { key: 'c' }]);
     expect(queue.isEmpty()).toEqual(true);
     
-    await asyncify(f => wrapper.init(allData1, f));
+    await promisifySingle(wrapper.init)(allData1);
     expect(await queue.take()).toEqual(['update', { key: 'b' }]); // b was updated to version 2
     expect(await queue.take()).toEqual(['update:b', { key: 'b' }]);
     expect(await queue.take()).toEqual(['update', { key: 'c' }]); // c was deleted
@@ -96,14 +96,14 @@ describe('FeatureStoreEventWrapper', () => {
 
     const wrapper = FeatureStoreEventWrapper(store, emitter);
 
-    await asyncify(f => wrapper.init(allData, f));
+    await promisifySingle(wrapper.init)(allData);
 
     expect(await queue.take()).toEqual(['update', { key: 'a' }]);
     expect(await queue.take()).toEqual(['update:a', { key: 'a' }]);
     expect(queue.isEmpty()).toEqual(true);
 
-    await asyncify(f => wrapper.upsert(dataKind.features, { key: 'a', version: 2 }, f));
-    await asyncify(f => wrapper.upsert(dataKind.features, { key: 'a', version: 2 }, f)); // no event for this one
+    await promisifySingle(wrapper.upsert)(dataKind.features, { key: 'a', version: 2 });
+    await promisifySingle(wrapper.upsert)(dataKind.features, { key: 'a', version: 2 }); // no event for this one
     expect(await queue.take()).toEqual(['update', { key: 'a' }]);
     expect(await queue.take()).toEqual(['update:a', { key: 'a' }]);
     expect(queue.isEmpty()).toEqual(true);
@@ -124,13 +124,13 @@ describe('FeatureStoreEventWrapper', () => {
 
     const wrapper = FeatureStoreEventWrapper(store, emitter);
 
-    await asyncify(f => wrapper.init(allData, f));
+    await promisifySingle(wrapper.init)(allData);
 
     expect(await queue.take()).toEqual(['update', { key: 'a' }]);
     expect(await queue.take()).toEqual(['update:a', { key: 'a' }]);
     expect(queue.isEmpty()).toEqual(true);
 
-    await asyncify(f => wrapper.delete(dataKind.features, 'a', 2, f));
+    await promisifySingle(wrapper.delete)(dataKind.features, 'a', 2);
     expect(await queue.take()).toEqual(['update', { key: 'a' }]);
     expect(await queue.take()).toEqual(['update:a', { key: 'a' }]);
     expect(queue.isEmpty()).toEqual(true);
@@ -160,7 +160,7 @@ describe('FeatureStoreEventWrapper', () => {
 
     const wrapper = FeatureStoreEventWrapper(store, emitter);
 
-    await asyncify(f => wrapper.init(allData, f));
+    await promisifySingle(wrapper.init)(allData);
 
     expect(await queue.take()).toEqual(['update', { key: 'a' }]);
     expect(await queue.take()).toEqual(['update', { key: 'b' }]);
@@ -169,13 +169,13 @@ describe('FeatureStoreEventWrapper', () => {
     expect(await queue.take()).toEqual(['update', { key: 'e' }]);
     expect(queue.isEmpty()).toEqual(true);
 
-    await asyncify(f => wrapper.upsert(dataKind.features,
-      { key: 'd', version: 2, prerequisites: [ { key: 'e' } ] }, f));
+    await promisifySingle(wrapper.upsert)(dataKind.features,
+      { key: 'd', version: 2, prerequisites: [ { key: 'e' } ] });
     expect(await queue.take()).toEqual(['update', { key: 'b' }]);
     expect(await queue.take()).toEqual(['update', { key: 'c' }]);
     expect(await queue.take()).toEqual(['update', { key: 'd' }]);
 
-    await asyncify(f => wrapper.upsert(dataKind.segments, { key: 's0', version: 2 }, f));
+    await promisifySingle(wrapper.upsert)(dataKind.segments, { key: 's0', version: 2 });
     expect(await queue.take()).toEqual(['update', { key: 'b' }]);
     expect(await queue.take()).toEqual(['update', { key: 'c' }]);
   });

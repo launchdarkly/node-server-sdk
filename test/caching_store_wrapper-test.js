@@ -1,7 +1,7 @@
 var CachingStoreWrapper = require('../caching_store_wrapper');
 var features = require('../versioned_data_kind').features;
 var segments = require('../versioned_data_kind').segments;
-const { asyncify, sleepAsync } = require('./async_utils');
+const { promisifySingle, sleepAsync } = require('./async_utils');
 
 function MockCore() {
   const c = {
@@ -104,12 +104,12 @@ describe('CachingStoreWrapper', function() {
 
     core.forceSet(features, flagv1);
 
-    var item = await asyncify(cb => wrapper.get(features, flagv1.key, cb));
+    var item = await promisifySingle(wrapper.get)(features, flagv1.key);
     expect(item).toEqual(flagv1);
 
     core.forceSet(features, flagv2); // Make a change that bypasses the cache
 
-    item = await asyncify(cb => wrapper.get(features, flagv1.key, cb));
+    item = await promisifySingle(wrapper.get)(features, flagv1.key);
     // If cached, it should return the cached value rather than calling the underlying getter
     expect(item).toEqual(isCached ? flagv1 : flagv2);
   });
@@ -120,12 +120,12 @@ describe('CachingStoreWrapper', function() {
 
     core.forceSet(features, flagv1);
 
-    var item = await asyncify(cb => wrapper.get(features, flagv1.key, cb));
+    var item = await promisifySingle(wrapper.get)(features, flagv1.key);
     expect(item).toBe(null);
 
     core.forceSet(features, flagv2); // Make a change that bypasses the cache
 
-    item = await asyncify(cb => wrapper.get(features, flagv2.key, cb));
+    item = await promisifySingle(wrapper.get)(features, flagv2.key);
     // If cached, the deleted state should persist in the cache
     expect(item).toEqual(isCached ? null : flagv2);
   });
@@ -133,12 +133,12 @@ describe('CachingStoreWrapper', function() {
   runCachedAndUncachedTests('get() with missing item', async (wrapper, core, isCached) => {
     const flag = { key: 'flag', version: 1 };
 
-    var item = await asyncify(cb => wrapper.get(features, flag.key, cb));
+    var item = await promisifySingle(wrapper.get)(features, flag.key);
     expect(item).toBe(null);
 
     core.forceSet(features, flag);
 
-    item = await asyncify(cb => wrapper.get(features, flag.key, cb));
+    item = await promisifySingle(wrapper.get)(features, flag.key);
     // If cached, the previous null result should persist in the cache
     expect(item).toEqual(isCached ? null  : flag);
   });
@@ -149,12 +149,12 @@ describe('CachingStoreWrapper', function() {
 
     const allData = { features: { 'flag': flagv1 } };
 
-    await asyncify(cb => wrapper.init(allData, cb));
+    await promisifySingle(wrapper.init)(allData);
     expect(core.data).toEqual(allData);
 
     core.forceSet(features, flagv2);
 
-    var item = await asyncify(cb => wrapper.get(features, flagv1.key, cb));
+    var item = await promisifySingle(wrapper.get)(features, flagv1.key);
     expect(item).toEqual(flagv1);
   });
 
@@ -165,12 +165,12 @@ describe('CachingStoreWrapper', function() {
     core.forceSet(features, flag1);
     core.forceSet(features, flag2);
 
-    var items = await asyncify(cb => wrapper.all(features, cb));
+    var items = await promisifySingle(wrapper.all)(features);
     expect(items).toEqual({ 'flag1': flag1, 'flag2': flag2 });
 
     core.forceRemove(features, flag2.key);
 
-    items = await asyncify(cb => wrapper.all(features, cb));
+    items = await promisifySingle(wrapper.all)(features);
     if (isCached) {
       expect(items).toEqual({ 'flag1': flag1, 'flag2': flag2 });
     } else {
@@ -185,12 +185,12 @@ describe('CachingStoreWrapper', function() {
     core.forceSet(features, flag1);
     core.forceSet(features, flag2);
 
-    var items = await asyncify(cb => wrapper.all(features, cb));
+    var items = await promisifySingle(wrapper.all)(features);
     expect(items).toEqual({ 'flag1': flag1 });
 
     core.forceRemove(features, flag1.key);
 
-    items = await asyncify(cb => wrapper.all(features, cb));
+    items = await promisifySingle(wrapper.all)(features);
     if (isCached) {
       expect(items).toEqual({ 'flag1': flag1 });
     } else {
@@ -201,7 +201,7 @@ describe('CachingStoreWrapper', function() {
   runCachedAndUncachedTests('all() error condition', async (wrapper, core, isCached) => {
     core.getAllError = true;
 
-    var items = await asyncify(cb => wrapper.all(features, cb));
+    var items = await promisifySingle(wrapper.all)(features);
     expect(items).toBe(null);
   });
 
@@ -211,10 +211,10 @@ describe('CachingStoreWrapper', function() {
 
     const allData = { features: { flag1: flag1, flag2: flag2 } };
 
-    await asyncify(cb => wrapper.init(allData, cb));
+    await promisifySingle(wrapper.init)(allData);
     core.forceRemove(features, flag2.key);
 
-    var items = await asyncify(cb => wrapper.all(features, cb));
+    var items = await promisifySingle(wrapper.all)(features);
     expect(items).toEqual({ flag1: flag1, flag2: flag2 });
   });
 
@@ -226,16 +226,16 @@ describe('CachingStoreWrapper', function() {
 
     const allData = { features: { flag1: flag1v1, flag2: flag2v2 } };
 
-    await asyncify(cb => wrapper.init(allData, cb));
+    await promisifySingle(wrapper.init)(allData);
     expect(core.data).toEqual(allData);
 
     // make a change to flag1 using the wrapper - this should flush the cache
-    await asyncify(cb => wrapper.upsert(features, flag1v2, cb));
+    await promisifySingle(wrapper.upsert)(features, flag1v2);
     // make a change to flag2 that bypasses the cache
     core.forceSet(features, flag2v2);
 
     // we should now see both changes since the cache was flushed
-    var items = await asyncify(cb => wrapper.all(features, cb));
+    var items = await promisifySingle(wrapper.all)(features);
     expect(items).toEqual({ flag1: flag1v2, flag2: flag2v2 });
   });
 
@@ -243,10 +243,10 @@ describe('CachingStoreWrapper', function() {
     const flagv1 = { key: 'flag', version: 1 };
     const flagv2 = { key: 'flag', version: 2 };
 
-    await asyncify(cb => wrapper.upsert(features, flagv1, cb));
+    await promisifySingle(wrapper.upsert)(features, flagv1);
     expect(core.data[features.namespace][flagv1.key]).toEqual(flagv1);
 
-    await asyncify(cb => wrapper.upsert(features, flagv2, cb));
+    await promisifySingle(wrapper.upsert)(features, flagv2);
     expect(core.data[features.namespace][flagv1.key]).toEqual(flagv2);
 
     // if we have a cache, verify that the new item is now cached by writing a different value
@@ -256,7 +256,7 @@ describe('CachingStoreWrapper', function() {
       core.forceSet(features, flagv3);
     }
 
-    var item = await asyncify(cb => wrapper.get(features, flagv1.key, cb));
+    var item = await promisifySingle(wrapper.get)(features, flagv1.key);
     expect(item).toEqual(flagv2);
   });
 
@@ -264,12 +264,12 @@ describe('CachingStoreWrapper', function() {
     const flagv1 = { key: 'flag', version: 1 };
     const flagv2 = { key: 'flag', version: 2 };
 
-    await asyncify(cb => wrapper.upsert(features, flagv1, cb));
+    await promisifySingle(wrapper.upsert)(features, flagv1);
     expect(core.data[features.namespace][flagv1.key]).toEqual(flagv1);
 
     core.upsertError = new Error('sorry');
 
-    await asyncify(cb => wrapper.upsert(features, flagv2, cb));
+    await promisifySingle(wrapper.upsert)(features, flagv2);
     expect(core.data[features.namespace][flagv1.key]).toEqual(flagv1);
 
     // if we have a cache, verify that the old item is still cached by writing a different value
@@ -277,7 +277,7 @@ describe('CachingStoreWrapper', function() {
     if (isCached) {
       const flagv3 = { key: 'flag', version: 3 };
       core.forceSet(features, flagv3);
-      var item = await asyncify(cb => wrapper.get(features, flagv1.key, cb));
+      var item = await promisifySingle(wrapper.get)(features, flagv1.key);
       expect(item).toEqual(flagv1);  
     }
   });
@@ -288,7 +288,7 @@ describe('CachingStoreWrapper', function() {
 
     core.forceSet(features, flagv2); // this is now in the underlying data, but not in the cache
 
-    await asyncify(cb => wrapper.upsert(features, flagv1, cb));
+    await promisifySingle(wrapper.upsert)(features, flagv1);
     expect(core.data[features.namespace][flagv1.key]).toEqual(flagv2); // value in store remains the same
 
     // the cache should now contain flagv2 - check this by making another change that bypasses
@@ -296,7 +296,7 @@ describe('CachingStoreWrapper', function() {
     const flagv3 = { key: 'flag', version: 3 };
     core.forceSet(features, flagv3);
 
-    var item = await asyncify(cb => wrapper.get(features, flagv1.key, cb));
+    var item = await promisifySingle(wrapper.get)(features, flagv1.key);
     expect(item).toEqual(flagv2);
   });
 
@@ -307,17 +307,17 @@ describe('CachingStoreWrapper', function() {
 
     core.forceSet(features, flagv1);
 
-    var item = await asyncify(cb => wrapper.get(features, flagv1.key, cb));
+    var item = await promisifySingle(wrapper.get)(features, flagv1.key);
     expect(item).toEqual(flagv1);
 
-    await asyncify(cb => wrapper.delete(features, flagv1.key, flagv2.version, cb));
+    await promisifySingle(wrapper.delete)(features, flagv1.key, flagv2.version);
 
     expect(core.data[features.namespace][flagv1.key]).toEqual(flagv2);
 
     // make a change to the flag that bypasses the cache
     core.forceSet(features, flagv3);
 
-    var item = await asyncify(cb => wrapper.get(features, flagv1.key, cb));
+    var item = await promisifySingle(wrapper.get)(features, flagv1.key);
     expect(item).toEqual(isCached ? null : flagv3);
   });
 
@@ -326,19 +326,19 @@ describe('CachingStoreWrapper', function() {
       const core = MockCore();
       const wrapper = new CachingStoreWrapper(core, 0);
 
-      var value = await asyncify(cb => wrapper.initialized(cb));
+      var value = await promisifySingle(wrapper.initialized)();
       expect(value).toEqual(false);
       expect(core.initQueriedCount).toEqual(1);
 
       core.inited = true;
 
-      value = await asyncify(cb => wrapper.initialized(cb));
+      value = await promisifySingle(wrapper.initialized)();
       expect(value).toEqual(true);
       expect(core.initQueriedCount).toEqual(2);
 
       core.inited = false; // this should have no effect since we already returned true
 
-      value = await asyncify(cb => wrapper.initialized(cb));
+      value = await promisifySingle(wrapper.initialized)();
       expect(value).toEqual(true);
       expect(core.initQueriedCount).toEqual(2);
     });
@@ -347,14 +347,14 @@ describe('CachingStoreWrapper', function() {
       const core = MockCore();
       const wrapper = new CachingStoreWrapper(core, 0);
 
-      var value = await asyncify(cb => wrapper.initialized(cb));
+      var value = await promisifySingle(wrapper.initialized)();
       expect(value).toEqual(false);
       expect(core.initQueriedCount).toEqual(1);
 
       const allData = { features: {} };
-      await asyncify(cb => wrapper.init(allData, cb));
+      await promisifySingle(wrapper.init)(allData);
 
-      value = await asyncify(cb => wrapper.initialized(cb));
+      value = await promisifySingle(wrapper.initialized)();
       expect(value).toEqual(true);
       expect(core.initQueriedCount).toEqual(1);
     });
@@ -363,19 +363,19 @@ describe('CachingStoreWrapper', function() {
       const core = MockCore();
       const wrapper = new CachingStoreWrapper(core, 1); // cache TTL = 1 second
 
-      var value = await asyncify(cb => wrapper.initialized(cb));
+      var value = await promisifySingle(wrapper.initialized)();
       expect(value).toEqual(false);
       expect(core.initQueriedCount).toEqual(1);
 
       core.inited = true;
 
-      value = await asyncify(cb => wrapper.initialized(cb));
+      value = await promisifySingle(wrapper.initialized)();
       expect(value).toEqual(false);
       expect(core.initQueriedCount).toEqual(1);
 
       await sleepAsync(1100);
       
-      value = await asyncify(cb => wrapper.initialized(cb));
+      value = await promisifySingle(wrapper.initialized)();
       expect(value).toEqual(true);
       expect(core.initQueriedCount).toEqual(2);
     });
@@ -402,7 +402,7 @@ describe('CachingStoreWrapper', function() {
       dependencyOrderingTestData[segments.namespace] = {
         o: { key: "o" }
       };
-      await asyncify(cb => wrapper.init(dependencyOrderingTestData, cb));
+      await promisifySingle(wrapper.init)(dependencyOrderingTestData);
       
       var receivedData = core.data;
       expect(receivedData.length).toEqual(2);
