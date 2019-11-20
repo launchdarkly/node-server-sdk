@@ -26,7 +26,16 @@ function withCloseable(entityOrCreateFn, asyncCallback) {
   // Using Promise.resolve allows promises and simple values to be treated as promises
   return Promise.resolve(typeof entityOrCreateFn === 'function' ? entityOrCreateFn() : entityOrCreateFn)
     .then(entity =>
-      asyncCallback(entity).finally(() => entity.close())
+      asyncCallback(entity)
+        .then(result => {
+          entity.close();
+          return result;
+        })
+        .catch(err => {
+          entity.close();
+          return Promise.reject(err);
+        })
+        // Note that we can't use Promise.finally() because it's not supported in Node 6.
     );
 }
 
