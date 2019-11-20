@@ -1,25 +1,40 @@
 version: 2.1
 
+orbs:
+   win: circleci/windows@1.0.0
+    executor:
+      name: win/vs2019
+      shell: powershell.exe
+    steps:
+      - checkout
+      - run:
+          name: Build
+          command: ./.ldrelease/build.ps1
+      - run:
+          name: Test
+          command: ./.ldrelease/test.ps1
+
 workflows:
   workflow:
     jobs:
-      - build-and-test:
+      - build-test-linux:
           name: latest Node version
+          docker-image: circleci/node:latest
           run-lint: true
-      - build-and-test:
+      - build-test-linux:
           name: oldest supported Node version
           docker-image: circleci/node:6
           run-lint: false
+      - build-test-windows
+          name: Windows
 
 jobs:
-  build-and-test:
+  build-test-linux:
     parameters:
       run-lint:
         type: boolean
-        default: false
       docker-image:
         type: string
-        default: circleci/node:latest
     docker:
       - image: <<parameters.docker-image>>
       - image: redis
@@ -43,3 +58,28 @@ jobs:
           path: reports/junit
       - store_artifacts:
           path: reports/junit
+
+  build-test-windows:
+    executor:
+      name: win/vs2019
+      shell: powershell.exe
+    steps:
+      - checkout
+      - run:
+          name: set up Redis
+          command: |
+            $ProgressPreference = "SilentlyContinue"  # prevents console errors from CircleCI host
+            iwr -outf redis.zip https://github.com/MicrosoftArchive/redis/releases/download/win-3.0.504/Redis-x64-3.0.504.zip
+            mkdir redis
+            Expand-Archive -Path redis.zip -DestinationPath redis
+      - run:
+          name: start Redis
+          command: |
+            cd redis
+            ./redis-server --service-install
+            ./redis-server --service-start
+            Start-Sleep -s 5
+            ./redis-cli ping
+      - run: node --version
+      - run: npm install
+      - run: npm test
