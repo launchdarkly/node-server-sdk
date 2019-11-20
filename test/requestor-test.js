@@ -1,7 +1,6 @@
-import { promisify } from 'util';
 import Requestor from '../requestor';
 import * as dataKind from '../versioned_data_kind';
-import { withCloseable } from './async_utils';
+import { promisify, withCloseable } from './async_utils';
 import { createServer, respond, respondJson } from './http_server';
 
 describe('Requestor', () => {

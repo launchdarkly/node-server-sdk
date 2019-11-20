@@ -1,8 +1,7 @@
-const { promisify } = require('util');
 const InMemoryFeatureStore = require('../feature_store');
 const PollingProcessor = require('../polling');
 const dataKind = require('../versioned_data_kind');
-const { asyncify, sleepAsync } = require('./async_utils');
+const { asyncify, promisify, sleepAsync } = require('./async_utils');
 const stubs = require('./stubs');
 
 describe('PollingProcessor', () => {
