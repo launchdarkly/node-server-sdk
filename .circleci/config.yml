@@ -2,20 +2,9 @@ version: 2.1
 
 orbs:
    win: circleci/windows@1.0.0
-    executor:
-      name: win/vs2019
-      shell: powershell.exe
-    steps:
-      - checkout
-      - run:
-          name: Build
-          command: ./.ldrelease/build.ps1
-      - run:
-          name: Test
-          command: ./.ldrelease/test.ps1
 
 workflows:
-  workflow:
+  build-and-test-all:
     jobs:
       - build-test-linux:
           name: latest Node version
