@@ -2,7 +2,7 @@
 // Converts a function that takes a Node-style callback (err, result) as its last argument into a
 // function that returns a Promise. This is equivalent to util.promisify, but is reimplemented here
 // because promisify isn't supported in Node 6.
-// Usage: await asyncifyNode(doSomething)(allParamsExceptCallback)
+// Usage: await promisify(doSomething)(allParamsExceptCallback)
 function promisify(f) {
   return (...args) =>
     new Promise((resolve, reject) =>
