@@ -14,7 +14,7 @@ workflows:
           name: oldest supported Node version
           docker-image: circleci/node:6
           run-lint: false
-      - build-test-windows
+      - build-test-windows:
           name: Windows
 
 jobs:
