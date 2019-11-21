@@ -1,3 +1,4 @@
+const { DiagnosticId, DiagnosticsManager } = require('../diagnostic_events');
 const InMemoryFeatureStore = require('../feature_store');
 const StreamProcessor = require('../streaming');
 const dataKind = require('../versioned_data_kind');
@@ -24,6 +25,10 @@ describe('StreamProcessor', () => {
     return es;
   }
 
+  function createProcessor(config, es, requestor, diagnosticsManager) {
+    return StreamProcessor(sdkKey, config, requestor, diagnosticsManager, es.constructor);
+  }
+
   function expectJsonError(err, config) {
     expect(err).not.toBe(undefined);
     expect(err.message).toEqual('Malformed JSON data in event stream');
@@ -33,7 +38,7 @@ describe('StreamProcessor', () => {
   it('uses expected URL', function() {
     var config = { streamUri: 'http://test' };
     var es = fakeEventSource();
-    var sp = StreamProcessor(sdkKey, config, null, es.constructor);
+    var sp = createProcessor(config, es);
     sp.start();
     expect(es.url).toEqual(config.streamUri + '/all');
   });
@@ -41,7 +46,7 @@ describe('StreamProcessor', () => {
   it('sets expected headers', function() {
     var config = { streamUri: 'http://test' };
     var es = fakeEventSource();
-    var sp = StreamProcessor(sdkKey, config, null, es.constructor);
+    var sp = createProcessor(config, es);
     sp.start();
     expect(es.options.headers).toMatchObject(httpUtils.getDefaultHeaders(sdkKey, config));
   });
@@ -62,7 +67,7 @@ describe('StreamProcessor', () => {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, null, es.constructor);
+      var sp = createProcessor(config, es);
       sp.start();
 
       es.handlers.put({ data: JSON.stringify(putData) });
@@ -80,7 +85,7 @@ describe('StreamProcessor', () => {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, null, es.constructor);
+      var sp = createProcessor(config, es);
       
       var waitUntilStarted = promisifySingle(sp.start)();
       es.handlers.put({ data: JSON.stringify(putData) });
@@ -92,12 +97,35 @@ describe('StreamProcessor', () => {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, null, es.constructor);
+      var sp = createProcessor(config, es);
       
       var waitUntilStarted = promisifySingle(sp.start)();
       es.handlers.put({ data: '{not-good' });
       var result = await waitUntilStarted;
       expectJsonError(result, config);
+    });
+
+    it('updates diagnostic stats', async () => {
+      const featureStore = InMemoryFeatureStore();
+      const config = { featureStore: featureStore, logger: stubs.stubLogger() };
+
+      const id = DiagnosticId('sdk-key');
+      const manager = DiagnosticsManager(config, id, 100000);
+      const startTime = new Date().getTime();
+
+      const es = fakeEventSource();
+      const sp = createProcessor(config, es, null, manager);
+
+      const waitUntilStarted = promisifySingle(sp.start)();
+      es.handlers.put({ data: JSON.stringify(putData) });
+      await waitUntilStarted;
+
+      const event = manager.createStatsEventAndReset(0, 0, 0);
+      expect(event.streamInits.length).toEqual(1);
+      const si = event.streamInits[0];
+      expect(si.timestamp).toBeGreaterThanOrEqual(startTime);
+      expect(si.failed).not.toBeTruthy();
+      expect(si.durationMillis).toBeGreaterThanOrEqual(0);
     });
   });
 
@@ -106,7 +134,7 @@ describe('StreamProcessor', () => {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, null, es.constructor);
+      var sp = createProcessor(config, es);
 
       var patchData = {
         path: '/flags/flagkey',
@@ -124,7 +152,7 @@ describe('StreamProcessor', () => {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, null, es.constructor);
+      var sp = createProcessor(config, es);
 
       var patchData = {
         path: '/segments/segkey',
@@ -142,7 +170,7 @@ describe('StreamProcessor', () => {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, null, es.constructor);
+      var sp = createProcessor(config, es);
       
       var waitForCallback = promisifySingle(sp.start)();
       es.handlers.patch({ data: '{not-good' });
@@ -156,7 +184,7 @@ describe('StreamProcessor', () => {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, null, es.constructor);
+      var sp = createProcessor(config, es);
 
       sp.start();
 
@@ -176,7 +204,7 @@ describe('StreamProcessor', () => {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, null, es.constructor);
+      var sp = createProcessor(config, es);
 
       sp.start();
 
@@ -196,7 +224,7 @@ describe('StreamProcessor', () => {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, null, es.constructor);
+      var sp = createProcessor(config, es);
       
       var waitForResult = promisifySingle(sp.start)();
       es.handlers.delete({ data: '{not-good' });
@@ -224,7 +252,7 @@ describe('StreamProcessor', () => {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, fakeRequestor, es.constructor);
+      var sp = createProcessor(config, es, fakeRequestor);
 
       sp.start();
 
@@ -254,7 +282,7 @@ describe('StreamProcessor', () => {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, fakeRequestor, es.constructor);
+      var sp = createProcessor(config, es, fakeRequestor);
 
       sp.start();
 
@@ -278,7 +306,7 @@ describe('StreamProcessor', () => {
       var featureStore = InMemoryFeatureStore();
       var config = { featureStore: featureStore, logger: stubs.stubLogger() };
       var es = fakeEventSource();
-      var sp = StreamProcessor(sdkKey, config, fakeRequestor, es.constructor);
+      var sp = createProcessor(config, es, fakeRequestor);
 
       sp.start();
 
@@ -290,27 +318,36 @@ describe('StreamProcessor', () => {
     });
   });
 
-  async function testRecoverableError(err) {
+  async function testErrorHandling(err, recoverable) {
     const featureStore = InMemoryFeatureStore();
     const config = { featureStore: featureStore, logger: stubs.stubLogger() };
+    const id = DiagnosticId('sdk-key');
+    const manager = DiagnosticsManager(config, id, 100000);
+    const startTime = new Date().getTime();
+
     const es = fakeEventSource();
-    const sp = StreamProcessor(sdkKey, config, null, es.constructor);
+    const sp = createProcessor(config, es, null, manager);
     
-    let errReceived;
-    sp.start(e => { errReceived = e; });
-
+    const waitForStart = promisifySingle(sp.start)();  
     es.instance.onerror(err);
-    await sleepAsync(300);
+    const errReceived = await waitForStart;
 
-    expect(config.logger.error).not.toHaveBeenCalled();
-    expect(errReceived).toBeUndefined();
-    expect(es.closed).not.toEqual(true);
+    expect(errReceived).toEqual(err);
+    expect(config.logger.error).toHaveBeenCalledTimes(1);
+    expect(es.closed).toEqual(!recoverable);
+
+    const event = manager.createStatsEventAndReset(0, 0, 0);
+    expect(event.streamInits.length).toEqual(1);
+    const si = event.streamInits[0];
+    expect(si.timestamp).toBeGreaterThanOrEqual(startTime);
+    expect(si.failed).toBeTruthy();
+    expect(si.durationMillis).toBeGreaterThanOrEqual(0);
   }
   
   function testRecoverableHttpError(status) {
     const err = new Error('sorry');
     err.status = status;
-    it('continues retrying after error ' + status, async () => await testRecoverableError(err));
+    it('continues retrying after error ' + status, async () => await testErrorHandling(err, true));
   }
 
   testRecoverableHttpError(400);
@@ -322,24 +359,9 @@ describe('StreamProcessor', () => {
   it('continues retrying after I/O error', async () => await testRecoverableError(new Error('sorry')));
 
   function testUnrecoverableHttpError(status) {
-    it('stops retrying after error ' + status, async () => {
-      const err = new Error('sorry');
-      err.status = status;
-      const featureStore = InMemoryFeatureStore();
-      const config = { featureStore: featureStore, logger: stubs.stubLogger() };
-      const es = fakeEventSource();
-      const sp = StreamProcessor(sdkKey, config, null, es.constructor);
-      
-      let errReceived;
-      sp.start(e => { errReceived = e; });
-  
-      es.instance.onerror(err);
-      await sleepAsync(300);
-  
-      expect(config.logger.error).toHaveBeenCalledTimes(1);
-      expect(errReceived).not.toBeUndefined();
-      expect(es.closed).toEqual(true);
-    });
+    const err = new Error('sorry');
+    err.status = status;
+    it('stops retrying after error ' + status, async () => await testErrorHandling(err, false));
   }
 
   testUnrecoverableHttpError(401);

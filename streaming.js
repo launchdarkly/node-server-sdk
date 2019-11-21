@@ -4,10 +4,11 @@ const messages = require('./messages');
 const EventSource = require('./eventsource');
 const dataKind = require('./versioned_data_kind');
 
-function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
+function StreamProcessor(sdkKey, config, requestor, diagnosticsManager, eventSourceFactory) {
   const processor = {},
     featureStore = config.featureStore;
   let es;
+  let connectionAttemptStartTime;
 
   const headers = httpUtils.getDefaultHeaders(sdkKey, config);
 
@@ -17,24 +18,42 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
     return path.startsWith(kind.streamApiPath) ? path.substring(kind.streamApiPath.length) : null;
   }
 
+  function logConnectionStarted() {
+    connectionAttemptStartTime = new Date().getTime();
+  }
+
+  function logConnectionResult(success) {
+    if (connectionAttemptStartTime && diagnosticsManager) {
+      diagnosticsManager.recordStreamInit(connectionAttemptStartTime, !success,
+        new Date().getTime() - connectionAttemptStartTime);
+    }
+    connectionAttemptStartTime = null;
+  }
+
   processor.start = fn => {
     const cb = fn || function(){};
+    
+    logConnectionStarted();
+
     es = new eventSourceFactory(config.streamUri + '/all', 
       {
         agent: config.proxyAgent, 
         headers,
         tlsParams: config.tlsParams
       });
-      
+    
     es.onerror = err => {
       if (err.status && !errors.isHttpErrorRecoverable(err.status)) {
         const message = messages.httpErrorMessage(err.status, 'streaming request');
         config.logger.error(message);
         es && es.close();
+        logConnectionResult(false);
         cb(new errors.LDStreamingError(err.message, err.status));
       } else {
         const message = messages.httpErrorMessage(err.status, 'streaming request', 'will retry');
         config.logger.warn(message);
+        logConnectionResult(false);
+        logConnectionStarted();
       }
     };
 
@@ -47,6 +66,7 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
     es.addEventListener('put', e => {
       config.logger.debug('Received put event');
       if (e && e.data) {
+        logConnectionResult(true);
         let all;
         try {
           all = JSON.parse(e.data);
