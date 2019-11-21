@@ -1,18 +1,19 @@
-var fs = require('fs');
-var tmp = require('tmp');
-var dataKind = require('../versioned_data_kind');
-const { asyncify, asyncifyNode, sleepAsync } = require('./async_utils');
+const fs = require('fs');
+const tmp = require('tmp');
+const dataKind = require('../versioned_data_kind');
+const { promisify, promisifySingle, sleepAsync } = require('./async_utils');
+const { stubLogger } = require('./stubs');
 
-var LaunchDarkly = require('../index');
-var FileDataSource = require('../file_data_source');
-var InMemoryFeatureStore = require('../feature_store');
+const LaunchDarkly = require('../index');
+const FileDataSource = require('../file_data_source');
+const InMemoryFeatureStore = require('../feature_store');
 
-var flag1Key = 'flag1';
-var flag2Key = 'flag2';
-var flag2Value = 'value2';
-var segment1Key = 'seg1';
+const flag1Key = 'flag1';
+const flag2Key = 'flag2';
+const flag2Value = 'value2';
+const segment1Key = 'seg1';
 
-var flag1 = {
+const flag1 = {
   "key": flag1Key,
   "on": true,
   "fallthrough": {
@@ -21,26 +22,26 @@ var flag1 = {
   "variations": [ "fall", "off", "on" ]
 };
 
-var segment1 = {
+const segment1 = {
   "key": segment1Key,
   "include": ["user1"]
 };
 
-var flagOnlyJson = `
+const flagOnlyJson = `
 {
   "flags": {
     "${flag1Key}": ${ JSON.stringify(flag1) }
   }
 }`;
 
-var segmentOnlyJson = `
+const segmentOnlyJson = `
 {
   "segments": {
     "${segment1Key}": ${ JSON.stringify(segment1) }
   }
 }`;
 
-var allPropertiesJson = `
+const allPropertiesJson = `
 {
   "flags": {
     "${flag1Key}": ${ JSON.stringify(flag1) }
@@ -53,7 +54,7 @@ var allPropertiesJson = `
   }
 }`;
 
-var allPropertiesYaml = `
+const allPropertiesYaml = `
 flags:
   ${flag1Key}:
     key: ${flag1Key}
@@ -81,10 +82,7 @@ describe('FileDataSource', function() {
   beforeEach(() => {
     store = InMemoryFeatureStore();
     dataSources = [];
-    logger = {
-      info: jest.fn(),
-      warn: jest.fn()
-    };
+    logger = stubLogger();
   });
 
   afterEach(() => {
@@ -92,14 +90,14 @@ describe('FileDataSource', function() {
   });
 
   function makeTempFile(content) {
-    return asyncifyNode(tmp.file)
+    return promisify(tmp.file)()
       .then(path => {
         return replaceFileContent(path, content).then(() => path);
       });
   }
 
   function replaceFileContent(path, content) {
-    return asyncifyNode(cb => fs.writeFile(path, content, cb));
+    return promisify(fs.writeFile)(path, content);
   }
 
   function setupDataSource(options) {
@@ -120,23 +118,23 @@ describe('FileDataSource', function() {
     var fds = setupDataSource({ paths: [path] });
 
     expect(fds.initialized()).toBe(false);
-    expect(await asyncify(cb => store.initialized(cb))).toBe(false);
-    expect(await asyncify(cb => store.all(dataKind.features, cb))).toEqual({});
-    expect(await asyncify(cb => store.all(dataKind.segments, cb))).toEqual({});
+    expect(await promisifySingle(store.initialized)()).toBe(false);
+    expect(await promisifySingle(store.all)(dataKind.features)).toEqual({});
+    expect(await promisifySingle(store.all)(dataKind.segments)).toEqual({});
   });
 
   async function testLoadAllProperties(content) {
     var path = await makeTempFile(content);
     var fds = setupDataSource({ paths: [path] });
-    await asyncify(fds.start);
+    await promisifySingle(fds.start)();
 
     expect(fds.initialized()).toBe(true);
-    expect(await asyncify(cb => store.initialized(cb))).toBe(true);
-    var items = await asyncify(cb => store.all(dataKind.features, cb));
+    expect(await promisifySingle(store.initialized)()).toBe(true);
+    var items = await promisifySingle(store.all)(dataKind.features);
     expect(sorted(Object.keys(items))).toEqual([ flag1Key, flag2Key ]);
-    var flag = await asyncify(cb => store.get(dataKind.features, flag1Key, cb));
+    var flag = await promisifySingle(store.get)(dataKind.features, flag1Key);
     expect(flag).toEqual(flag1);
-    items = await asyncify(cb => store.all(dataKind.segments, cb));
+    items = await promisifySingle(store.all)(dataKind.segments);
     expect(items).toEqual({ seg1: segment1 });
   }
 
@@ -146,33 +144,33 @@ describe('FileDataSource', function() {
 
   it('does not load if file is missing', async () => {
     var fds = setupDataSource({ paths: ['no-such-file'] });
-    await asyncify(fds.start);
+    await promisifySingle(fds.start)();
 
     expect(fds.initialized()).toBe(false);
-    expect(await asyncify(cb => store.initialized(cb))).toBe(false);
+    expect(await promisifySingle(store.initialized)()).toBe(false);
   });
 
   it('does not load if file data is malformed', async () => {
     var path = await makeTempFile('{x');
     var fds = setupDataSource({ paths: [path] });
-    await asyncify(fds.start);
+    await promisifySingle(fds.start)();
 
     expect(fds.initialized()).toBe(false);
-    expect(await asyncify(cb => store.initialized(cb))).toBe(false);
+    expect(await promisifySingle(store.initialized)()).toBe(false);
   });
 
   it('can load multiple files', async () => {
     var path1 = await makeTempFile(flagOnlyJson);
     var path2 = await makeTempFile(segmentOnlyJson);
     var fds = setupDataSource({ paths: [path1, path2] });
-    await asyncify(fds.start);
+    await promisifySingle(fds.start)();
 
     expect(fds.initialized()).toBe(true);
-    expect(await asyncify(cb => store.initialized(cb))).toBe(true);
+    expect(await promisifySingle(store.initialized)()).toBe(true);
 
-    var items = await asyncify(cb => store.all(dataKind.features, cb));
+    var items = await promisifySingle(store.all)(dataKind.features);
     expect(Object.keys(items)).toEqual([ flag1Key ]);
-    items = await asyncify(cb => store.all(dataKind.segments, cb));
+    items = await promisifySingle(store.all)(dataKind.segments);
     expect(Object.keys(items)).toEqual([ segment1Key ]);
   });
 
@@ -180,41 +178,41 @@ describe('FileDataSource', function() {
     var path1 = await makeTempFile(flagOnlyJson);
     var path2 = await makeTempFile(flagOnlyJson);
     var fds = setupDataSource({ paths: [path1, path2] });
-    await asyncify(fds.start);
+    await promisifySingle(fds.start)();
 
     expect(fds.initialized()).toBe(false);
-    expect(await asyncify(cb => store.initialized(cb))).toBe(false);
+    expect(await promisifySingle(store.initialized)()).toBe(false);
   });
 
   it('does not reload modified file if auto-update is off', async () => {
     var path = await makeTempFile(flagOnlyJson);
     var fds = setupDataSource({ paths: [path] });
-    await asyncify(fds.start);
+    await promisifySingle(fds.start)();
     
-    var items = await asyncify(cb => store.all(dataKind.segments, cb));
+    var items = await promisifySingle(store.all)(dataKind.segments);
     expect(Object.keys(items).length).toEqual(0);
 
     await sleepAsync(200);
     await replaceFileContent(path, segmentOnlyJson);
     await sleepAsync(200);
 
-    items = await asyncify(cb => store.all(dataKind.segments, cb));
+    items = await promisifySingle(store.all)(dataKind.segments);
     expect(Object.keys(items).length).toEqual(0);
   });
 
   it('reloads modified file if auto-update is on', async () => {
     var path = await makeTempFile(flagOnlyJson);
     var fds = setupDataSource({ paths: [path], autoUpdate: true });
-    await asyncify(fds.start);
+    await promisifySingle(fds.start)();
     
-    var items = await asyncify(cb => store.all(dataKind.segments, cb));
+    var items = await promisifySingle(store.all)(dataKind.segments);
     expect(Object.keys(items).length).toEqual(0);
 
     await sleepAsync(200);
     await replaceFileContent(path, segmentOnlyJson);
     await sleepAsync(4000); // the long wait here is to see if we get any spurious reloads (ch32123)
 
-    items = await asyncify(cb => store.all(dataKind.segments, cb));
+    items = await promisifySingle(store.all)(dataKind.segments);
     expect(Object.keys(items).length).toEqual(1);
 
     // We call logger.warn() once for each reload. It should only have reloaded once, but for
@@ -226,7 +224,7 @@ describe('FileDataSource', function() {
   it('evaluates simplified flag with client as expected', async () => {
     var path = await makeTempFile(allPropertiesJson);
     var factory = FileDataSource({ paths: [ path ]});
-    var config = { updateProcessor: factory, sendEvents: false };
+    var config = { updateProcessor: factory, sendEvents: false, logger: logger };
     var client = LaunchDarkly.init('dummy-key', config);
     var user = { key: 'userkey' };
 
@@ -242,7 +240,7 @@ describe('FileDataSource', function() {
   it('evaluates full flag with client as expected', async () => {
     var path = await makeTempFile(allPropertiesJson);
     var factory = FileDataSource({ paths: [ path ]});
-    var config = { updateProcessor: factory, sendEvents: false };
+    var config = { updateProcessor: factory, sendEvents: false, logger: logger };
     var client = LaunchDarkly.init('dummy-key', config);
     var user = { key: 'userkey' };
 
