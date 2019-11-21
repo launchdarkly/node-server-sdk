@@ -10,19 +10,24 @@ const wrapPromiseCallback = require('./utils/wrapPromiseCallback');
 
 const userAttrsToStringifyForEvents = [ 'key', 'secondary', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name' ];
 
-function EventProcessor(sdkKey, config, errorReporter) {
+function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
   const ep = {};
 
   const userFilter = UserFilter(config),
     summarizer = EventSummarizer(config),
-    userKeysCache = LRUCache(config.userKeysCapacity);
+    userKeysCache = LRUCache(config.userKeysCapacity),
+    mainEventsUri = config.eventsUri + '/bulk',
+    diagnosticEventsUri = config.eventsUri + '/diagnostic';
   
   let queue = [],
     lastKnownPastTime = 0,
+    droppedEvents = 0,
+    deduplicatedUsers = 0,
     exceededCapacity = false,
     shutdown = false,
     flushTimer,
-    flushUsersTimer;
+    flushUsersTimer,
+    diagnosticsTimer;
 
   function enqueue(event) {
     if (queue.length < config.capacity) {
@@ -33,6 +38,7 @@ function EventProcessor(sdkKey, config, errorReporter) {
         exceededCapacity = true;
         config.logger.warn('Exceeded event queue capacity. Increase capacity to avoid dropping events.');
       }
+      droppedEvents++;
     }
   }
 
@@ -138,10 +144,17 @@ function EventProcessor(sdkKey, config, errorReporter) {
     // For each user we haven't seen before, we add an index event - unless this is already
     // an identify event for that user.
     if (!addFullEvent || !config.inlineUsersInEvents) {
-      if (event.user && !userKeysCache.get(event.user.key)) {
-        userKeysCache.set(event.user.key, true);
-        if (event.kind != 'identify') {
-          addIndexEvent = true;
+      if (event.user) {
+        const isIdentify = (event.kind === 'identify');
+        if (userKeysCache.get(event.user.key)) {
+          if (!isIdentify) {
+            deduplicatedUsers++;
+          }
+        } else {
+          userKeysCache.set(event.user.key, true);
+          if (!isIdentify) {
+            addIndexEvent = true;
+          }
         }
       }
     }
@@ -189,16 +202,16 @@ function EventProcessor(sdkKey, config, errorReporter) {
 
       config.logger.debug('Flushing %d events', worklist.length);
 
-      tryPostingEvents(worklist, resolve, reject, true);
+      tryPostingEvents(worklist, mainEventsUri, resolve, reject, true);
     }), callback);
   };
 
-  function tryPostingEvents(events, resolve, reject, canRetry) {
+  function tryPostingEvents(events, uri, resolve, reject, canRetry) {
     const retryOrReject = err => {
       if (canRetry) {
         config.logger && config.logger.warn('Will retry posting events after 1 second');
         setTimeout(() => {
-          tryPostingEvents(events, resolve, reject, false);
+          tryPostingEvents(events, uri, resolve, reject, false);
         }, 1000);
       } else {
         reject(err);
@@ -210,7 +223,7 @@ function EventProcessor(sdkKey, config, errorReporter) {
 
     const options = Object.assign({}, config.tlsParams, {
       method: 'POST',
-      url: config.eventsUri + '/bulk',
+      url: uri,
       headers,
       json: true,
       body: events,
@@ -241,9 +254,14 @@ function EventProcessor(sdkKey, config, errorReporter) {
     });
   }
 
+  function postDiagnosticEvent(event) {
+    tryPostingEvents(event, diagnosticEventsUri, () => {}, () => {}, true);
+  }
+
   ep.close = () => {
     clearInterval(flushTimer);
     clearInterval(flushUsersTimer);
+    diagnosticsTimer && clearInterval(diagnosticsTimer);
   };
 
   flushTimer = setInterval(() => {
@@ -253,6 +271,18 @@ function EventProcessor(sdkKey, config, errorReporter) {
   flushUsersTimer = setInterval(() => {
     userKeysCache.removeAll();
   }, config.userKeysFlushInterval * 1000);
+
+  if (!config.diagnosticOptOut && diagnosticsManager) {
+    const initEvent = diagnosticsManager.createInitEvent();
+    postDiagnosticEvent(initEvent);
+    
+    diagnosticsTimer = setInterval(() => {
+      const statsEvent = diagnosticsManager.createStatsEventAndReset(droppedEvents, deduplicatedUsers, queue.length);
+      droppedEvents = 0;
+      deduplicatedUsers = 0;
+      postDiagnosticEvent(statsEvent);
+    }, config.diagnosticRecordingInterval * 1000);
+  }
 
   return ep;
 }

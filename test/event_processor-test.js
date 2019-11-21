@@ -1,3 +1,4 @@
+const { DiagnosticsManager, DiagnosticId } = require('../diagnostic_events');
 const EventProcessor = require('../event_processor');
 const { createServer, respond } = require('./http_server');
 const { sleepAsync, withCloseable } = require('./async_utils');
@@ -12,6 +13,7 @@ describe('EventProcessor', () => {
     flushInterval: 30,
     userKeysCapacity: 1000,
     userKeysFlushInterval: 300,
+    diagnosticRecordingInterval: 900,
     logger: {
       debug: jest.fn(),
       warn: jest.fn()
@@ -27,14 +29,28 @@ describe('EventProcessor', () => {
   function eventsServerTest(asyncCallback) {
     return async () => withCloseable(createServer, async server => {
       server.forMethodAndPath('post', '/bulk', respond(200));
+      server.forMethodAndPath('post', '/diagnostic', respond(200));
       return await asyncCallback(server);
     });
   }
 
-  async function withEventProcessor(config, server, asyncCallback) {
-    const ep = EventProcessor(sdkKey, Object.assign({}, config, { eventsUri: server.url }));
+  async function withEventProcessor(baseConfig, server, asyncCallback) {
+    const config = Object.assign({}, baseConfig, { eventsUri: server.url, diagnosticOptOut: true });
+    const ep = EventProcessor(sdkKey, config);
     try {
       return await asyncCallback(ep);
+    } finally {
+      ep.close();
+    }
+  }
+
+  async function withDiagnosticEventProcessor(baseConfig, server, asyncCallback) {
+    const config = Object.assign({}, baseConfig, { eventsUri: server.url });
+    const id = DiagnosticId(sdkKey);
+    const manager = DiagnosticsManager(config, id, new Date().getTime());
+    const ep = EventProcessor(sdkKey, config, null, manager);
+    try {
+      return await asyncCallback(ep, id, manager);
     } finally {
       ep.close();
     }
@@ -549,4 +565,41 @@ describe('EventProcessor', () => {
       expect(s.requestCount()).toEqual(2);
     });
   }));
+
+  describe('diagnostic events', () => {
+    it('sends initial diagnostic event', eventsServerTest(async s => {
+      const startTime = new Date().getTime();
+      await withDiagnosticEventProcessor(defaultConfig, s, async (ep, id) => {
+        const req = await s.nextRequest();
+        expect(req.path).toEqual('/diagnostic');
+        const data = JSON.parse(req.body);
+        expect(data.kind).toEqual('diagnostic-init');
+        expect(data.id).toEqual(id);
+        expect(data.creationDate).toBeGreaterThanOrEqual(startTime);
+        expect(data.configuration).toMatchObject({ customEventsURI: true });
+        expect(data.sdk).toMatchObject({ name: 'node-server-sdk' });
+        expect(data.platform).toMatchObject({ name: 'Node' });
+      });
+    }));
+  
+    it('sends periodic diagnostic event', eventsServerTest(async s => {
+      const startTime = new Date().getTime();
+      const config = Object.assign({}, defaultConfig, { diagnosticRecordingInterval: 0.1 });
+      await withDiagnosticEventProcessor(config, s, async (ep, id) => {
+        const req0 = await s.nextRequest();
+        expect(req0.path).toEqual('/diagnostic');
+        
+        const req1 = await s.nextRequest();
+        expect(req1.path).toEqual('/diagnostic');
+        const data = JSON.parse(req1.body);
+        expect(data.kind).toEqual('diagnostic');
+        expect(data.id).toEqual(id);
+        expect(data.creationDate).toBeGreaterThanOrEqual(startTime);
+        expect(data.dataSinceDate).toBeGreaterThanOrEqual(startTime);
+        expect(data.droppedEvents).toEqual(0);
+        expect(data.deduplicatedUsers).toEqual(0);
+        expect(data.eventsInQueue).toEqual(0);
+      });
+    }));
+  });
 });

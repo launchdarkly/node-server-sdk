@@ -60,12 +60,13 @@ const initializedKey = '$checkedInit';
   in the specified order. The store should delete any obsolete items only after writing
   all of the items provided.
 */
-function CachingStoreWrapper(underlyingStore, ttl) {
+function CachingStoreWrapper(underlyingStore, ttl, description) {
   const cache = ttl ? new NodeCache({ stdTTL: ttl }) : null;
   const queue = new UpdateQueue();
   let initialized = false;
 
   this.underlyingStore = underlyingStore;
+  this.description = description;
   
   this.init = (allData, cb) => {
     queue.enqueue(cb => {

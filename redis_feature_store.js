@@ -7,7 +7,8 @@ const noop = function(){};
 
 
 function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
-  return new CachingStoreWrapper(new redisFeatureStoreInternal(redisOpts, prefix, logger), cacheTTL);
+  return new CachingStoreWrapper(new redisFeatureStoreInternal(redisOpts, prefix, logger), cacheTTL,
+    'RedisFeatureStore');
 }
 
 function redisFeatureStoreInternal(redisOpts, prefix, logger) {
