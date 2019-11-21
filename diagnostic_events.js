@@ -3,12 +3,16 @@ const uuidv4 = require('uuid/v4');
 const configuration = require('./configuration');
 const packageJson = require('./package.json');
 
+// An object that maintains information that will go into diagnostic events, and knows how to format
+// those events. It is instantiated by the SDK client, and shared with the event processor.
 function DiagnosticsManager(config, diagnosticId, startTime) {
   let dataSinceDate;
   const acc = {};
 
   dataSinceDate = startTime;
 
+  // Creates the initial event that is sent by the event processor when the SDK starts up. This will not
+  // be repeated during the lifetime of the SDK client.
   acc.createInitEvent = () => ({
     kind: 'diagnostic-init',
     id: diagnosticId,
@@ -18,6 +22,11 @@ function DiagnosticsManager(config, diagnosticId, startTime) {
     platform: makePlatformData()
   });
 
+  // Creates a periodic event containing time-dependent stats, and resets the state of the manager with
+  // regard to those stats.
+  // Note: the reason droppedEvents, deduplicatedUsers, and eventsInQueue are passed into this function,
+  // instead of being properties of the DiagnosticsManager, is that the event processor is the one who's
+  // calling this function and is also the one who's tracking those stats.
   acc.createStatsEventAndReset = (droppedEvents, deduplicatedUsers, eventsInQueue) => {
     const currentTime = new Date().getTime();
     const ret = {
