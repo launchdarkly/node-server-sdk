@@ -318,7 +318,7 @@ describe('StreamProcessor', () => {
     });
   });
 
-  async function testErrorHandling(err, recoverable) {
+  async function testRecoverableError(err) {
     const featureStore = InMemoryFeatureStore();
     const config = { featureStore: featureStore, logger: stubs.stubLogger() };
     const id = DiagnosticId('sdk-key');
@@ -327,14 +327,19 @@ describe('StreamProcessor', () => {
 
     const es = fakeEventSource();
     const sp = createProcessor(config, es, null, manager);
-    
-    const waitForStart = promisifySingle(sp.start)();  
-    es.instance.onerror(err);
-    const errReceived = await waitForStart;
 
-    expect(errReceived).toEqual(err);
-    expect(config.logger.error).toHaveBeenCalledTimes(1);
-    expect(es.closed).toEqual(!recoverable);
+    // Note that the callback for start() will *not* be called; it only reports failure and provides the
+    // error object if it's an unrecovable error.
+    let errReceived;
+    sp.start(e => { errReceived = e; });
+
+    es.instance.onerror(err);
+    await sleepAsync(300);
+
+    expect(config.logger.warn).toHaveBeenCalledTimes(1);
+    expect(config.logger.error).not.toHaveBeenCalled();
+    expect(errReceived).toBeUndefined();
+    expect(es.closed).not.toBeTruthy();
 
     const event = manager.createStatsEventAndReset(0, 0, 0);
     expect(event.streamInits.length).toEqual(1);
@@ -347,7 +352,7 @@ describe('StreamProcessor', () => {
   function testRecoverableHttpError(status) {
     const err = new Error('sorry');
     err.status = status;
-    it('continues retrying after error ' + status, async () => await testErrorHandling(err, true));
+    it('continues retrying after error ' + status, async () => await testRecoverableError(err));
   }
 
   testRecoverableHttpError(400);
@@ -358,10 +363,36 @@ describe('StreamProcessor', () => {
 
   it('continues retrying after I/O error', async () => await testRecoverableError(new Error('sorry')));
 
+  async function testUnrecoverableError(err) {
+    const featureStore = InMemoryFeatureStore();
+    const config = { featureStore: featureStore, logger: stubs.stubLogger() };
+    const id = DiagnosticId('sdk-key');
+    const manager = DiagnosticsManager(config, id, 100000);
+    const startTime = new Date().getTime();
+
+    const es = fakeEventSource();
+    const sp = createProcessor(config, es, null, manager);
+
+    const waitForStart = promisifySingle(sp.start)();  
+    es.instance.onerror(err);
+    const errReceived = await waitForStart;
+
+    expect(errReceived).toEqual(err);
+    expect(config.logger.error).toHaveBeenCalledTimes(1);
+    expect(es.closed).toBe(true);
+
+    const event = manager.createStatsEventAndReset(0, 0, 0);
+    expect(event.streamInits.length).toEqual(1);
+    const si = event.streamInits[0];
+    expect(si.timestamp).toBeGreaterThanOrEqual(startTime);
+    expect(si.failed).toBeTruthy();
+    expect(si.durationMillis).toBeGreaterThanOrEqual(0);
+  }
+  
   function testUnrecoverableHttpError(status) {
     const err = new Error('sorry');
     err.status = status;
-    it('stops retrying after error ' + status, async () => await testErrorHandling(err, false));
+    it('stops retrying after error ' + status, async () => await testUnrecoverableError(err));
   }
 
   testUnrecoverableHttpError(401);
