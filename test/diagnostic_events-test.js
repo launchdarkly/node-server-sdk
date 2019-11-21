@@ -121,4 +121,32 @@ describe('DiagnosticsManager', () => {
     const fakeStore = { description: 'WeirdStore' };
     verifyConfig({ featureStore: fakeStore }, { featureStore: fakeStore.description });
   });
+
+  it('creates periodic event from stats, then resets', () => {
+    const manager = DiagnosticsManager(defaultConfig, id, 100000);
+    const timeBeforeReset = new Date().getTime();
+    const event1 = manager.createStatsEventAndReset(4, 5, 6);
+
+    expect(event1).toMatchObject({
+      kind: 'diagnostic',
+      dataSinceDate: 100000,
+      droppedEvents: 4,
+      deduplicatedUsers: 5,
+      eventsInQueue: 6,
+    });
+
+    expect(event1.creationDate).toBeGreaterThanOrEqual(timeBeforeReset);
+
+    const event2 = manager.createStatsEventAndReset(1, 2, 3);
+
+    expect(event2).toMatchObject({
+      kind: 'diagnostic',
+      dataSinceDate: event1.creationDate,
+      droppedEvents: 1,
+      deduplicatedUsers: 2,
+      eventsInQueue: 3,
+    });
+
+    expect(event2.creationDate).toBeGreaterThanOrEqual(event1.creationDate);
+  });
 });
