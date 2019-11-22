@@ -69,7 +69,6 @@ describe('DiagnosticsManager', () => {
       customEventsURI: false,
       customStreamURI: false,
       diagnosticRecordingIntervalMillis: 900000,
-      eventReportingDisabled: false,
       eventsCapacity: 10000,
       eventsFlushIntervalMillis: 5000,
       inlineUsersInEvents: false,
@@ -105,7 +104,6 @@ describe('DiagnosticsManager', () => {
     verifyConfig({ allAttributesPrivate: true }, { allAttributesPrivate: true });
     verifyConfig({ timeout: 6 }, { connectTimeoutMillis: 6000, socketTimeoutMillis: 6000 });
     verifyConfig({ diagnosticRecordingInterval: 999 }, { diagnosticRecordingIntervalMillis: 999000 });
-    verifyConfig({ sendEvents: false }, { eventReportingDisabled: true });
     verifyConfig({ capacity: 999 }, { eventsCapacity: 999 });
     verifyConfig({ flushInterval: 33 }, { eventsFlushIntervalMillis: 33000 });
     verifyConfig({ stream: false }, { streamingDisabled: true });
