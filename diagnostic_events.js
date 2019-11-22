@@ -105,7 +105,6 @@ function makeConfigData(config) {
     usingRelayDaemon: !!config.useLdd,
     offline: !!config.offline,
     allAttributesPrivate: !!config.allAttributesPrivate,
-    eventReportingDisabled: !config.sendEvents,
     inlineUsersInEvents: !!config.inlineUsersInEvents,
     userKeysCapacity: config.userKeysCapacity,
     userKeysFlushIntervalMillis: secondsToMillis(config.userKeysFlushInterval),

@@ -73,8 +73,7 @@ const newClient = function(sdkKey, originalConfig) {
 
   const maybeReportError = createErrorReporter(client, config.logger);
 
-  const diagnosticId = diagnostics.DiagnosticId(sdkKey);
-  const diagnosticsManager = diagnostics.DiagnosticsManager(config, diagnosticId, new Date().getTime());
+  let diagnosticsManager = null;
 
   eventFactoryDefault = EventFactory(false);
   eventFactoryWithReasons = EventFactory(true);
@@ -85,6 +84,8 @@ const newClient = function(sdkKey, originalConfig) {
     if (config.offline || !config.sendEvents) {
       eventProcessor = NullEventProcessor();
     } else {
+      const diagnosticId = diagnostics.DiagnosticId(sdkKey);
+      diagnosticsManager = diagnostics.DiagnosticsManager(config, diagnosticId, new Date().getTime());
       eventProcessor = EventProcessor(sdkKey, config, maybeReportError, diagnosticsManager);
     }
   }
