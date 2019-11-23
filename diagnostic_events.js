@@ -7,6 +7,7 @@ const packageJson = require('./package.json');
 // those events. It is instantiated by the SDK client, and shared with the event processor.
 function DiagnosticsManager(config, diagnosticId, startTime) {
   let dataSinceDate = startTime;
+  let streamInits = [];
   const acc = {};
 
   // Creates the initial event that is sent by the event processor when the SDK starts up. This will not
@@ -19,6 +20,19 @@ function DiagnosticsManager(config, diagnosticId, startTime) {
     configuration: makeConfigData(config),
     platform: makePlatformData()
   });
+
+  // Records a stream connection attempt (called by the stream processor).
+  // timestamp: Time of the *beginning* of the connection attempt.
+  // failed: True if the connection failed, or we got a read timeout before receiving a "put".
+  // durationMillis: Elapsed time between starting timestamp and when we either gave up/lost the
+  //   connection or received a successful "put".
+  acc.recordStreamInit = (timestamp, failed, durationMillis) => {
+    const item = { timestamp, durationMillis };
+    if (failed) {
+      item.failed = true;  // omit this property if false
+    }
+    streamInits.push(item);
+  };
 
   // Creates a periodic event containing time-dependent stats, and resets the state of the manager with
   // regard to those stats.
@@ -34,9 +48,11 @@ function DiagnosticsManager(config, diagnosticId, startTime) {
       dataSinceDate,
       droppedEvents,
       deduplicatedUsers,
-      eventsInQueue
+      eventsInQueue,
+      streamInits
     };
     dataSinceDate = currentTime;
+    streamInits = [];
     return ret;
   };
 
