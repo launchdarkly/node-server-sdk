@@ -43,6 +43,7 @@ describe('LDClient TLS configuration', () => {
         stream: false,
         logger: stubs.stubLogger(),
         tlsParams: { ca: certData.cert },
+        diagnosticOptOut: true,
       };
       
       await withCloseable(LDClient.init(sdkKey, config), async client => {
@@ -60,6 +61,7 @@ describe('LDClient TLS configuration', () => {
         sendEvents: false,
         stream: false,
         logger: stubs.stubLogger(),
+        diagnosticOptOut: true,
       };
 
       await withCloseable(LDClient.init(sdkKey, config), async client => {
@@ -83,6 +85,7 @@ describe('LDClient TLS configuration', () => {
           sendEvents: false,
           logger: logger,
           tlsParams: { ca: certData.cert },
+          diagnosticOptOut: true,
         };
 
         await withCloseable(LDClient.init(sdkKey, config), async client => {
@@ -103,6 +106,7 @@ describe('LDClient TLS configuration', () => {
         stream: false,
         logger: stubs.stubLogger(),
         tlsParams: { ca: certData.cert },
+        diagnosticOptOut: true,
       };
 
       await withCloseable(LDClient.init(sdkKey, config), async client => {

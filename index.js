@@ -9,6 +9,7 @@ const PollingProcessor = require('./polling');
 const StreamingProcessor = require('./streaming');
 const FlagsStateBuilder = require('./flags_state');
 const configuration = require('./configuration');
+const diagnostics = require('./diagnostic_events');
 const evaluate = require('./evaluate_flag');
 const messages = require('./messages');
 const tunnel = require('tunnel');
@@ -72,6 +73,8 @@ const newClient = function(sdkKey, originalConfig) {
 
   const maybeReportError = createErrorReporter(client, config.logger);
 
+  let diagnosticsManager = null;
+
   eventFactoryDefault = EventFactory(false);
   eventFactoryWithReasons = EventFactory(true);
 
@@ -81,7 +84,9 @@ const newClient = function(sdkKey, originalConfig) {
     if (config.offline || !config.sendEvents) {
       eventProcessor = NullEventProcessor();
     } else {
-      eventProcessor = EventProcessor(sdkKey, config, maybeReportError);
+      const diagnosticId = diagnostics.DiagnosticId(sdkKey);
+      diagnosticsManager = diagnostics.DiagnosticsManager(config, diagnosticId, new Date().getTime());
+      eventProcessor = EventProcessor(sdkKey, config, maybeReportError, diagnosticsManager);
     }
   }
 

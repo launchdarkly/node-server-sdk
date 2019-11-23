@@ -12,7 +12,7 @@ async function withAllServers(asyncCallback) {
           baseUri: pollingServer.url,
           streamUri: streamingServer.url,
           eventsUri: eventsServer.url,
-          logger: stubLogger()
+          logger: stubLogger(),
         };
         return await asyncCallback(servers, baseConfig);
       })
@@ -53,7 +53,11 @@ describe('LDClient end-to-end', () => {
 
       expect(servers.polling.requestCount()).toEqual(1);
       expect(servers.streaming.requestCount()).toEqual(0);
-      expect(servers.events.requestCount()).toEqual(1);
+      expect(servers.events.requestCount()).toEqual(2);
+      const req0 = await servers.events.nextRequest();
+      expect(req0.path).toEqual('/diagnostic');
+      const req1 = await servers.events.nextRequest();
+      expect(req1.path).toEqual('/bulk');
     });
   });
   
@@ -94,7 +98,11 @@ describe('LDClient end-to-end', () => {
 
         expect(servers.polling.requestCount()).toEqual(0);
         expect(servers.streaming.requestCount()).toEqual(1);
-        expect(servers.events.requestCount()).toEqual(1);
+        expect(servers.events.requestCount()).toEqual(2);
+        const req0 = await servers.events.nextRequest();
+        expect(req0.path).toEqual('/diagnostic');
+        const req1 = await servers.events.nextRequest();
+        expect(req1.path).toEqual('/bulk');
       });
     });
   });
