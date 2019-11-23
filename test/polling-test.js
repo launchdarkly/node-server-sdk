@@ -1,7 +1,7 @@
 const InMemoryFeatureStore = require('../feature_store');
 const PollingProcessor = require('../polling');
 const dataKind = require('../versioned_data_kind');
-const { asyncify, promisify, sleepAsync } = require('./async_utils');
+const { promisify, promisifySingle, sleepAsync } = require('./async_utils');
 const stubs = require('./stubs');
 
 describe('PollingProcessor', () => {
@@ -59,9 +59,9 @@ describe('PollingProcessor', () => {
 
     await promisify(processor.start)();
 
-    const flags = await asyncify(cb => store.all(dataKind.features, cb));
+    const flags = await promisifySingle(store.all)(dataKind.features);
     expect(flags).toEqual(allData.flags);
-    const segments = await asyncify(cb => store.all(dataKind.segments, cb));
+    const segments = await promisifySingle(store.all)(dataKind.segments);
     expect(segments).toEqual(allData.segments);
   });
 

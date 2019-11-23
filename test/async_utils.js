@@ -9,11 +9,12 @@ function promisify(f) {
       f(...args, (err, result) => err ? reject(err) : resolve(result)));
 }
 
-// Converts a function that takes a single-parameter callback (like most SDK methods) into a Promise.
-// This is different from util.promisify, which uses Node-style callbacks with two parameters.
-// Usage: await asyncify(callback => doSomething(params, callback))
-function asyncify(f) {
-  return new Promise(resolve => f(resolve));
+// Similar to promisify, but for functions whose callback takes only a single parameter (result)
+// instead of Node-style (err, result). Some internal LaunchDarkly code uses these semantics.
+// Usage: await promisifySingle(doSomething)(allParamsExceptCallback);
+function promisifySingle(f) {
+  return (...args) =>
+    new Promise(resolve => f(...args, resolve));
 }
 
 // Usage: await sleepAsync(5000)
@@ -92,8 +93,8 @@ function AsyncQueue() {
 }
 
 module.exports = {
-  asyncify,
   promisify,
+  promisifySingle,
   sleepAsync,
   withCloseable,
   AsyncQueue,

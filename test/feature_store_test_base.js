@@ -1,5 +1,5 @@
 var dataKind = require('../versioned_data_kind');
-const { asyncify } = require('./async_utils');
+const { promisifySingle } = require('./async_utils');
 
 // The following tests should be run on every feature store implementation. If this type of
 // store supports caching, the tests should be run once with caching enabled and once with
@@ -37,13 +37,13 @@ function baseFeatureStoreTests(makeStore, clearExistingData, isCached, makeStore
       'foo': feature1,
       'bar': feature2
     };
-    await asyncify(cb => store.init(initData, cb));
+    await promisifySingle(store.init)(initData);
     return store;
   }
 
   it('is initialized after calling init()', async () => {
     var store = await initedStore();
-    var result = await asyncify(cb => store.initialized(cb));
+    var result = await promisifySingle(store.initialized)();
     expect(result).toBe(true);
   });
 
@@ -58,10 +58,10 @@ function baseFeatureStoreTests(makeStore, clearExistingData, isCached, makeStore
     initData[dataKind.features.namespace] = flags;
     initData[dataKind.segments.namespace] = segments;
 
-    await asyncify(cb => store.init(initData, cb));
-    var items = await asyncify(cb => store.all(dataKind.features, cb));
+    await promisifySingle(store.init)(initData);
+    var items = await promisifySingle(store.all)(dataKind.features);
     expect(items).toEqual(flags);
-    items = await asyncify(cb => store.all(dataKind.segments, cb));
+    items = await promisifySingle(store.all)(dataKind.segments);
     expect(items).toEqual(segments);
 
     var newFlags = { first: { key: 'first', version: 3 } };
@@ -70,10 +70,10 @@ function baseFeatureStoreTests(makeStore, clearExistingData, isCached, makeStore
     initData[dataKind.features.namespace] = newFlags;
     initData[dataKind.segments.namespace] = newSegments;
 
-    await asyncify(cb => store.init(initData, cb));
-    items = await asyncify(cb => store.all(dataKind.features, cb));
+    await promisifySingle(store.init)(initData);
+    items = await promisifySingle(store.all)(dataKind.features);
     expect(items).toEqual(newFlags);
-    items = await asyncify(cb => store.all(dataKind.segments, cb));
+    items = await promisifySingle(store.all)(dataKind.segments);
     expect(items).toEqual(newSegments);
   });
 
@@ -83,11 +83,11 @@ function baseFeatureStoreTests(makeStore, clearExistingData, isCached, makeStore
         var store1 = makeStore();
         var store2 = makeStore();
 
-        var result = await asyncify(cb => store1.initialized(cb));
+        var result = await promisifySingle(store1.initialized)();
         expect(result).toBe(false);
 
-        await asyncify(cb => store2.init(initData, cb));
-        result = await asyncify(cb => store1.initialized(cb));
+        await promisifySingle(store2.init)(initData);
+        result = await promisifySingle(store1.initialized)();
         expect(result).toBe(true);
       });
     }
@@ -102,13 +102,13 @@ function baseFeatureStoreTests(makeStore, clearExistingData, isCached, makeStore
       it('is independent from other instances with different prefixes', async () => {
         var flag = { key: 'flag', version: 1 };
         var storeA = makeStoreWithPrefix('a');
-        await asyncify(cb => storeA.init({ features: { flag: flag } }, cb));
+        await promisifySingle(storeA.init)({ features: { flag: flag } });
         var storeB = makeStoreWithPrefix('b');
-        await asyncify(cb => storeB.init({ features: { } }, cb));
+        await promisifySingle(storeB.init)({ features: { } });
         var storeB1 = makeStoreWithPrefix('b');  // this ensures we're not just reading cached data
-        var item = await asyncify(cb => storeB1.get(dataKind.features, 'flag', cb));
+        var item = await promisifySingle(storeB1.get)(dataKind.features, 'flag');
         expect(item).toBe(null);
-        item = await asyncify(cb => storeA.get(dataKind.features, 'flag', cb));
+        item = await promisifySingle(storeA.get)(dataKind.features, 'flag');
         expect(item).toEqual(flag);
       });
     }
@@ -116,19 +116,19 @@ function baseFeatureStoreTests(makeStore, clearExistingData, isCached, makeStore
 
   it('gets existing feature', async () => {
     var store = await initedStore();
-    var result = await asyncify(cb => store.get(dataKind.features, feature1.key, cb));
+    var result = await promisifySingle(store.get)(dataKind.features, feature1.key);
     expect(result).toEqual(feature1);
   });
 
   it('does not get nonexisting feature', async () => {
     var store = await initedStore();
-    var result = await asyncify(cb => store.get(dataKind.features, 'biz', cb));
+    var result = await promisifySingle(store.get)(dataKind.features, 'biz');
     expect(result).toBe(null);
   });
 
   it('gets all features', async () => {
     var store = await initedStore();
-    var result = await asyncify(cb => store.all(dataKind.features, cb));
+    var result = await promisifySingle(store.all)(dataKind.features);
     expect(result).toEqual({
       'foo': feature1,
       'bar': feature2
@@ -138,24 +138,24 @@ function baseFeatureStoreTests(makeStore, clearExistingData, isCached, makeStore
   it('upserts with newer version', async () => {
     var newVer = { key: feature1.key, version: feature1.version + 1 };
     var store = await initedStore();
-    await asyncify(cb => store.upsert(dataKind.features, newVer, cb));
-    var result = await asyncify(cb => store.get(dataKind.features, feature1.key, cb));
+    await promisifySingle(store.upsert)(dataKind.features, newVer);
+    var result = await promisifySingle(store.get)(dataKind.features, feature1.key);
     expect(result).toEqual(newVer);
   });
 
   it('does not upsert with older version', async () => {
     var oldVer = { key: feature1.key, version: feature1.version - 1 };
     var store = await initedStore();
-    await asyncify(cb => store.upsert(dataKind.features, oldVer, cb));
-    var result = await asyncify(cb => store.get(dataKind.features, feature1.key, cb));
+    await promisifySingle(store.upsert)(dataKind.features, oldVer);
+    var result = await promisifySingle(store.get)(dataKind.features, feature1.key);
     expect(result).toEqual(feature1);
   });
 
   it('upserts new feature', async () => {
     var newFeature = { key: 'biz', version: 99 };
     var store = await initedStore();
-    await asyncify(cb => store.upsert(dataKind.features, newFeature, cb));
-    var result = await asyncify(cb => store.get(dataKind.features, newFeature.key, cb));
+    await promisifySingle(store.upsert)(dataKind.features, newFeature);
+    var result = await promisifySingle(store.get)(dataKind.features, newFeature.key);
     expect(result).toEqual(newFeature);
   });
 
@@ -183,30 +183,30 @@ function baseFeatureStoreTests(makeStore, clearExistingData, isCached, makeStore
 
   it('deletes with newer version', async () => {
     var store = await initedStore();
-    await asyncify(cb => store.delete(dataKind.features, feature1.key, feature1.version + 1, cb));
-    var result = await asyncify(cb => store.get(dataKind.features, feature1.key, cb));
+    await promisifySingle(store.delete)(dataKind.features, feature1.key, feature1.version + 1);
+    var result = await promisifySingle(store.get)(dataKind.features, feature1.key);
     expect(result).toBe(null);
   });
 
   it('does not delete with older version', async () => {
     var store = await initedStore();
-    await asyncify(cb => store.delete(dataKind.features, feature1.key, feature1.version - 1, cb));
-    var result = await asyncify(cb => store.get(dataKind.features, feature1.key, cb));
+    await promisifySingle(store.delete)(dataKind.features, feature1.key, feature1.version - 1);
+    var result = await promisifySingle(store.get)(dataKind.features, feature1.key);
     expect(result).not.toBe(null);
   });
 
   it('allows deleting unknown feature', async () => {
     var store = await initedStore();
-    await asyncify(cb => store.delete(dataKind.features, 'biz', 99, cb));
-    var result = await asyncify(cb => store.get(dataKind.features, 'biz', cb));
+    await promisifySingle(store.delete)(dataKind.features, 'biz', 99);
+    var result = await promisifySingle(store.get)(dataKind.features, 'biz');
     expect(result).toBe(null);
   });
 
   it('does not upsert older version after delete', async () => {
     var store = await initedStore();
-    await asyncify(cb => store.delete(dataKind.features, feature1.key, feature1.version + 1, cb));
-    await asyncify(cb => store.upsert(dataKind.features, feature1, cb));
-    var result = await asyncify(cb => store.get(dataKind.features, feature1.key, cb));
+    await promisifySingle(store.delete)(dataKind.features, feature1.key, feature1.version + 1);
+    await promisifySingle(store.upsert)(dataKind.features, feature1);
+    var result = await promisifySingle(store.get)(dataKind.features, feature1.key);
     expect(result).toBe(null);
   });
 }
@@ -234,7 +234,7 @@ function concurrentModificationTests(makeStore, makeStoreWithHook) {
   async function initStore(store) {
     var allData = { features: {} };
     allData['features'][flagKey] = makeFlagWithVersion(initialVersion);
-    await asyncify(cb => store.init(allData, cb));
+    await promisifySingle(store.init)(allData);
   }
 
   function writeCompetingVersions(flagVersionsToWrite) {
@@ -257,8 +257,8 @@ function concurrentModificationTests(makeStore, makeStoreWithHook) {
     var myStore = makeStoreWithHook(writeCompetingVersions(competingStoreVersions));
 
     await initStore(myStore);
-    await asyncify(cb => myStore.upsert(dataKind.features, makeFlagWithVersion(myDesiredVersion), cb));
-    var result = await asyncify(cb => myStore.get(dataKind.features, flagKey, cb));
+    await promisifySingle(myStore.upsert)(dataKind.features, makeFlagWithVersion(myDesiredVersion));
+    var result = await promisifySingle(myStore.get)(dataKind.features, flagKey);
     expect(result.version).toEqual(myDesiredVersion);
   });
 
@@ -269,8 +269,8 @@ function concurrentModificationTests(makeStore, makeStoreWithHook) {
     var myStore = makeStoreWithHook(writeCompetingVersions([ competingStoreVersion ]));
 
     await initStore(myStore);
-    await asyncify(cb => myStore.upsert(dataKind.features, makeFlagWithVersion(myDesiredVersion), cb));
-    var result = await asyncify(cb => myStore.get(dataKind.features, flagKey, cb));
+    await promisifySingle(myStore.upsert)(dataKind.features, makeFlagWithVersion(myDesiredVersion));
+    var result = await promisifySingle(myStore.get)(dataKind.features, flagKey);
     expect(result.version).toEqual(competingStoreVersion);
   });
 }
