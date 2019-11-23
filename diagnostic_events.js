@@ -6,11 +6,9 @@ const packageJson = require('./package.json');
 // An object that maintains information that will go into diagnostic events, and knows how to format
 // those events. It is instantiated by the SDK client, and shared with the event processor.
 function DiagnosticsManager(config, diagnosticId, startTime) {
-  let dataSinceDate;
+  let dataSinceDate = startTime;
   let streamInits = [];
   const acc = {};
-
-  dataSinceDate = startTime;
 
   // Creates the initial event that is sent by the event processor when the SDK starts up. This will not
   // be repeated during the lifetime of the SDK client.
@@ -47,11 +45,11 @@ function DiagnosticsManager(config, diagnosticId, startTime) {
       kind: 'diagnostic',
       id: diagnosticId,
       creationDate: currentTime,
-      dataSinceDate: dataSinceDate,
-      droppedEvents: droppedEvents,
-      deduplicatedUsers: deduplicatedUsers,
-      eventsInQueue: eventsInQueue,
-      streamInits: streamInits
+      dataSinceDate,
+      droppedEvents,
+      deduplicatedUsers,
+      eventsInQueue,
+      streamInits
     };
     dataSinceDate = currentTime;
     streamInits = [];
