@@ -1,7 +1,7 @@
 const InMemoryFeatureStore = require('../feature_store');
 const StreamProcessor = require('../streaming');
 const dataKind = require('../versioned_data_kind');
-const { promisifySingle, sleepAsync } = require('./async_utils');
+const { promisifySingle, sleepAsync } = require('launchdarkly-js-test-helpers');
 const stubs = require('./stubs');
 
 describe('StreamProcessor', () => {

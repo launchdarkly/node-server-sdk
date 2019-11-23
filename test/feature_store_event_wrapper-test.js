@@ -2,7 +2,7 @@ const EventEmitter = require('events').EventEmitter;
 const FeatureStoreEventWrapper = require('../feature_store_event_wrapper');
 const InMemoryFeatureStore = require('../feature_store');
 const dataKind = require('../versioned_data_kind');
-const { AsyncQueue, promisifySingle } = require('./async_utils');
+const { AsyncQueue, promisifySingle } = require('launchdarkly-js-test-helpers');
 
 describe('FeatureStoreEventWrapper', () => {
   function listenAndStoreEvents(emitter, queue, eventName) {
@@ -21,7 +21,7 @@ describe('FeatureStoreEventWrapper', () => {
       segments: {}
     };
     const emitter = new EventEmitter();
-    const queue = AsyncQueue();
+    const queue = new AsyncQueue();
     listenAndStoreEvents(emitter, queue, 'update');
     listenAndStoreEvents(emitter, queue, 'update:a');
     listenAndStoreEvents(emitter, queue, 'update:b');
@@ -55,7 +55,7 @@ describe('FeatureStoreEventWrapper', () => {
       segments: {}
     };
     const emitter = new EventEmitter();
-    const queue = AsyncQueue();
+    const queue = new AsyncQueue();
     listenAndStoreEvents(emitter, queue, 'update');
     listenAndStoreEvents(emitter, queue, 'update:a');
     listenAndStoreEvents(emitter, queue, 'update:b');
@@ -90,7 +90,7 @@ describe('FeatureStoreEventWrapper', () => {
       segments: {}
     };
     const emitter = new EventEmitter();
-    const queue = AsyncQueue();
+    const queue = new AsyncQueue();
     listenAndStoreEvents(emitter, queue, 'update');
     listenAndStoreEvents(emitter, queue, 'update:a');
 
@@ -118,7 +118,7 @@ describe('FeatureStoreEventWrapper', () => {
       segments: {}
     };
     const emitter = new EventEmitter();
-    const queue = AsyncQueue();
+    const queue = new AsyncQueue();
     listenAndStoreEvents(emitter, queue, 'update');
     listenAndStoreEvents(emitter, queue, 'update:a');
 
@@ -155,7 +155,7 @@ describe('FeatureStoreEventWrapper', () => {
       }
     };
     const emitter = new EventEmitter();
-    const queue = AsyncQueue();
+    const queue = new AsyncQueue();
     listenAndStoreEvents(emitter, queue, 'update');
 
     const wrapper = FeatureStoreEventWrapper(store, emitter);

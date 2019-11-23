@@ -48,7 +48,7 @@
     "eslint-formatter-pretty": "2.1.1",
     "jest": "24.7.1",
     "jest-junit": "6.3.0",
-    "selfsigned": "1.10.4",
+    "launchdarkly-js-test-helpers": "0.0.1",
     "tmp": "0.0.33",
     "typescript": "3.0.1"
   },

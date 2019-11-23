@@ -1,5 +1,5 @@
 var dataKind = require('../versioned_data_kind');
-const { promisifySingle } = require('./async_utils');
+const { promisifySingle } = require('launchdarkly-js-test-helpers');
 
 // The following tests should be run on every feature store implementation. If this type of
 // store supports caching, the tests should be run once with caching enabled and once with

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const tmp = require('tmp');
 const dataKind = require('../versioned_data_kind');
-const { promisify, promisifySingle, sleepAsync } = require('./async_utils');
+const { promisify, promisifySingle, sleepAsync } = require('launchdarkly-js-test-helpers');
 const { stubLogger } = require('./stubs');
 
 const LaunchDarkly = require('../index');

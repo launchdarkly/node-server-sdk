@@ -1,12 +1,11 @@
 const LDClient = require('../index.js');
-import { AsyncQueue, sleepAsync, withCloseable } from './async_utils';
-import { createServer, respond, respondJson, respondSSE } from './http_server';
+import { AsyncQueue, TestHttpHandlers, TestHttpServer, withCloseable } from 'launchdarkly-js-test-helpers';
 import { stubLogger } from './stubs';
 
 async function withAllServers(asyncCallback) {
-  return await withCloseable(createServer, async pollingServer =>
-    withCloseable(createServer, async streamingServer =>
-      withCloseable(createServer, async eventsServer => {
+  return await withCloseable(TestHttpServer.start, async pollingServer =>
+    withCloseable(TestHttpServer.start, async streamingServer =>
+      withCloseable(TestHttpServer.start, async eventsServer => {
         const servers = { polling: pollingServer, streaming: streamingServer, events: eventsServer };
         const baseConfig = {
           baseUri: pollingServer.url,
@@ -37,8 +36,8 @@ describe('LDClient end-to-end', () => {
 
   it('starts in polling mode', async () => {
     await withAllServers(async (servers, config) => {
-      servers.polling.forMethodAndPath('get', '/sdk/latest-all', respondJson(allData));
-      servers.events.forMethodAndPath('post', '/bulk', respond(200));
+      servers.polling.forMethodAndPath('get', '/sdk/latest-all', TestHttpHandlers.respondJson(allData));
+      servers.events.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(200));
 
       config.stream = false;
       await withCloseable(LDClient.init(sdkKey, config), async client => {
@@ -59,8 +58,8 @@ describe('LDClient end-to-end', () => {
   
   it('fails in polling mode with 401 error', async () => {
     await withAllServers(async (servers, config) => {
-      servers.polling.forMethodAndPath('get', '/sdk/latest-all', respond(401));
-      servers.events.forMethodAndPath('post', '/bulk', respond(200));
+      servers.polling.forMethodAndPath('get', '/sdk/latest-all', TestHttpHandlers.respond(401));
+      servers.events.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(200));
 
       config.stream = false;
 
@@ -76,11 +75,11 @@ describe('LDClient end-to-end', () => {
 
   it('starts in streaming mode', async () => {
     await withAllServers(async (servers, config) => {
-      const streamEvent = { type: 'put', data: { data: allData } };
-      await withCloseable(AsyncQueue(), async events => {
+      const streamEvent = { type: 'put', data: JSON.stringify({ data: allData }) };
+      await withCloseable(new AsyncQueue(), async events => {
         events.add(streamEvent);
-        servers.streaming.forMethodAndPath('get', '/all', respondSSE(events));
-        servers.events.forMethodAndPath('post', '/bulk', respond(200));
+        servers.streaming.forMethodAndPath('get', '/all', TestHttpHandlers.sseStream(events));
+        servers.events.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(200));
 
         await withCloseable(LDClient.init(sdkKey, config), async client => {
           await client.waitForInitialization();
@@ -101,8 +100,8 @@ describe('LDClient end-to-end', () => {
 
   it('fails in streaming mode with 401 error', async () => {
     await withAllServers(async (servers, config) => {
-      servers.streaming.forMethodAndPath('get', '/all', respond(401));
-      servers.events.forMethodAndPath('post', '/bulk', respond(200));
+      servers.streaming.forMethodAndPath('get', '/all', TestHttpHandlers.respond(401));
+      servers.events.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(200));
 
       await withCloseable(LDClient.init(sdkKey, config), async client => {
         await expect(client.waitForInitialization()).rejects.toThrow();

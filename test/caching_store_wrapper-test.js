@@ -1,7 +1,7 @@
 var CachingStoreWrapper = require('../caching_store_wrapper');
 var features = require('../versioned_data_kind').features;
 var segments = require('../versioned_data_kind').segments;
-const { promisifySingle, sleepAsync } = require('./async_utils');
+const { promisifySingle, sleepAsync } = require('launchdarkly-js-test-helpers/dist/async');
 
 function MockCore() {
   const c = {

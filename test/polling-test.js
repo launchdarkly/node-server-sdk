@@ -1,7 +1,7 @@
 const InMemoryFeatureStore = require('../feature_store');
 const PollingProcessor = require('../polling');
 const dataKind = require('../versioned_data_kind');
-const { promisify, promisifySingle, sleepAsync } = require('./async_utils');
+const { promisify, promisifySingle, sleepAsync } = require('launchdarkly-js-test-helpers');
 const stubs = require('./stubs');
 
 describe('PollingProcessor', () => {
