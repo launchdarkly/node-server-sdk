@@ -14,7 +14,7 @@ exports.missingUserKeyNoEvent = () => 'User was unspecified or had no key; event
 exports.unknownOption = name => 'Ignoring unknown config option "' + name + '"';
 
 exports.wrongOptionType = (name, expectedType, actualType) =>
-  'Config option "' + name + '" should be a ' + expectedType + ', got ' + actualType + ', using default value';
+  'Config option "' + name + '" should be of type ' + expectedType + ', got ' + actualType + ', using default value';
 
-exports.wrongOptionTypeBoolean = (name, expectedType, actualType) =>
-  'Config option "' + name + '" should be a ' + expectedType + ', got ' + actualType + ', converting to boolean';
+exports.wrongOptionTypeBoolean = (name, actualType) =>
+  'Config option "' + name + '" should be a boolean, got ' + actualType + ', converting to boolean';
