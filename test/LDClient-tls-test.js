@@ -1,48 +1,28 @@
-import * as selfsigned from 'selfsigned';
-
 import * as LDClient from '../index';
-import { AsyncQueue, sleepAsync, withCloseable } from './async_utils';
-import { createServer, respond, respondJson, respondSSE } from './http_server';
+
+import {
+  AsyncQueue,
+  sleepAsync,
+  TestHttpHandlers,
+  TestHttpServer,
+  withCloseable
+} from 'launchdarkly-js-test-helpers';
 import * as stubs from './stubs';
 
 describe('LDClient TLS configuration', () => {
   const sdkKey = 'secret';
   let logger = stubs.stubLogger();
-  let certData;
-
-  beforeAll(async () => {
-    certData = await makeSelfSignedPems();
-  });
-
-  async function createSecureServer() {
-    const serverOptions = { key: certData.private, cert: certData.cert, ca: certData.public };
-    return await createServer(true, serverOptions);
-  }
-
-  async function makeSelfSignedPems() {
-    const certAttrs = [{ name: 'commonName', value: 'localhost' }];
-    const certOptions = {
-      // This part is based on code within the selfsigned package
-      extensions: [
-        {
-          name: 'subjectAltName',
-          altNames: [{ type: 6, value: 'https://localhost' }],
-        },
-      ],
-    };
-    return await selfsigned.generate(certAttrs, certOptions);
-  }
 
   it('can connect via HTTPS to a server with a self-signed certificate, if CA is specified', async () => {
-    await withCloseable(createSecureServer, async server => {
-      server.forMethodAndPath('get', '/sdk/latest-all', respondJson({}));
+    await withCloseable(TestHttpServer.startSecure, async server => {
+      server.forMethodAndPath('get', '/sdk/latest-all', TestHttpHandlers.respondJson({}));
 
       const config = {
         baseUri: server.url,
         sendEvents: false,
         stream: false,
         logger: stubs.stubLogger(),
-        tlsParams: { ca: certData.cert },
+        tlsParams: { ca: server.certificate },
       };
       
       await withCloseable(LDClient.init(sdkKey, config), async client => {
@@ -52,8 +32,8 @@ describe('LDClient TLS configuration', () => {
   });
 
   it('cannot connect via HTTPS to a server with a self-signed certificate, using default config', async () => {
-    await withCloseable(createSecureServer, async server => {
-      server.forMethodAndPath('get', '/sdk/latest-all', respondJson({}));
+    await withCloseable(TestHttpServer.startSecure, async server => {
+      server.forMethodAndPath('get', '/sdk/latest-all', TestHttpHandlers.respondJson({}));
 
       const config = {
         baseUri: server.url,
@@ -71,18 +51,18 @@ describe('LDClient TLS configuration', () => {
   });
 
   it('can use custom TLS options for streaming as well as polling', async () => {
-    await withCloseable(createSecureServer, async server => {
+    await withCloseable(TestHttpServer.startSecure, async server => {
       const eventData = { data: { flags: { flag: { version: 1 } }, segments: {} } };
-      await withCloseable(AsyncQueue(), async events => {
-        events.add({ type: 'put', data: eventData });
-        server.forMethodAndPath('get', '/stream/all', respondSSE(events));
+      await withCloseable(new AsyncQueue(), async events => {
+        events.add({ type: 'put', data: JSON.stringify(eventData) });
+        server.forMethodAndPath('get', '/stream/all', TestHttpHandlers.sseStream(events));
 
         const config = {
           baseUri: server.url,
           streamUri: server.url + '/stream',
           sendEvents: false,
           logger: logger,
-          tlsParams: { ca: certData.cert },
+          tlsParams: { ca: server.certificate },
         };
 
         await withCloseable(LDClient.init(sdkKey, config), async client => {
@@ -93,16 +73,16 @@ describe('LDClient TLS configuration', () => {
   });
 
   it('can use custom TLS options for posting events', async () => {
-    await withCloseable(createSecureServer, async server => {
-      server.forMethodAndPath('post', '/events/bulk', respond(200));
-      server.forMethodAndPath('get', '/sdk/latest-all', respondJson({}));
+    await withCloseable(TestHttpServer.startSecure, async server => {
+      server.forMethodAndPath('post', '/events/bulk', TestHttpHandlers.respond(200));
+      server.forMethodAndPath('get', '/sdk/latest-all', TestHttpHandlers.respondJson({}));
 
       const config = {
         baseUri: server.url,
         eventsUri: server.url + '/events',
         stream: false,
         logger: stubs.stubLogger(),
-        tlsParams: { ca: certData.cert },
+        tlsParams: { ca: server.certificate },
       };
 
       await withCloseable(LDClient.init(sdkKey, config), async client => {

@@ -1,6 +1,5 @@
 const EventProcessor = require('../event_processor');
-const { createServer, respond } = require('./http_server');
-const { sleepAsync, withCloseable } = require('./async_utils');
+const { sleepAsync, TestHttpHandlers, TestHttpServer, withCloseable } = require('launchdarkly-js-test-helpers');
 
 describe('EventProcessor', () => {
 
@@ -25,8 +24,8 @@ describe('EventProcessor', () => {
     lastName: '7', avatar: '8', name: '9', anonymous: false, custom: { age: 99 } };
 
   function eventsServerTest(asyncCallback) {
-    return async () => withCloseable(createServer, async server => {
-      server.forMethodAndPath('post', '/bulk', respond(200));
+    return async () => withCloseable(TestHttpServer.start, async server => {
+      server.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(200));
       return await asyncCallback(server);
     });
   }
@@ -296,7 +295,7 @@ describe('EventProcessor', () => {
     await withEventProcessor(defaultConfig, s, async ep => {
       // Pick a server time that is somewhat behind the client time
       const serverTime = new Date().getTime() - 20000;
-      s.forMethodAndPath('post', '/bulk', respond(200, headersWithDate(serverTime)));
+      s.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(200, headersWithDate(serverTime)));
 
       // Send and flush an event we don't care about, just to set the last server time        
       ep.sendEvent({ kind: 'identify', user: { key: 'otherUser' } });
@@ -323,7 +322,7 @@ describe('EventProcessor', () => {
     await withEventProcessor(defaultConfig, s, async ep => {
       // Pick a server time that is somewhat ahead of the client time
       const serverTime = new Date().getTime() + 20000;
-      s.forMethodAndPath('post', '/bulk', respond(200, headersWithDate(serverTime)));
+      s.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(200, headersWithDate(serverTime)));
 
       // Send and flush an event we don't care about, just to set the last server time
       ep.sendEvent({ kind: 'identify', user: { key: 'otherUser' } });
@@ -486,7 +485,7 @@ describe('EventProcessor', () => {
 
   function verifyUnrecoverableHttpError(status) {
     return eventsServerTest(async s => {
-      s.forMethodAndPath('post', '/bulk', respond(status));
+      s.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(status));
       await withEventProcessor(defaultConfig, s, async ep => {
         const e = { kind: 'identify', creationDate: 1000, user: user };
         ep.sendEvent(e);
@@ -497,14 +496,14 @@ describe('EventProcessor', () => {
 
         ep.sendEvent(e);
         await expect(ep.flush()).rejects.toThrow(/SDK key is invalid/);
-        expect(s.requestCount()).toEqual(0);
+        expect(s.requestCount()).toEqual(1);
       });
     });
   }
 
   function verifyRecoverableHttpError(status) {
     return eventsServerTest(async s => {
-      s.forMethodAndPath('post', '/bulk', respond(status));
+      s.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(status));
       await withEventProcessor(defaultConfig, s, async ep => {
         var e = { kind: 'identify', creationDate: 1000, user: user };
         ep.sendEvent(e);
@@ -514,10 +513,10 @@ describe('EventProcessor', () => {
         await s.nextRequest();
         await s.nextRequest();
 
-        s.forMethodAndPath('post', '/bulk', respond(200));
+        s.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(200));
         ep.sendEvent(e);
         await ep.flush();
-        expect(s.requestCount()).toEqual(1);
+        expect(s.requestCount()).toEqual(3);
       });
     });
   }
@@ -540,7 +539,7 @@ describe('EventProcessor', () => {
     
     const config = Object.assign({}, defaultConfig, { flushInterval: 0.25 });
     await withEventProcessor(config, s, async ep => {
-      s.forMethodAndPath('post', '/bulk', respond(500));
+      s.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(500));
 
       ep.sendEvent({ kind: 'identify', creationDate: 1000, user: user });
 
