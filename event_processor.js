@@ -24,6 +24,7 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
     droppedEvents = 0,
     deduplicatedUsers = 0,
     exceededCapacity = false,
+    lastEventsInQueue = 0,
     shutdown = false,
     flushTimer,
     flushUsersTimer,
@@ -195,6 +196,8 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
         worklist.push(summary);
       }
 
+      lastEventsInQueue = worklist.length;
+
       if (!worklist.length) {
         resolve();
         return;
@@ -277,7 +280,7 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
     postDiagnosticEvent(initEvent);
     
     diagnosticsTimer = setInterval(() => {
-      const statsEvent = diagnosticsManager.createStatsEventAndReset(droppedEvents, deduplicatedUsers, queue.length);
+      const statsEvent = diagnosticsManager.createStatsEventAndReset(droppedEvents, deduplicatedUsers, lastEventsInQueue);
       droppedEvents = 0;
       deduplicatedUsers = 0;
       postDiagnosticEvent(statsEvent);
