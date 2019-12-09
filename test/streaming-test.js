@@ -1,9 +1,10 @@
 const { DiagnosticId, DiagnosticsManager } = require('../diagnostic_events');
 const InMemoryFeatureStore = require('../feature_store');
 const StreamProcessor = require('../streaming');
+import * as httpUtils from '../utils/httpUtils';
 const dataKind = require('../versioned_data_kind');
-const httpUtils = require('../utils/httpUtils');
-const { promisifySingle, sleepAsync } = require('./async_utils');
+
+const { promisifySingle, sleepAsync } = require('launchdarkly-js-test-helpers');
 const stubs = require('./stubs');
 
 describe('StreamProcessor', () => {

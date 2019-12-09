@@ -1,8 +1,8 @@
 import Requestor from '../requestor';
-import * as dataKind from '../versioned_data_kind';
 import * as httpUtils from '../utils/httpUtils';
-import { promisify, withCloseable } from './async_utils';
-import { createServer, respond, respondJson } from './http_server';
+import * as dataKind from '../versioned_data_kind';
+
+import { promisify, TestHttpHandlers, TestHttpServer, withCloseable } from 'launchdarkly-js-test-helpers';
 
 describe('Requestor', () => {
   const sdkKey = 'x';
@@ -12,8 +12,8 @@ describe('Requestor', () => {
 
   describe('requestObject', () => {
     it('gets flag data', async () =>
-      await withCloseable(createServer, async server => {
-        server.forMethodAndPath('get', '/sdk/latest-flags/key', respondJson(someData));
+      await withCloseable(TestHttpServer.start, async server => {
+        server.forMethodAndPath('get', '/sdk/latest-flags/key', TestHttpHandlers.respondJson(someData));
         const r = Requestor(sdkKey, { baseUri: server.url });
         const result = await promisify(r.requestObject)(dataKind.features, 'key');
         expect(JSON.parse(result)).toEqual(someData);
@@ -21,8 +21,8 @@ describe('Requestor', () => {
     );
   
     it('gets segment data', async () =>
-      await withCloseable(createServer, async server => {
-        server.forMethodAndPath('get', '/sdk/latest-segments/key', respondJson(someData));
+      await withCloseable(TestHttpServer.start, async server => {
+        server.forMethodAndPath('get', '/sdk/latest-segments/key', TestHttpHandlers.respondJson(someData));
         const r = Requestor(sdkKey, { baseUri: server.url });
         const result = await promisify(r.requestObject)(dataKind.segments, 'key');
         expect(JSON.parse(result)).toEqual(someData);
@@ -30,8 +30,8 @@ describe('Requestor', () => {
     );
 
     it('passes expected headers', async () =>
-      await withCloseable(createServer, async server => {
-        server.forMethodAndPath('get', '/sdk/latest-flags/key', respondJson(someData));
+      await withCloseable(TestHttpServer.start, async server => {
+        server.forMethodAndPath('get', '/sdk/latest-flags/key', TestHttpHandlers.respondJson(someData));
         const r = Requestor(sdkKey, { baseUri: server.url });
         await promisify(r.requestObject)(dataKind.features, 'key');
         const req = await server.nextRequest();
@@ -40,8 +40,8 @@ describe('Requestor', () => {
     );
 
     it('returns error result for HTTP error', async () =>
-      await withCloseable(createServer, async server => {
-        server.forMethodAndPath('get', '/sdk/latest-flags/key', respond(404));
+      await withCloseable(TestHttpServer.start, async server => {
+        server.forMethodAndPath('get', '/sdk/latest-flags/key', TestHttpHandlers.respond(404));
         const r = Requestor(sdkKey, { baseUri: server.url });
         const req = promisify(r.requestObject)(dataKind.features, 'key');
         await expect(req).rejects.toThrow(/404/);
@@ -57,8 +57,8 @@ describe('Requestor', () => {
 
   describe('requestAllData', () => {
     it('gets data', async () =>
-      await withCloseable(createServer, async server => {
-        server.forMethodAndPath('get', '/sdk/latest-all', respondJson(allData));
+      await withCloseable(TestHttpServer.start, async server => {
+        server.forMethodAndPath('get', '/sdk/latest-all', TestHttpHandlers.respondJson(allData));
         const r = Requestor(sdkKey, { baseUri: server.url });
         const result = await promisify(r.requestAllData)();
         expect(JSON.parse(result)).toEqual(allData);
@@ -66,8 +66,8 @@ describe('Requestor', () => {
     );
 
     it('returns error result for HTTP error', async () =>
-      await withCloseable(createServer, async server => {
-        server.forMethodAndPath('get', '/sdk/latest-all', respond(401));
+      await withCloseable(TestHttpServer.start, async server => {
+        server.forMethodAndPath('get', '/sdk/latest-all', TestHttpHandlers.respond(401));
         const r = Requestor(sdkKey, { baseUri: server.url });
         const req = promisify(r.requestAllData)();
         await expect(req).rejects.toThrow(/401/);
