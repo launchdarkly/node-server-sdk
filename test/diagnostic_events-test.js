@@ -130,7 +130,7 @@ describe('DiagnosticsManager', () => {
       dataSinceDate: 100000,
       droppedEvents: 4,
       deduplicatedUsers: 5,
-      eventsInQueue: 6,
+      eventsInLastBatch: 6,
     });
 
     expect(event1.creationDate).toBeGreaterThanOrEqual(timeBeforeReset);
@@ -142,7 +142,7 @@ describe('DiagnosticsManager', () => {
       dataSinceDate: event1.creationDate,
       droppedEvents: 1,
       deduplicatedUsers: 2,
-      eventsInQueue: 3,
+      eventsInLastBatch: 3,
     });
 
     expect(event2.creationDate).toBeGreaterThanOrEqual(event1.creationDate);

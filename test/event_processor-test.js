@@ -597,7 +597,7 @@ describe('EventProcessor', () => {
         expect(data.dataSinceDate).toBeGreaterThanOrEqual(startTime);
         expect(data.droppedEvents).toEqual(0);
         expect(data.deduplicatedUsers).toEqual(0);
-        expect(data.eventsInQueue).toEqual(0);
+        expect(data.eventsInLastBatch).toEqual(0);
       });
     }));
   
@@ -635,7 +635,7 @@ describe('EventProcessor', () => {
             id: id,
             droppedEvents: 1,
             deduplicatedUsers: 0,
-            eventsInQueue: 2,
+            eventsInLastBatch: 2,
          }),
         });
       });
@@ -674,7 +674,7 @@ describe('EventProcessor', () => {
             id: id,
             droppedEvents: 0,
             deduplicatedUsers: 1,
-            eventsInQueue: 3, // 2 "track" + 1 "index"
+            eventsInLastBatch: 3, // 2 "track" + 1 "index"
          }),
         });
       });
