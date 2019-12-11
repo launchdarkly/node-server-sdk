@@ -36,10 +36,10 @@ function DiagnosticsManager(config, diagnosticId, startTime) {
 
   // Creates a periodic event containing time-dependent stats, and resets the state of the manager with
   // regard to those stats.
-  // Note: the reason droppedEvents, deduplicatedUsers, and eventsInQueue are passed into this function,
+  // Note: the reason droppedEvents, deduplicatedUsers, and eventsInLastBatch are passed into this function,
   // instead of being properties of the DiagnosticsManager, is that the event processor is the one who's
   // calling this function and is also the one who's tracking those stats.
-  acc.createStatsEventAndReset = (droppedEvents, deduplicatedUsers, eventsInQueue) => {
+  acc.createStatsEventAndReset = (droppedEvents, deduplicatedUsers, eventsInLastBatch) => {
     const currentTime = new Date().getTime();
     const ret = {
       kind: 'diagnostic',
@@ -48,7 +48,7 @@ function DiagnosticsManager(config, diagnosticId, startTime) {
       dataSinceDate,
       droppedEvents,
       deduplicatedUsers,
-      eventsInQueue,
+      eventsInLastBatch,
       streamInits
     };
     dataSinceDate = currentTime;

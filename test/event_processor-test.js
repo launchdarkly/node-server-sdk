@@ -597,7 +597,86 @@ describe('EventProcessor', () => {
         expect(data.dataSinceDate).toBeGreaterThanOrEqual(startTime);
         expect(data.droppedEvents).toEqual(0);
         expect(data.deduplicatedUsers).toEqual(0);
-        expect(data.eventsInQueue).toEqual(0);
+        expect(data.eventsInLastBatch).toEqual(0);
+      });
+    }));
+  
+    it('counts events in queue from last flush and dropped events', eventsServerTest(async s => {
+      const startTime = new Date().getTime();
+      const config = Object.assign({}, defaultConfig, { diagnosticRecordingInterval: 0.1, capacity: 2 });
+      await withDiagnosticEventProcessor(config, s, async (ep, id) => {
+        const req0 = await s.nextRequest();
+        expect(req0.path).toEqual('/diagnostic');
+
+        ep.sendEvent({ kind: 'identify', creationDate: 1000, user: user });
+        ep.sendEvent({ kind: 'identify', creationDate: 1001, user: user });
+        ep.sendEvent({ kind: 'identify', creationDate: 1002, user: user });
+        await ep.flush();
+
+        // We can't be sure which will be posted first, the regular events or the diagnostic event
+        const requests = [];
+        const req1 = await s.nextRequest();
+        requests.push({ path: req1.path, data: JSON.parse(req1.body) });
+        const req2 = await s.nextRequest();
+        requests.push({ path: req2.path, data: JSON.parse(req2.body) });
+
+        expect(requests).toContainEqual({
+          path: '/bulk',
+          data: expect.arrayContaining([
+            expect.objectContaining({ kind: 'identify', creationDate: 1000 }),
+            expect.objectContaining({ kind: 'identify', creationDate: 1001 }),
+          ]),
+        });
+
+        expect(requests).toContainEqual({
+          path: '/diagnostic',
+          data: expect.objectContaining({
+            kind: 'diagnostic',
+            id: id,
+            droppedEvents: 1,
+            deduplicatedUsers: 0,
+            eventsInLastBatch: 2,
+         }),
+        });
+      });
+    }));
+  
+    it('counts deduplicated users', eventsServerTest(async s => {
+      const startTime = new Date().getTime();
+      const config = Object.assign({}, defaultConfig, { diagnosticRecordingInterval: 0.1 });
+      await withDiagnosticEventProcessor(config, s, async (ep, id) => {
+        const req0 = await s.nextRequest();
+        expect(req0.path).toEqual('/diagnostic');
+
+        ep.sendEvent({ kind: 'track', key: 'eventkey1', creationDate: 1000, user: user });
+        ep.sendEvent({ kind: 'track', key: 'eventkey2', creationDate: 1001, user: user });
+        await ep.flush();
+
+        // We can't be sure which will be posted first, the regular events or the diagnostic event
+        const requests = [];
+        const req1 = await s.nextRequest();
+        requests.push({ path: req1.path, data: JSON.parse(req1.body) });
+        const req2 = await s.nextRequest();
+        requests.push({ path: req2.path, data: JSON.parse(req2.body) });
+
+        expect(requests).toContainEqual({
+          path: '/bulk',
+          data: expect.arrayContaining([
+            expect.objectContaining({ kind: 'track', creationDate: 1000 }),
+            expect.objectContaining({ kind: 'track', creationDate: 1001 }),
+          ]),
+        });
+
+        expect(requests).toContainEqual({
+          path: '/diagnostic',
+          data: expect.objectContaining({
+            kind: 'diagnostic',
+            id: id,
+            droppedEvents: 0,
+            deduplicatedUsers: 1,
+            eventsInLastBatch: 3, // 2 "track" + 1 "index"
+         }),
+        });
       });
     }));
   });
