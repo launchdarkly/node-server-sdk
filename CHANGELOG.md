@@ -2,6 +2,14 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.10.0] - 2019-12-11
+### Added:
+- `RedisFeatureStore` now accepts an optional `client` parameter, if you have an existing `RedisClient` instance that you want to reuse.
+
+### Changed:
+- The SDK now logs a warning if any configuration property has an inappropriate type, such as `baseUri:3` or `offline:"yes"`. For boolean properties, the SDK will still interpret the value in terms of truthiness, which was the previous behavior. For all other types, since there's no such commonly accepted way to coerce the type, it will fall back to the default setting for that property; previously, the behavior was undefined but most such mistakes would have caused the SDK to throw an exception at some later point.
+
+
 ## [5.9.2] - 2019-10-23
 ### Changed:
 - Event listeners for `update` events were receiving an entire flag configuration object as an argument. This was not useful for applications (since the SDK does not provide any way to use such an object directly), and was unsafe since the object was shared with internal code and was mutable. The argument for `update` events is now an object with only one property, `key` (the flag key).
