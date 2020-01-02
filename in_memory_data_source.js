@@ -3,7 +3,7 @@
   This would typically be used in a local development environment.
 */
 
-export default function InMemoryDataSource(features) {
+function InMemoryDataSource(features) {
   if (!features) {
     return;
   }
@@ -41,3 +41,5 @@ export default function InMemoryDataSource(features) {
     return dev_ds;
   };
 }
+
+module.exports = InMemoryDataSource;

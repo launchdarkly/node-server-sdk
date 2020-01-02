@@ -93,7 +93,7 @@ const newClient = function(sdkKey, originalConfig) {
   const createDefaultUpdateProcessor = config => {
     if (config.inMemoryDevFlags) {
       config.logger.info('Creating in-memory flags for offline usage');
-      return InMemoryDataSource(config.inMemoryDevFlags)
+      return InMemoryDataSource(config.inMemoryDevFlags);
     }
     if (config.useLdd || config.offline) {
       return NullUpdateProcessor();

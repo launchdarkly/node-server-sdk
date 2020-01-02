@@ -1,5 +1,3 @@
-import InMemoryDataSource from "./in_memory_data_source";
-
 const winston = require('winston');
 const InMemoryFeatureStore = require('./feature_store');
 const messages = require('./messages');
