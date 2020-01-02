@@ -16,6 +16,18 @@ describe('EventProcessor', () => {
       warn: jest.fn()
     }
   };
+  const developmentConfig = {
+    eventsUri: eventsUri,
+    capacity: 100,
+    flushInterval: 30,
+    userKeysCapacity: 1000,
+    userKeysFlushInterval: 300,
+    inMemoryDevFlags: { 'development-feature': true },
+    logger: {
+      debug: jest.fn(),
+      warn: jest.fn()
+    }
+  };
   const user = { key: 'userKey', name: 'Red' };
   const filteredUser = { key: 'userKey', privateAttrs: [ 'name' ] };
   const numericUser = { key: 1, secondary: 2, ip: 3, country: 4, email: 5, firstName: 6, lastName: 7,
@@ -212,6 +224,19 @@ describe('EventProcessor', () => {
     });
   }));
 
+  it('processes offline events when defined', eventsServerTest(async s => {
+    const config = Object.assign({}, developmentConfig, { allAttributesPrivate: true });
+    await withEventProcessor(config, s, async ep => {
+      const e = developmentConfig.inMemoryDevFlags['development-feature']
+      ep.sendEvent(e);
+      await ep.flush();
+
+      const output = await getJsonRequest(s);
+      expect(output.length).toEqual(1);
+      expect(output[0]).toEqual(e)
+    });
+  }));
+
   it('stringifies user attributes in feature event', eventsServerTest(async s => {
     const config = Object.assign({}, defaultConfig, { inlineUsersInEvents: true });
     await withEventProcessor(config, s, async ep => {
@@ -297,7 +322,7 @@ describe('EventProcessor', () => {
       const serverTime = new Date().getTime() - 20000;
       s.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(200, headersWithDate(serverTime)));
 
-      // Send and flush an event we don't care about, just to set the last server time        
+      // Send and flush an event we don't care about, just to set the last server time
       ep.sendEvent({ kind: 'identify', user: { key: 'otherUser' } });
       await ep.flush();
       await s.nextRequest();
@@ -536,7 +561,7 @@ describe('EventProcessor', () => {
   it('swallows errors from failed background flush', eventsServerTest(async s => {
     // This test verifies that when a background flush fails, we don't emit an unhandled
     // promise rejection. Jest will fail the test if we do that.
-    
+
     const config = Object.assign({}, defaultConfig, { flushInterval: 0.25 });
     await withEventProcessor(config, s, async ep => {
       s.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(500));

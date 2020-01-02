@@ -1,3 +1,5 @@
+import InMemoryDataSource from "./in_memory_data_source";
+
 const winston = require('winston');
 const InMemoryFeatureStore = require('./feature_store');
 const messages = require('./messages');
@@ -21,7 +23,8 @@ module.exports = (function() {
       privateAttributeNames: [],
       userKeysCapacity: 1000,
       userKeysFlushInterval: 300,
-      featureStore: InMemoryFeatureStore()
+      featureStore: InMemoryFeatureStore(),
+      inMemoryDevFlags: false,
     };
   };
 
@@ -132,7 +135,7 @@ module.exports = (function() {
 
   function validate(options) {
     let config = Object.assign({}, options || {});
-    
+
     config.userAgent = 'NodeJSClient/' + package_json.version;
     config.logger = (config.logger ||
       new winston.Logger({
@@ -146,7 +149,7 @@ module.exports = (function() {
         ]
       })
     );
-    
+
     checkDeprecatedOptions(config);
 
     const defaultConfig = defaults();

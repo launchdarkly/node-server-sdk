@@ -8,6 +8,7 @@ const EventProcessor = require('./event_processor');
 const PollingProcessor = require('./polling');
 const StreamingProcessor = require('./streaming');
 const FlagsStateBuilder = require('./flags_state');
+const InMemoryDataSource = require('./in_memory_data_source');
 const configuration = require('./configuration');
 const evaluate = require('./evaluate_flag');
 const messages = require('./messages');
@@ -62,7 +63,7 @@ const newClient = function(sdkKey, originalConfig) {
     eventFactoryWithReasons;
 
   const config = configuration.validate(originalConfig);
-  
+
   // Initialize global tunnel if proxy options are set
   if (config.proxyHost && config.proxyPort ) {
     config.proxyAgent = createProxyAgent(config);
@@ -90,11 +91,15 @@ const newClient = function(sdkKey, originalConfig) {
   }
 
   const createDefaultUpdateProcessor = config => {
+    if (config.inMemoryDevFlags) {
+      config.logger.info('Creating in-memory flags for offline usage');
+      return InMemoryDataSource(config.inMemoryDevFlags)
+    }
     if (config.useLdd || config.offline) {
       return NullUpdateProcessor();
     } else {
       requestor = Requestor(sdkKey, config);
-  
+
       if (config.stream) {
         config.logger.info('Initializing stream processor to receive feature flag updates');
         return StreamingProcessor(sdkKey, config, requestor);
