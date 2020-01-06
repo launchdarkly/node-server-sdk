@@ -2,6 +2,10 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.10.1] - 2020-01-06
+### Fixed:
+- In rare circumstances (depending on the exact data in the flag configuration, the flag's salt value, and the user properties), a percentage rollout could fail and return a default value, logging the error "Data inconsistency in feature flag ... variation/rollout object with no variation or rollout". This would happen if the user's hashed value fell exactly at the end of the last "bucket" (the last variation defined in the rollout). This has been fixed so that the user will get the last variation.
+
 ## [5.10.0] - 2019-12-11
 ### Added:
 - `RedisFeatureStore` now accepts an optional `client` parameter, if you have an existing `RedisClient` instance that you want to reuse.
