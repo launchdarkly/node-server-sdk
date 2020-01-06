@@ -696,6 +696,66 @@ describe('evaluate', () => {
   });
 });
 
+describe('rollout', () => {
+  it('selects bucket', done => {
+    const user = { key: 'userkey' };
+    const flagKey = 'flagkey';
+    const salt = 'salt';
+
+    // First verify that with our test inputs, the bucket value will be greater than zero and less than 100000,
+    // so we can construct a rollout whose second bucket just barely contains that value
+    const bucketValue = Math.floor(evaluate.bucketUser(user, flagKey, 'key', salt) * 100000);
+    expect(bucketValue).toBeGreaterThan(0);
+    expect(bucketValue).toBeLessThan(100000);
+
+    const badVariationA = 0, matchedVariation = 1, badVariationB = 2;
+    const rollout = {
+      variations: [
+        { variation: badVariationA, weight: bucketValue }, // end of bucket range is not inclusive, so it will *not* match the target value
+        { variation: matchedVariation, weight: 1 }, // size of this bucket is 1, so it only matches that specific value
+        { variation: badVariationB, weight: 100000 - (bucketValue + 1) }
+      ]
+    };
+    const flag = {
+      key: flagKey,
+      salt: salt,
+      on: true,
+      fallthrough: { rollout: rollout },
+      variations: [ null, null, null ]
+    };
+    evaluate.evaluate(flag, user, featureStore, eventFactory, (err, detail) => {
+      expect(err).toEqual(null);
+      expect(detail.variationIndex).toEqual(matchedVariation);
+      done();
+    });
+  });
+
+  it('uses last bucket if bucket value is equal to total weight', done => {
+    const user = { key: 'userkey' };
+    const flagKey = 'flagkey';
+    const salt = 'salt';
+
+    // We'll construct a list of variations that stops right at the target bucket value
+    const bucketValue = Math.floor(evaluate.bucketUser(user, flagKey, 'key', salt) * 100000);
+    
+    const rollout = {
+      variations: [ { variation: 0, weight: bucketValue }]
+    };
+    const flag = {
+      key: flagKey,
+      salt: salt,
+      on: true,
+      fallthrough: { rollout: rollout },
+      variations: [ null, null, null ]
+    };
+    evaluate.evaluate(flag, user, featureStore, eventFactory, (err, detail) => {
+      expect(err).toEqual(null);
+      expect(detail.variationIndex).toEqual(0);
+      done();
+    });
+  });
+});
+
 describe('bucketUser', () => {
   it('gets expected bucket values for specific keys', () => {
     var user = { key: 'userKeyA' };
