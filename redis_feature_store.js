@@ -6,13 +6,13 @@ const redis = require('redis'),
 const noop = function(){};
 
 
-function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger) {
-  return new CachingStoreWrapper(new redisFeatureStoreInternal(redisOpts, prefix, logger), cacheTTL);
+function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger, preconfiguredClient) {
+  return new CachingStoreWrapper(new redisFeatureStoreInternal(redisOpts, prefix, logger, preconfiguredClient), cacheTTL);
 }
 
-function redisFeatureStoreInternal(redisOpts, prefix, logger) {
+function redisFeatureStoreInternal(redisOpts, prefix, logger, preconfiguredClient) {
 
-  const client = redisOpts.client || redis.createClient(redisOpts),
+  const client = preconfiguredClient || redisOpts.client || redis.createClient(redisOpts),
     store = {},
     itemsPrefix = (prefix || 'launchdarkly') + ':',
     initedKey = itemsPrefix + '$inited';
