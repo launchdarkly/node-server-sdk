@@ -483,6 +483,24 @@ describe('EventProcessor', () => {
     });
   }));
 
+  it('sends unique payload IDs', eventsServerTest(async s => {
+    await withEventProcessor(defaultConfig, s, async ep => {
+      const e = { kind: 'identify', creationDate: 1000, user: user };
+      ep.sendEvent(e);
+      await ep.flush();
+      ep.sendEvent(e);
+      await ep.flush();
+
+      const req0 = await s.nextRequest();
+      const req1 = await s.nextRequest();
+      const id0 = req0.headers['x-launchdarkly-payload-id'];
+      const id1 = req1.headers['x-launchdarkly-payload-id'];
+      expect(id0).toBeTruthy();
+      expect(id1).toBeTruthy();
+      expect(id0).not.toEqual(id1);
+    });
+  }));
+
   function verifyUnrecoverableHttpError(status) {
     return eventsServerTest(async s => {
       s.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(status));
@@ -510,13 +528,18 @@ describe('EventProcessor', () => {
         await expect(ep.flush()).rejects.toThrow('error ' + status);
 
         expect(s.requestCount()).toEqual(2);
-        await s.nextRequest();
-        await s.nextRequest();
+        const req0 = await s.nextRequest();
+        const req1 = await s.nextRequest();
+        expect(req0.body).toEqual(req1.body);
+        const id0 = req0.headers['x-launchdarkly-payload-id'];
+        expect(req1.headers['x-launchdarkly-payload-id']).toEqual(id0);
 
         s.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(200));
         ep.sendEvent(e);
         await ep.flush();
         expect(s.requestCount()).toEqual(3);
+        const req2 = await s.nextRequest();
+        expect(req2.headers['x-launchdarkly-payload-id']).not.toEqual(id0);
       });
     });
   }
