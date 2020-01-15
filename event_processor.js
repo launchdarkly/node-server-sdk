@@ -1,5 +1,6 @@
 const LRUCache = require('lrucache');
 const request = require('request');
+const uuidv4 = require('uuid/v4');
 const EventSummarizer = require('./event_summarizer');
 const UserFilter = require('./user_filter');
 const errors = require('./errors');
@@ -188,16 +189,16 @@ function EventProcessor(sdkKey, config, errorReporter) {
 
       config.logger.debug('Flushing %d events', worklist.length);
 
-      tryPostingEvents(worklist, resolve, reject, true);
+      tryPostingEvents(worklist, uuidv4(), resolve, reject, true);
     }), callback);
   };
 
-  function tryPostingEvents(events, resolve, reject, canRetry) {
+  function tryPostingEvents(events, payloadId, resolve, reject, canRetry) {
     const retryOrReject = err => {
       if (canRetry) {
         config.logger && config.logger.warn('Will retry posting events after 1 second');
         setTimeout(() => {
-          tryPostingEvents(events, resolve, reject, false);
+          tryPostingEvents(events, payloadId, resolve, reject, false);
         }, 1000);
       } else {
         reject(err);
@@ -210,7 +211,8 @@ function EventProcessor(sdkKey, config, errorReporter) {
       headers: {
         'Authorization': sdkKey,
         'User-Agent': config.userAgent,
-        'X-LaunchDarkly-Event-Schema': '3'
+        'X-LaunchDarkly-Event-Schema': '3',
+        'X-LaunchDarkly-Payload-ID': payloadId
       },
       json: true,
       body: events,
