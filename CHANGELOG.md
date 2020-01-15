@@ -2,6 +2,10 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.10.3] - 2020-01-15
+### Fixed:
+- The SDK now specifies a uniquely identifiable request header when sending events to LaunchDarkly to ensure that events are only processed once, even if the SDK sends them two times due to a failed initial attempt.
+
 ## [5.10.2] - 2020-01-13
 ### Fixed:
 - The implementation of the `RedisFeatureStore` function was inconsistent with its TypeScript declaration: instead of taking `client` as an optional parameter, it was looking for it as a property within `redisOpts`. It now correctly supports the optional parameter; passing the property in `redisOpts` is still supported for backward compatibility, but is deprecated (since it is not a valid property of that object type) and will be removed in a future version. 
