@@ -27,6 +27,10 @@ declare module 'launchdarkly-node-server-sdk' {
    * The client will begin attempting to connect to LaunchDarkly as soon as it is created. To
    * determine when it is ready to use, call [[LDClient.waitForInitialization]], or register an
    * event listener for the `"ready"` event using [[LDClient.on]].
+   * 
+   * It's important to make this a SINGLETON -- internally, the client instance maintains 
+   * internal state that allows us to serve feature flags without making any remote requests. Be sure 
+   * that you're not instantiating a new client with every request.
    *
    * @param key
    *   The SDK key.
