@@ -2,6 +2,26 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.10.3] - 2020-01-15
+### Fixed:
+- The SDK now specifies a uniquely identifiable request header when sending events to LaunchDarkly to ensure that events are only processed once, even if the SDK sends them two times due to a failed initial attempt.
+
+## [5.10.2] - 2020-01-13
+### Fixed:
+- The implementation of the `RedisFeatureStore` function was inconsistent with its TypeScript declaration: instead of taking `client` as an optional parameter, it was looking for it as a property within `redisOpts`. It now correctly supports the optional parameter; passing the property in `redisOpts` is still supported for backward compatibility, but is deprecated (since it is not a valid property of that object type) and will be removed in a future version. 
+
+## [5.10.1] - 2020-01-06
+### Fixed:
+- In rare circumstances (depending on the exact data in the flag configuration, the flag's salt value, and the user properties), a percentage rollout could fail and return a default value, logging the error "Data inconsistency in feature flag ... variation/rollout object with no variation or rollout". This would happen if the user's hashed value fell exactly at the end of the last "bucket" (the last variation defined in the rollout). This has been fixed so that the user will get the last variation.
+
+## [5.10.0] - 2019-12-11
+### Added:
+- `RedisFeatureStore` now accepts an optional `client` parameter, if you have an existing `RedisClient` instance that you want to reuse.
+
+### Changed:
+- The SDK now logs a warning if any configuration property has an inappropriate type, such as `baseUri:3` or `offline:"yes"`. For boolean properties, the SDK will still interpret the value in terms of truthiness, which was the previous behavior. For all other types, since there's no such commonly accepted way to coerce the type, it will fall back to the default setting for that property; previously, the behavior was undefined but most such mistakes would have caused the SDK to throw an exception at some later point.
+
+
 ## [5.9.2] - 2019-10-23
 ### Changed:
 - Event listeners for `update` events were receiving an entire flag configuration object as an argument. This was not useful for applications (since the SDK does not provide any way to use such an object directly), and was unsafe since the object was shared with internal code and was mutable. The argument for `update` events is now an object with only one property, `key` (the flag key).

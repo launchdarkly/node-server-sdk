@@ -1,5 +1,6 @@
 const LRUCache = require('lrucache');
 const request = require('request');
+const uuidv4 = require('uuid/v4');
 const EventSummarizer = require('./event_summarizer');
 const UserFilter = require('./user_filter');
 const errors = require('./errors');
@@ -205,16 +206,16 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
 
       config.logger.debug('Flushing %d events', worklist.length);
 
-      tryPostingEvents(worklist, mainEventsUri, resolve, reject, true);
+      tryPostingEvents(worklist, mainEventsUri, uuidv4(), resolve, reject, true);
     }), callback);
   };
 
-  function tryPostingEvents(events, uri, resolve, reject, canRetry) {
+  function tryPostingEvents(events, uri, payloadId, resolve, reject, canRetry) {
     const retryOrReject = err => {
       if (canRetry) {
         config.logger && config.logger.warn('Will retry posting events after 1 second');
         setTimeout(() => {
-          tryPostingEvents(events, uri, resolve, reject, false);
+          tryPostingEvents(events, uri, payloadId, resolve, reject, false);
         }, 1000);
       } else {
         reject(err);
@@ -223,6 +224,10 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
 
     const headers = Object.assign({ 'X-LaunchDarkly-Event-Schema': '3' },
       httpUtils.getDefaultHeaders(sdkKey, config));
+    if (payloadId) {
+      headers['X-LaunchDarkly-Payload-ID'] = payloadId;
+      headers['X-LaunchDarkly-Event-Schema'] = '3';
+    }
 
     const options = Object.assign({}, config.tlsParams, {
       method: 'POST',
@@ -258,7 +263,7 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
   }
 
   function postDiagnosticEvent(event) {
-    tryPostingEvents(event, diagnosticEventsUri, () => {}, () => {}, true);
+    tryPostingEvents(event, diagnosticEventsUri, null, () => {}, () => {}, true);
   }
 
   ep.close = () => {

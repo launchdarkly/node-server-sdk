@@ -295,18 +295,30 @@ function variationForUser(r, user, flag) {
   if (r.variation != null) {
     // This represets a fixed variation; return it
     return r.variation;
-  } else if (r.rollout != null) {
-    // This represents a percentage rollout. Assume
-    // we're rolling out by key
-    const bucketBy = r.rollout.bucketBy != null ? r.rollout.bucketBy : 'key';
-    const bucket = bucketUser(user, flag.key, bucketBy, flag.salt);
-    let sum = 0;
-    for (let i = 0; i < r.rollout.variations.length; i++) {
-      const variate = r.rollout.variations[i];
-      sum += variate.weight / 100000.0;
-      if (bucket < sum) {
-        return variate.variation;
+  }
+  const rollout = r.rollout;
+  if (rollout) {
+    const variations = rollout.variations;
+    if (variations && variations.length > 0) {
+      // This represents a percentage rollout. Assume
+      // we're rolling out by key
+      const bucketBy = rollout.bucketBy || 'key';
+      const bucket = bucketUser(user, flag.key, bucketBy, flag.salt);
+      let sum = 0;
+      for (let i = 0; i < variations.length; i++) {
+        const variate = variations[i];
+        sum += variate.weight / 100000.0;
+        if (bucket < sum) {
+          return variate.variation;
+        }
       }
+
+      // The user's bucket value was greater than or equal to the end of the last bucket. This could happen due
+      // to a rounding error, or due to the fact that we are scaling to 100000 rather than 99999, or the flag
+      // data could contain buckets that don't actually add up to 100000. Rather than returning an error in
+      // this case (or changing the scaling, which would potentially change the results for *all* users), we
+      // will simply put the user in the last bucket.
+      return variations[variations.length - 1].variation;
     }
   }
 
