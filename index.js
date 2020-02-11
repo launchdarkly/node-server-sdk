@@ -38,7 +38,7 @@ function NullEventProcessor() {
   return {
     sendEvent: () => {},
     flush: callback => wrapPromiseCallback(Promise.resolve(), callback),
-    close: () => {}
+    close: () => {},
   };
 }
 
@@ -47,7 +47,7 @@ function NullUpdateProcessor() {
     start: callback => {
       setImmediate(callback, null); // the start() callback should always be deferred
     },
-    close: () => {}
+    close: () => {},
   };
 }
 
@@ -57,14 +57,12 @@ const newClient = function(sdkKey, originalConfig) {
     failure,
     requestor,
     updateProcessor,
-    eventProcessor,
-    eventFactoryDefault,
-    eventFactoryWithReasons;
+    eventProcessor;
 
   const config = configuration.validate(originalConfig);
-  
+
   // Initialize global tunnel if proxy options are set
-  if (config.proxyHost && config.proxyPort ) {
+  if (config.proxyHost && config.proxyPort) {
     config.proxyAgent = createProxyAgent(config);
   }
 
@@ -72,8 +70,8 @@ const newClient = function(sdkKey, originalConfig) {
 
   const maybeReportError = createErrorReporter(client, config.logger);
 
-  eventFactoryDefault = EventFactory(false);
-  eventFactoryWithReasons = EventFactory(true);
+  const eventFactoryDefault = EventFactory(false);
+  const eventFactoryWithReasons = EventFactory(true);
 
   if (config.eventProcessor) {
     eventProcessor = config.eventProcessor;
@@ -94,7 +92,7 @@ const newClient = function(sdkKey, originalConfig) {
       return NullUpdateProcessor();
     } else {
       requestor = Requestor(sdkKey, config);
-  
+
       if (config.stream) {
         config.logger.info('Initializing stream processor to receive feature flag updates');
         return StreamingProcessor(sdkKey, config, requestor);
@@ -158,26 +156,37 @@ const newClient = function(sdkKey, originalConfig) {
     }
 
     return new Promise((resolve, reject) => {
-      client.once('ready', () => { resolve(client); });
+      client.once('ready', () => {
+        resolve(client);
+      });
       client.once('failed', reject);
     });
   };
 
-  client.variation = (key, user, defaultVal, callback) => {
-    return wrapPromiseCallback(new Promise((resolve, reject) => {
-      evaluateIfPossible(key, user, defaultVal, eventFactoryDefault,
-        detail => {
-          resolve(detail.value);
-        },
-        reject);
-    }), callback);
-  };
+  client.variation = (key, user, defaultVal, callback) =>
+    wrapPromiseCallback(
+      new Promise((resolve, reject) => {
+        evaluateIfPossible(
+          key,
+          user,
+          defaultVal,
+          eventFactoryDefault,
+          detail => {
+            resolve(detail.value);
+          },
+          reject
+        );
+      }),
+      callback
+    );
 
-  client.variationDetail = (key, user, defaultVal, callback) => {
-    return wrapPromiseCallback(new Promise((resolve, reject) => {
-      evaluateIfPossible(key, user, defaultVal, eventFactoryWithReasons, resolve, reject);
-    }), callback);
-  };
+  client.variationDetail = (key, user, defaultVal, callback) =>
+    wrapPromiseCallback(
+      new Promise((resolve, reject) => {
+        evaluateIfPossible(key, user, defaultVal, eventFactoryWithReasons, resolve, reject);
+      }),
+      callback
+    );
 
   function errorResult(errorKind, defaultVal) {
     return { value: defaultVal, variationIndex: null, reason: { kind: 'ERROR', errorKind: errorKind } };
@@ -187,10 +196,14 @@ const newClient = function(sdkKey, originalConfig) {
     if (!initComplete) {
       config.featureStore.initialized(storeInited => {
         if (storeInited) {
-          config.logger.warn('Variation called before LaunchDarkly client initialization completed (did you wait for the \'ready\' event?) - using last known values from feature store');
+          config.logger.warn(
+            "Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using last known values from feature store" // eslint-disable-line quotes
+          );
           variationInternal(key, user, defaultVal, eventFactory, resolve, reject);
         } else {
-          const err = new errors.LDClientError('Variation called before LaunchDarkly client initialization completed (did you wait for the \'ready\' event?) - using default value');
+          const err = new errors.LDClientError(
+            "Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using default value" // eslint-disable-line quotes
+          );
           maybeReportError(err);
           const result = errorResult('CLIENT_NOT_READY', defaultVal);
           eventProcessor.sendEvent(eventFactory.newUnknownFlagEvent(key, user, result));
@@ -207,16 +220,16 @@ const newClient = function(sdkKey, originalConfig) {
     if (client.isOffline()) {
       config.logger.info('Variation called in offline mode. Returning default value.');
       return resolve(errorResult('CLIENT_NOT_READY', defaultVal));
-    }
-
-    else if (!key) {
+    } else if (!key) {
       const err = new errors.LDClientError('No feature flag key specified. Returning default value.');
       maybeReportError(err);
       return resolve(errorResult('FLAG_NOT_FOUND', defaultVal));
     }
 
     if (user && user.key === '') {
-      config.logger.warn('User key is blank. Flag evaluation will proceed, but the user will not be stored in LaunchDarkly');
+      config.logger.warn(
+        'User key is blank. Flag evaluation will proceed, but the user will not be stored in LaunchDarkly'
+      );
     }
 
     config.featureStore.get(dataKind.features, key, flag => {
@@ -235,9 +248,14 @@ const newClient = function(sdkKey, originalConfig) {
         return resolve(result);
       }
 
-      evaluate.evaluate(flag, user, config.featureStore, eventFactory, (err, detail, events) => {
+      evaluate.evaluate(flag, user, config.featureStore, eventFactory, (err, detailIn, events) => {
+        const detail = detailIn;
         if (err) {
-          maybeReportError(new errors.LDClientError('Encountered error evaluating feature flag:' + (err.message ? (': ' + err.message) : err)));
+          maybeReportError(
+            new errors.LDClientError(
+              'Encountered error evaluating feature flag:' + (err.message ? ': ' + err.message : err)
+            )
+          );
         }
 
         // Send off any events associated with evaluating prerequisites. The events
@@ -259,53 +277,69 @@ const newClient = function(sdkKey, originalConfig) {
   }
 
   client.allFlags = (user, callback) => {
-    config.logger.warn('allFlags() is deprecated. Call \'allFlagsState\' instead and call toJSON() on the result');
+    config.logger.warn('allFlags() is deprecated. Call allFlagsState() instead and call toJSON() on the result');
     return wrapPromiseCallback(
       client.allFlagsState(user).then(state => state.allValues()),
-      callback);
+      callback
+    );
   };
 
-  client.allFlagsState = (user, options, callback) => {
-    if (callback === undefined && typeof(options) === 'function') {
+  client.allFlagsState = (user, specifiedOptions, specifiedCallback) => {
+    let callback = specifiedCallback,
+      options = specifiedOptions;
+    if (callback === undefined && typeof options === 'function') {
       callback = options;
       options = {};
     } else {
       options = options || {};
     }
-    return wrapPromiseCallback(new Promise((resolve, reject) => {
-      if (client.isOffline()) {
-        config.logger.info('allFlagsState() called in offline mode. Returning empty state.');
-        return resolve(FlagsStateBuilder(false).build());
-      }
+    return wrapPromiseCallback(
+      new Promise((resolve, reject) => {
+        if (client.isOffline()) {
+          config.logger.info('allFlagsState() called in offline mode. Returning empty state.');
+          return resolve(FlagsStateBuilder(false).build());
+        }
 
-      if (!user) {
-        config.logger.info('allFlagsState() called without user. Returning empty state.');
-        return resolve(FlagsStateBuilder(false).build());
-      }
+        if (!user) {
+          config.logger.info('allFlagsState() called without user. Returning empty state.');
+          return resolve(FlagsStateBuilder(false).build());
+        }
 
-      const builder = FlagsStateBuilder(true);
-      const clientOnly = options.clientSideOnly;
-      const withReasons = options.withReasons;
-      const detailsOnlyIfTracked = options.detailsOnlyForTrackedFlags;
-      config.featureStore.all(dataKind.features, flags => {
-        safeAsyncEach(flags, (flag, iterateeCb) => {
-          if (clientOnly && !flag.clientSide) {
-            iterateeCb();
-          } else {
-            // At the moment, we don't send any events here
-            evaluate.evaluate(flag, user, config.featureStore, eventFactoryDefault, (err, detail) => {
-              if (err != null) {
-                maybeReportError(new Error('Error for feature flag "' + flag.key + '" while evaluating all flags: ' + err));
+        const builder = FlagsStateBuilder(true);
+        const clientOnly = options.clientSideOnly;
+        const withReasons = options.withReasons;
+        const detailsOnlyIfTracked = options.detailsOnlyForTrackedFlags;
+        config.featureStore.all(dataKind.features, flags => {
+          safeAsyncEach(
+            flags,
+            (flag, iterateeCb) => {
+              if (clientOnly && !flag.clientSide) {
+                iterateeCb();
+              } else {
+                // At the moment, we don't send any events here
+                evaluate.evaluate(flag, user, config.featureStore, eventFactoryDefault, (err, detail) => {
+                  if (err !== null) {
+                    maybeReportError(
+                      new Error('Error for feature flag "' + flag.key + '" while evaluating all flags: ' + err)
+                    );
+                  }
+                  builder.addFlag(
+                    flag,
+                    detail.value,
+                    detail.variationIndex,
+                    withReasons ? detail.reason : null,
+                    detailsOnlyIfTracked
+                  );
+                  iterateeCb();
+                });
               }
-              builder.addFlag(flag, detail.value, detail.variationIndex, withReasons ? detail.reason : null, detailsOnlyIfTracked);
-              iterateeCb();
-            });
-          }
-        }, err => {
-          return err ? reject(err) : resolve(builder.build());
+            },
+            err => (err ? reject(err) : resolve(builder.build()))
+          );
         });
-      });
-    }), callback);
+      }),
+      callback
+    );
   };
 
   client.secureModeHash = user => {
@@ -340,9 +374,7 @@ const newClient = function(sdkKey, originalConfig) {
     eventProcessor.sendEvent(eventFactoryDefault.newIdentifyEvent(user));
   };
 
-  client.flush = callback => {
-    return eventProcessor.flush(callback);
-  };
+  client.flush = callback => eventProcessor.flush(callback);
 
   function userExistsAndHasKey(user) {
     if (user) {
@@ -371,17 +403,16 @@ module.exports = {
   init: newClient,
   RedisFeatureStore: RedisFeatureStore,
   FileDataSource: FileDataSource,
-  errors: errors
+  errors: errors,
 };
-
 
 function createProxyAgent(config) {
   const options = {
     proxy: {
       host: config.proxyHost,
       port: config.proxyPort,
-      proxyAuth: config.proxyAuth
-    }
+      proxyAuth: config.proxyAuth,
+    },
   };
 
   if (config.proxyScheme === 'https') {

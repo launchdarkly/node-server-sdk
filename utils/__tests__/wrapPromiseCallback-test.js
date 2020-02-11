@@ -1,4 +1,4 @@
-const wrapPromiseCallback =  require('../wrapPromiseCallback');
+const wrapPromiseCallback = require('../wrapPromiseCallback');
 
 describe('wrapPromiseCallback', () => {
   it('should resolve to the value', () => {

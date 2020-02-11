@@ -1,10 +1,9 @@
-
 module.exports = function stringifyAttrs(object, attrs) {
   if (!object) {
     return object;
   }
   let newObject;
-  for (let i in attrs) {
+  for (const i in attrs) {
     const attr = attrs[i];
     const value = object[attr];
     if (value !== undefined && typeof value !== 'string') {

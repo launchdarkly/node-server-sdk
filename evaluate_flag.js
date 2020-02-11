@@ -6,7 +6,7 @@ const stringifyAttrs = require('./utils/stringifyAttrs');
 const { safeAsyncEachSeries } = require('./utils/asyncUtils');
 
 const builtins = ['key', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name', 'anonymous'];
-const userAttrsToStringifyForEvaluation = [ 'key', 'secondary' ];
+const userAttrsToStringifyForEvaluation = ['key', 'secondary'];
 // Currently we are not stringifying the rest of the built-in attributes prior to evaluation, only for events.
 // This is because it could affect evaluation results for existing users (ch35206).
 
@@ -14,8 +14,8 @@ const noop = () => {};
 
 // Callback receives (err, detail, events) where detail has the properties "value", "variationIndex", and "reason";
 // detail will never be null even if there's an error.
-function evaluate(flag, user, featureStore, eventFactory, cb) {
-  cb = cb || noop;
+function evaluate(flag, user, featureStore, eventFactory, maybeCallback) {
+  const cb = maybeCallback || noop;
   if (!user || user.key === null || user.key === undefined) {
     cb(null, errorResult('USER_NOT_SPECIFIED'), []);
     return;
@@ -41,7 +41,7 @@ function evalInternal(flag, user, featureStore, events, eventFactory, cb) {
   }
 
   checkPrerequisites(flag, user, featureStore, events, eventFactory, (err, failureReason) => {
-    if (err != null || failureReason != null) {
+    if (err !== null || failureReason !== null) {
       getOffResult(flag, failureReason, cb);
     } else {
       evalRules(flag, user, featureStore, cb);
@@ -52,13 +52,17 @@ function evalInternal(flag, user, featureStore, events, eventFactory, cb) {
 // Callback receives (err, reason) where reason is null if successful, or a "prerequisite failed" reason
 function checkPrerequisites(flag, user, featureStore, events, eventFactory, cb) {
   if (flag.prerequisites && flag.prerequisites.length) {
-    safeAsyncEachSeries(flag.prerequisites,
+    safeAsyncEachSeries(
+      flag.prerequisites,
       (prereq, callback) => {
         featureStore.get(dataKind.features, prereq.key, prereqFlag => {
           // If the flag does not exist in the store or is not on, the prerequisite
           // is not satisfied
           if (!prereqFlag) {
-            callback({ key: prereq.key, err: new Error('Could not retrieve prerequisite feature flag "' + prereq.key + '"') });
+            callback({
+              key: prereq.key,
+              err: new Error('Could not retrieve prerequisite feature flag "' + prereq.key + '"'),
+            });
             return;
           }
           evalInternal(prereqFlag, user, featureStore, events, eventFactory, (err, detail) => {
@@ -67,7 +71,7 @@ function checkPrerequisites(flag, user, featureStore, events, eventFactory, cb) 
             events.push(eventFactory.newEvalEvent(prereqFlag, user, detail, null, flag));
             if (err) {
               callback({ key: prereq.key, err: err });
-            } else if (!prereqFlag.on || detail.variationIndex != prereq.variation) {
+            } else if (!prereqFlag.on || detail.variationIndex !== prereq.variation) {
               // Note that if the prerequisite flag is off, we don't consider it a match no matter what its
               // off variation was. But we still evaluate it and generate an event.
               callback({ key: prereq.key });
@@ -80,11 +84,15 @@ function checkPrerequisites(flag, user, featureStore, events, eventFactory, cb) 
       },
       errInfo => {
         if (errInfo) {
-          cb(errInfo.err, { 'kind': 'PREREQUISITE_FAILED', 'prerequisiteKey': errInfo.key });
+          cb(errInfo.err, {
+            kind: 'PREREQUISITE_FAILED',
+            prerequisiteKey: errInfo.key,
+          });
         } else {
           cb(null, null);
         }
-      });
+      }
+    );
   } else {
     cb(null, null);
   }
@@ -108,7 +116,8 @@ function evalRules(flag, user, featureStore, cb) {
     }
   }
 
-  safeAsyncEachSeries(flag.rules,
+  safeAsyncEachSeries(
+    flag.rules,
     (rule, callback) => {
       ruleMatchUser(rule, user, featureStore, matched => {
         // We raise an "error" on the first rule that *does* match, to stop evaluating more rules
@@ -120,7 +129,7 @@ function evalRules(flag, user, featureStore, cb) {
       // we use the "error" value to indicate that a rule was successfully matched (since we only care
       // about the first match, and eachSeries terminates on the first "error")
       if (err) {
-        let rule = err;
+        const rule = err;
         const reason = { kind: 'RULE_MATCH', ruleId: rule.id };
         for (let i = 0; i < flag.rules.length; i++) {
           if (flag.rules[i].id === rule.id) {
@@ -144,7 +153,8 @@ function ruleMatchUser(r, user, featureStore, cb) {
   }
 
   // A rule matches if all its clauses match.
-  safeAsyncEachSeries(r.clauses,
+  safeAsyncEachSeries(
+    r.clauses,
     (clause, callback) => {
       clauseMatchUser(clause, user, featureStore, matched => {
         // on the first clause that does *not* match, we raise an "error" to stop the loop
@@ -158,8 +168,9 @@ function ruleMatchUser(r, user, featureStore, cb) {
 }
 
 function clauseMatchUser(c, user, featureStore, cb) {
-  if (c.op == 'segmentMatch') {
-    safeAsyncEachSeries(c.values,
+  if (c.op === 'segmentMatch') {
+    safeAsyncEachSeries(
+      c.values,
       (value, callback) => {
         featureStore.get(dataKind.segments, value, segment => {
           if (segment && segmentMatchUser(segment, user)) {
@@ -286,13 +297,13 @@ function getResultForVariationOrRollout(r, user, flag, reason, cb) {
 }
 
 function errorResult(errorKind) {
-  return { value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: errorKind }};
+  return { value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: errorKind } };
 }
 
 // Given a variation or rollout 'r', select
 // the variation for the given user
 function variationForUser(r, user, flag) {
-  if (r.variation != null) {
+  if (r.variation !== null) {
     // This represets a fixed variation; return it
     return r.variation;
   }
@@ -350,13 +361,13 @@ function bucketUser(user, key, attr, salt) {
   }
 
   const hashKey = util.format('%s.%s.%s', key, salt, idHash);
-  const hashVal = parseInt(sha1(hashKey).substring(0,15), 16);
+  const hashVal = parseInt(sha1(hashKey).substring(0, 15), 16);
 
-  return hashVal / 0xFFFFFFFFFFFFFFF;
+  return hashVal / 0xfffffffffffffff;
 }
 
 function bucketableStringValue(value) {
-  if (typeof(value) === 'string') {
+  if (typeof value === 'string') {
     return value;
   }
   if (Number.isInteger(value)) {
@@ -365,4 +376,4 @@ function bucketableStringValue(value) {
   return null;
 }
 
-module.exports = {evaluate: evaluate, bucketUser: bucketUser};
+module.exports = { evaluate: evaluate, bucketUser: bucketUser };

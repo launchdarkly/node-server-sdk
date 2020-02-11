@@ -66,40 +66,44 @@ function CachingStoreWrapper(underlyingStore, ttl) {
   let initialized = false;
 
   this.underlyingStore = underlyingStore;
-  
+
   this.init = (allData, cb) => {
-    queue.enqueue(cb => {
-      // The underlying store can either implement initInternal, which receives unordered  data,
-      // or initOrderedInternal, which receives ordered data (for implementations that cannot do
-      // an atomic update and therefore need to be told what order to do the operations in).
-      const afterInit = () => {
-        initialized = true;
+    queue.enqueue(
+      cb => {
+        // The underlying store can either implement initInternal, which receives unordered  data,
+        // or initOrderedInternal, which receives ordered data (for implementations that cannot do
+        // an atomic update and therefore need to be told what order to do the operations in).
+        const afterInit = () => {
+          initialized = true;
 
-        if (cache) {
-          cache.del(initializedKey);
-          cache.flushAll();
+          if (cache) {
+            cache.del(initializedKey);
+            cache.flushAll();
 
-          // populate cache with initial data
-          Object.keys(allData).forEach(kindNamespace => {
-            const kind = dataKind[kindNamespace];
-            const items = allData[kindNamespace];
-            cache.set(allCacheKey(kind), items);
-            Object.keys(items).forEach(key => {
-              cache.set(cacheKey(kind, key), items[key]);
+            // populate cache with initial data
+            Object.keys(allData).forEach(kindNamespace => {
+              const kind = dataKind[kindNamespace];
+              const items = allData[kindNamespace];
+              cache.set(allCacheKey(kind), items);
+              Object.keys(items).forEach(key => {
+                cache.set(cacheKey(kind, key), items[key]);
+              });
             });
-          });
+          }
+
+          cb();
+        };
+
+        if (underlyingStore.initOrderedInternal) {
+          const orderedData = sortAllCollections(allData);
+          underlyingStore.initOrderedInternal(orderedData, afterInit);
+        } else {
+          underlyingStore.initInternal(allData, afterInit);
         }
-
-        cb();
-      };
-
-      if (underlyingStore.initOrderedInternal) {
-        const orderedData = sortAllCollections(allData);
-        underlyingStore.initOrderedInternal(orderedData, afterInit);
-      } else {
-        underlyingStore.initInternal(allData, afterInit);
-      }
-    }, [], cb);
+      },
+      [],
+      cb
+    );
   };
 
   this.initialized = cb => {
@@ -157,20 +161,24 @@ function CachingStoreWrapper(underlyingStore, ttl) {
     });
   };
 
-  function itemOnlyIfNotDeleted(item) { 
-    return (!item || item.deleted) ? null : item;
+  function itemOnlyIfNotDeleted(item) {
+    return !item || item.deleted ? null : item;
   }
 
   this.upsert = (kind, newItem, cb) => {
-    queue.enqueue(cb => {
-      flushAllCaches();
-      underlyingStore.upsertInternal(kind, newItem, (err, updatedItem) => {
-        if (!err) {
-          cache && cache.set(cacheKey(kind, newItem.key), updatedItem);
-        }
-        cb();
-      });
-    }, [], cb);
+    queue.enqueue(
+      cb => {
+        flushAllCaches();
+        underlyingStore.upsertInternal(kind, newItem, (err, updatedItem) => {
+          if (!err) {
+            cache && cache.set(cacheKey(kind, newItem.key), updatedItem);
+          }
+          cb();
+        });
+      },
+      [],
+      cb
+    );
   };
 
   this.delete = (kind, key, version, cb) => {
@@ -186,7 +194,7 @@ function CachingStoreWrapper(underlyingStore, ttl) {
     if (!cache) {
       return;
     }
-    for (let kindNamespace in dataKind) {
+    for (const kindNamespace in dataKind) {
       cache.del(allCacheKey(dataKind[kindNamespace]));
     }
   }
@@ -195,11 +203,11 @@ function CachingStoreWrapper(underlyingStore, ttl) {
   // to write the underlying store, if the store supports the initOrderedInternal method.
   function sortAllCollections(dataMap) {
     const result = [];
-    Object.keys(dataMap).forEach(function(kindNamespace) {
+    Object.keys(dataMap).forEach(kindNamespace => {
       const kind = dataKind[kindNamespace];
       result.push({ kind: kind, items: sortCollection(kind, dataMap[kindNamespace]) });
     });
-    const kindPriority = kind => kind.priority === undefined ? kind.namespace.length : kind.priority;
+    const kindPriority = kind => (kind.priority === undefined ? kind.namespace.length : kind.priority);
     result.sort((i1, i2) => kindPriority(i1.kind) - kindPriority(i2.kind));
     return result;
   }

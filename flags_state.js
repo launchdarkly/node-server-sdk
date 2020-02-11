@@ -1,4 +1,3 @@
-
 function FlagsStateBuilder(valid) {
   const builder = {};
   const flagValues = {};
@@ -25,15 +24,13 @@ function FlagsStateBuilder(valid) {
     flagMetadata[flag.key] = meta;
   };
 
-  builder.build = () => {
-    return {
-      valid: valid,
-      allValues: () => flagValues,
-      getFlagValue: key => flagValues[key],
-      getFlagReason: key => flagMetadata[key] ? flagMetadata[key].reason : null,
-      toJSON: () => Object.assign({}, flagValues, { $flagsState: flagMetadata, $valid: valid })
-    };
-  };
+  builder.build = () => ({
+    valid: valid,
+    allValues: () => flagValues,
+    getFlagValue: key => flagValues[key],
+    getFlagReason: key => (flagMetadata[key] ? flagMetadata[key].reason : null),
+    toJSON: () => Object.assign({}, flagValues, { $flagsState: flagMetadata, $valid: valid }),
+  });
 
   return builder;
 }

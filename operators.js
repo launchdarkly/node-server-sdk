@@ -25,20 +25,21 @@ function dateOperator(f) {
 }
 
 function parseDate(input) {
-  switch(typeof input) {
-  case 'number':
-    return input;
-  case 'string':
-    return dateRegex.test(input) ? Date.parse(input) : null;
-  default:
-    return null;
+  switch (typeof input) {
+    case 'number':
+      return input;
+    case 'string':
+      return dateRegex.test(input) ? Date.parse(input) : null;
+    default:
+      return null;
   }
 }
 
 function semVerOperator(fn) {
   return (a, b) => {
-    const av = parseSemVer(a), bv = parseSemVer(b);
-    return (av && bv) ? fn(av, bv) : false;
+    const av = parseSemVer(a),
+      bv = parseSemVer(b);
+    return av && bv ? fn(av, bv) : false;
   };
 }
 
@@ -53,7 +54,7 @@ function parseSemVer(input) {
     if (versionNumericComponents) {
       let transformed = versionNumericComponents[0];
       for (let i = 1; i < versionNumericComponents.length; i++) {
-        if (versionNumericComponents[i] == undefined) {
+        if (versionNumericComponents[i] === undefined) {
           transformed = transformed + '.0';
         }
       }
@@ -67,7 +68,7 @@ function parseSemVer(input) {
 function safeRegexMatch(pattern, value) {
   try {
     return new RegExp(pattern).test(value);
-  } catch(e) {
+  } catch (e) {
     // do not propagate this exception, just treat a bad regex as a non-match for consistency with other SDKs
     return false;
   }
@@ -85,9 +86,9 @@ const operators = {
   greaterThanOrEqual: numericOperator((a, b) => a >= b),
   before: dateOperator((a, b) => a < b),
   after: dateOperator((a, b) => a > b),
-  semVerEqual: semVerOperator((a, b) => a.compare(b) == 0),
+  semVerEqual: semVerOperator((a, b) => a.compare(b) === 0),
   semVerLessThan: semVerOperator((a, b) => a.compare(b) < 0),
-  semVerGreaterThan: semVerOperator((a, b) => a.compare(b) > 0)
+  semVerGreaterThan: semVerOperator((a, b) => a.compare(b) > 0),
 };
 
 const operatorNone = () => false;
@@ -96,4 +97,7 @@ function fn(op) {
   return operators[op] || operatorNone;
 }
 
-module.exports = {operators: operators, fn: fn};
+module.exports = {
+  operators: operators,
+  fn: fn,
+};

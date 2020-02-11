@@ -8,7 +8,17 @@ const messages = require('./messages');
 const stringifyAttrs = require('./utils/stringifyAttrs');
 const wrapPromiseCallback = require('./utils/wrapPromiseCallback');
 
-const userAttrsToStringifyForEvents = [ 'key', 'secondary', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name' ];
+const userAttrsToStringifyForEvents = [
+  'key',
+  'secondary',
+  'ip',
+  'country',
+  'email',
+  'firstName',
+  'lastName',
+  'avatar',
+  'name',
+];
 
 function EventProcessor(sdkKey, config, errorReporter) {
   const ep = {};
@@ -16,13 +26,11 @@ function EventProcessor(sdkKey, config, errorReporter) {
   const userFilter = UserFilter(config),
     summarizer = EventSummarizer(config),
     userKeysCache = LRUCache(config.userKeysCapacity);
-  
+
   let queue = [],
     lastKnownPastTime = 0,
     exceededCapacity = false,
-    shutdown = false,
-    flushTimer,
-    flushUsersTimer;
+    shutdown = false;
 
   function enqueue(event) {
     if (queue.length < config.capacity) {
@@ -38,8 +46,7 @@ function EventProcessor(sdkKey, config, errorReporter) {
 
   function shouldDebugEvent(event) {
     if (event.debugEventsUntilDate) {
-      if (event.debugEventsUntilDate > lastKnownPastTime &&
-        event.debugEventsUntilDate > new Date().getTime()) {
+      if (event.debugEventsUntilDate > lastKnownPastTime && event.debugEventsUntilDate > new Date().getTime()) {
         return true;
       }
     }
@@ -48,60 +55,60 @@ function EventProcessor(sdkKey, config, errorReporter) {
 
   function makeOutputEvent(event) {
     switch (event.kind) {
-    case 'feature': {
-      const debug = !!event.debug;
-      const out = {
-        kind: debug ? 'debug' : 'feature',
-        creationDate: event.creationDate,
-        key: event.key,
-        value: event.value,
-        default: event.default,
-        prereqOf: event.prereqOf
-      };
-      if (event.variation !== undefined && event.variation !== null) {
-        out.variation = event.variation;
+      case 'feature': {
+        const debug = !!event.debug;
+        const out = {
+          kind: debug ? 'debug' : 'feature',
+          creationDate: event.creationDate,
+          key: event.key,
+          value: event.value,
+          default: event.default,
+          prereqOf: event.prereqOf,
+        };
+        if (event.variation !== undefined && event.variation !== null) {
+          out.variation = event.variation;
+        }
+        if (event.version) {
+          out.version = event.version;
+        }
+        if (event.reason) {
+          out.reason = event.reason;
+        }
+        if (config.inlineUsersInEvents || debug) {
+          out.user = processUser(event);
+        } else {
+          out.userKey = getUserKey(event);
+        }
+        return out;
       }
-      if (event.version) {
-        out.version = event.version;
+      case 'identify':
+        return {
+          kind: 'identify',
+          creationDate: event.creationDate,
+          key: getUserKey(event),
+          user: processUser(event),
+        };
+      case 'custom': {
+        const out = {
+          kind: 'custom',
+          creationDate: event.creationDate,
+          key: event.key,
+        };
+        if (config.inlineUsersInEvents) {
+          out.user = processUser(event);
+        } else {
+          out.userKey = getUserKey(event);
+        }
+        if (event.data !== null && event.data !== undefined) {
+          out.data = event.data;
+        }
+        if (event.metricValue !== null && event.metricValue !== undefined) {
+          out.metricValue = event.metricValue;
+        }
+        return out;
       }
-      if (event.reason) {
-        out.reason = event.reason;
-      }
-      if (config.inlineUsersInEvents || debug) {
-        out.user = processUser(event);
-      } else {
-        out.userKey = getUserKey(event);
-      }
-      return out;
-    }
-    case 'identify':
-      return {
-        kind: 'identify',
-        creationDate: event.creationDate,
-        key: getUserKey(event),
-        user: processUser(event)
-      };
-    case 'custom': {
-      const out = {
-        kind: 'custom',
-        creationDate: event.creationDate,
-        key: event.key
-      };
-      if (config.inlineUsersInEvents) {
-        out.user = processUser(event);
-      } else {
-        out.userKey = getUserKey(event);
-      }
-      if (event.data !== null && event.data !== undefined) {
-        out.data = event.data;
-      }
-      if (event.metricValue !== null && event.metricValue !== undefined) {
-        out.metricValue = event.metricValue;
-      }
-      return out;
-    }
-    default:
-      return event;
+      default:
+        return event;
     }
   }
 
@@ -140,7 +147,7 @@ function EventProcessor(sdkKey, config, errorReporter) {
     if (!addFullEvent || !config.inlineUsersInEvents) {
       if (event.user && !userKeysCache.get(event.user.key)) {
         userKeysCache.set(event.user.key, true);
-        if (event.kind != 'identify') {
+        if (event.kind !== 'identify') {
           addIndexEvent = true;
         }
       }
@@ -150,7 +157,7 @@ function EventProcessor(sdkKey, config, errorReporter) {
       enqueue({
         kind: 'index',
         creationDate: event.creationDate,
-        user: processUser(event)
+        user: processUser(event),
       });
     }
     if (addFullEvent) {
@@ -163,34 +170,34 @@ function EventProcessor(sdkKey, config, errorReporter) {
   };
 
   ep.flush = function(callback) {
-    return wrapPromiseCallback(new Promise(function(resolve, reject) {
-      let worklist;
-      let summary;
-      
-      if (shutdown) {
-        const err = new errors.LDInvalidSDKKeyError('Events cannot be posted because SDK key is invalid');
-        reject(err);
-        return;
-      }
+    return wrapPromiseCallback(
+      new Promise((resolve, reject) => {
+        if (shutdown) {
+          const err = new errors.LDInvalidSDKKeyError('Events cannot be posted because SDK key is invalid');
+          reject(err);
+          return;
+        }
 
-      worklist = queue;
-      queue = [];
-      summary = summarizer.getSummary();
-      summarizer.clearSummary();
-      if (Object.keys(summary.features).length) {
-        summary.kind = 'summary';
-        worklist.push(summary);
-      }
+        const worklist = queue;
+        queue = [];
+        const summary = summarizer.getSummary();
+        summarizer.clearSummary();
+        if (Object.keys(summary.features).length) {
+          summary.kind = 'summary';
+          worklist.push(summary);
+        }
 
-      if (!worklist.length) {
-        resolve();
-        return;
-      }
+        if (!worklist.length) {
+          resolve();
+          return;
+        }
 
-      config.logger.debug('Flushing %d events', worklist.length);
+        config.logger.debug('Flushing %d events', worklist.length);
 
-      tryPostingEvents(worklist, uuidv4(), resolve, reject, true);
-    }), callback);
+        tryPostingEvents(worklist, uuidv4(), resolve, reject, true);
+      }),
+      callback
+    );
   };
 
   function tryPostingEvents(events, payloadId, resolve, reject, canRetry) {
@@ -209,52 +216,59 @@ function EventProcessor(sdkKey, config, errorReporter) {
       method: 'POST',
       url: config.eventsUri + '/bulk',
       headers: {
-        'Authorization': sdkKey,
+        Authorization: sdkKey,
         'User-Agent': config.userAgent,
         'X-LaunchDarkly-Event-Schema': '3',
-        'X-LaunchDarkly-Payload-ID': payloadId
+        'X-LaunchDarkly-Payload-ID': payloadId,
       },
       json: true,
       body: events,
       timeout: config.timeout * 1000,
-      agent: config.proxyAgent
+      agent: config.proxyAgent,
     });
-    request(options).on('response', (resp, body) => {
-      if (resp.headers['date']) {
-        const date = Date.parse(resp.headers['date']);
-        if (date) {
-          lastKnownPastTime = date;
+    request(options)
+      .on('response', (resp, body) => {
+        if (resp.headers['date']) {
+          const date = Date.parse(resp.headers['date']);
+          if (date) {
+            lastKnownPastTime = date;
+          }
         }
-      }
-      if (resp.statusCode > 204) {
-        const err = new errors.LDUnexpectedResponseError(messages.httpErrorMessage(resp.statusCode, 'event posting', 'some events were dropped'));
-        errorReporter && errorReporter(err);
-        if (!errors.isHttpErrorRecoverable(resp.statusCode)) {
-          reject(err);
-          shutdown = true;
+        if (resp.statusCode > 204) {
+          const err = new errors.LDUnexpectedResponseError(
+            messages.httpErrorMessage(resp.statusCode, 'event posting', 'some events were dropped')
+          );
+          errorReporter && errorReporter(err);
+          if (!errors.isHttpErrorRecoverable(resp.statusCode)) {
+            reject(err);
+            shutdown = true;
+          } else {
+            retryOrReject(err);
+          }
         } else {
-          retryOrReject(err);
+          resolve(resp, body);
         }
-      } else {
-        resolve(resp, body);
-      }
-    }).on('error', function(err) {
-      retryOrReject(err);
-    });
+      })
+      .on('error', err => {
+        retryOrReject(err);
+      });
   }
+
+  const flushTimer = setInterval(() => {
+    ep.flush().then(
+      () => {},
+      () => {}
+    );
+  }, config.flushInterval * 1000);
+
+  const flushUsersTimer = setInterval(() => {
+    userKeysCache.removeAll();
+  }, config.userKeysFlushInterval * 1000);
 
   ep.close = () => {
     clearInterval(flushTimer);
     clearInterval(flushUsersTimer);
   };
-
-  flushTimer = setInterval(() => {
-    ep.flush().then(() => {} , () => {});
-  }, config.flushInterval * 1000);
-
-  flushUsersTimer = setInterval(() => {
-    userKeysCache.removeAll();
-  }, config.userKeysFlushInterval * 1000);
 
   return ep;
 }
