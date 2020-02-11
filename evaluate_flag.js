@@ -41,7 +41,7 @@ function evalInternal(flag, user, featureStore, events, eventFactory, cb) {
   }
 
   checkPrerequisites(flag, user, featureStore, events, eventFactory, (err, failureReason) => {
-    if (err !== null || failureReason !== null) {
+    if (err || failureReason) {
       getOffResult(flag, failureReason, cb);
     } else {
       evalRules(flag, user, featureStore, cb);
@@ -288,7 +288,7 @@ function getResultForVariationOrRollout(r, user, flag, reason, cb) {
     cb(new Error('Fallthrough variation undefined'), errorResult('MALFORMED_FLAG'));
   } else {
     const index = variationForUser(r, user, flag);
-    if (index === null) {
+    if (index === null || index === undefined) {
       cb(new Error('Variation/rollout object with no variation or rollout'), errorResult('MALFORMED_FLAG'));
     } else {
       getVariation(flag, index, reason, cb);
@@ -303,7 +303,7 @@ function errorResult(errorKind) {
 // Given a variation or rollout 'r', select
 // the variation for the given user
 function variationForUser(r, user, flag) {
-  if (r.variation !== null) {
+  if (r.variation !== null && r.variation !== undefined) {
     // This represets a fixed variation; return it
     return r.variation;
   }
