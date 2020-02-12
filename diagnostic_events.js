@@ -18,7 +18,7 @@ function DiagnosticsManager(config, diagnosticId, startTime) {
     creationDate: startTime,
     sdk: makeSdkData(config),
     configuration: makeConfigData(config),
-    platform: makePlatformData()
+    platform: makePlatformData(),
   });
 
   // Records a stream connection attempt (called by the stream processor).
@@ -29,7 +29,7 @@ function DiagnosticsManager(config, diagnosticId, startTime) {
   acc.recordStreamInit = (timestamp, failed, durationMillis) => {
     const item = { timestamp, durationMillis };
     if (failed) {
-      item.failed = true;  // omit this property if false
+      item.failed = true; // omit this property if false
     }
     streamInits.push(item);
   };
@@ -49,7 +49,7 @@ function DiagnosticsManager(config, diagnosticId, startTime) {
       droppedEvents,
       deduplicatedUsers,
       eventsInLastBatch,
-      streamInits
+      streamInits,
     };
     dataSinceDate = currentTime;
     streamInits = [];
@@ -61,7 +61,7 @@ function DiagnosticsManager(config, diagnosticId, startTime) {
 
 function DiagnosticId(sdkKey) {
   const ret = {
-    diagnosticId: uuidv4()
+    diagnosticId: uuidv4(),
   };
   if (sdkKey) {
     ret.sdkKeySuffix = sdkKey.length > 6 ? sdkKey.substring(sdkKey.length - 6) : sdkKey;
@@ -72,7 +72,7 @@ function DiagnosticId(sdkKey) {
 function makeSdkData(config) {
   const sdkData = {
     name: 'node-server-sdk',
-    version: packageJson.version
+    version: packageJson.version,
   };
   if (config.wrapperName) {
     sdkData.wrapperName = config.wrapperName;
@@ -116,7 +116,7 @@ function makeConfigData(config) {
     usingProxy: !!(config.proxyAgent || config.proxyHost),
     usingProxyAuthenticator: !!config.proxyAuth,
     diagnosticRecordingIntervalMillis: secondsToMillis(config.diagnosticRecordingInterval),
-    dataStoreType: getComponentDescription(config.featureStore, 'memory')
+    dataStoreType: getComponentDescription(config.featureStore, 'memory'),
   };
 
   return configData;
@@ -131,25 +131,25 @@ function makePlatformData() {
     // Note that os.release() is not the same OS version string that would be reported by other languages.
     // It's defined as being the value returned by "uname -r" (e.g. on Mac OS 10.14, this is "18.7.0"; on
     // Ubuntu 16.04, it is "4.4.0-1095-aws"), or GetVersionExW in Windows.
-    nodeVersion: process.versions.node
+    nodeVersion: process.versions.node,
   };
 }
 
 function normalizePlatformName(platformName) {
   // The following logic is based on how Node.js reports the platform name
   switch (platformName) {
-  case 'darwin':
-    return 'MacOS';
-  case 'win32':
-    return 'Windows';
-  case 'linux':
-    return 'Linux';
-  default:
-    return platformName;
+    case 'darwin':
+      return 'MacOS';
+    case 'win32':
+      return 'Windows';
+    case 'linux':
+      return 'Linux';
+    default:
+      return platformName;
   }
 }
 
 module.exports = {
-  DiagnosticsManager: DiagnosticsManager,
-  DiagnosticId: DiagnosticId
+  DiagnosticsManager,
+  DiagnosticId,
 };

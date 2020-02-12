@@ -24,7 +24,7 @@ function FileDataSource(options) {
     function defaultLogger() {
       return new winston.Logger({
         level: 'info',
-        transports: [ new (winston.transports.Console)() ]
+        transports: [new winston.transports.Console()],
       });
     }
 
@@ -34,43 +34,44 @@ function FileDataSource(options) {
           if (err) {
             reject(err);
           } else {
-            resolve(stat.mtimeMs || stat.mtime);  // mtimeMs isn't always available; either of these values will work for  us
+            resolve(stat.mtimeMs || stat.mtime); // mtimeMs isn't always available; either of these values will work for  us
           }
         });
       });
     }
 
-    function loadFilePromise(path, allData) {
+    function loadFilePromise(path, allDataIn) {
+      const allData = allDataIn;
       return new Promise((resolve, reject) =>
-        fs.readFile(path, 'utf8', (err, data) =>
-          err ? reject(err) : resolve(data))
-      ).then(data => {
-        const parsed = parseData(data) || {};
-        const addItem = (kind, item) => {
-          if (!allData[kind.namespace]) {
-            allData[kind.namespace] = {};
-          }
-          if (allData[kind.namespace][item.key]) {
-            throw new Error('found duplicate key: "' + item.key + '"');
-          } else {
-            allData[kind.namespace][item.key] = item;
-          }
-        };
-        Object.keys(parsed.flags || {}).forEach(key => {
-          addItem(dataKind.features, parsed.flags[key]);
+        fs.readFile(path, 'utf8', (err, data) => (err ? reject(err) : resolve(data)))
+      )
+        .then(data => {
+          const parsed = parseData(data) || {};
+          const addItem = (kind, item) => {
+            if (!allData[kind.namespace]) {
+              allData[kind.namespace] = {};
+            }
+            if (allData[kind.namespace][item.key]) {
+              throw new Error('found duplicate key: "' + item.key + '"');
+            } else {
+              allData[kind.namespace][item.key] = item;
+            }
+          };
+          Object.keys(parsed.flags || {}).forEach(key => {
+            addItem(dataKind.features, parsed.flags[key]);
+          });
+          Object.keys(parsed.flagValues || {}).forEach(key => {
+            addItem(dataKind.features, makeFlagWithValue(key, parsed.flagValues[key]));
+          });
+          Object.keys(parsed.segments || {}).forEach(key => {
+            addItem(dataKind.segments, parsed.segments[key]);
+          });
+          logger.info('Loaded flags from ' + path);
+        })
+        .then(() => getFileTimestampPromise(path))
+        .then(timestamp => {
+          timestamps[path] = timestamp;
         });
-        Object.keys(parsed.flagValues || {}).forEach(key => {
-          addItem(dataKind.features, makeFlagWithValue(key, parsed.flagValues[key]));
-        });
-        Object.keys(parsed.segments || {}).forEach(key => {
-          addItem(dataKind.segments, parsed.segments[key]);
-        });
-        logger.info('Loaded flags from ' + path);
-      }).then(() =>
-        getFileTimestampPromise(path)
-      ).then(timestamp => {
-        timestamps[path] = timestamp;
-      });
     }
 
     function loadAllPromise() {
@@ -79,7 +80,8 @@ function FileDataSource(options) {
       let p = Promise.resolve();
       for (let i = 0; i < paths.length; i++) {
         (path => {
-          p = p.then(() => loadFilePromise(path, allData))
+          p = p
+            .then(() => loadFilePromise(path, allData))
             .catch(e => {
               throw new Error('Unable to load flags: ' + e + ' [' + path + ']');
             });
@@ -89,10 +91,12 @@ function FileDataSource(options) {
     }
 
     function initStorePromise(data) {
-      return new Promise(resolve => featureStore.init(data, () => {
-        inited = true;
-        resolve();
-      }));
+      return new Promise(resolve =>
+        featureStore.init(data, () => {
+          inited = true;
+          resolve();
+        })
+      );
     }
 
     function parseData(data) {
@@ -106,7 +110,7 @@ function FileDataSource(options) {
         key: key,
         on: true,
         fallthrough: { variation: 0 },
-        variations: [ value ]
+        variations: [value],
       };
     }
 
@@ -115,9 +119,11 @@ function FileDataSource(options) {
         return; // coalesce updates so we don't do multiple reloads if a whole set of files was just updated
       }
       const reload = () => {
-        loadAllPromise().then(() => {
-          logger.warn('Reloaded flags from file data');
-        }).catch(() => {});
+        loadAllPromise()
+          .then(() => {
+            logger.warn('Reloaded flags from file data');
+          })
+          .catch(() => {});
       };
       getFileTimestampPromise(path)
         .then(timestamp => {
@@ -130,7 +136,8 @@ function FileDataSource(options) {
             // because in a case where multiple fs.watch events are fired off one after another,
             // we want the reload to happen only after all of the event handlers have executed.
           }
-        }).catch(() => {
+        })
+        .catch(() => {
           logger.warn('Unexpected error trying to get timestamp of file: ' + path);
         });
     }
@@ -158,7 +165,10 @@ function FileDataSource(options) {
         startWatching();
       }
 
-      loadAllPromise().then(() => cb(), err => cb(err));
+      loadAllPromise().then(
+        () => cb(),
+        err => cb(err)
+      );
     };
 
     fds.stop = () => {
@@ -167,9 +177,7 @@ function FileDataSource(options) {
       }
     };
 
-    fds.initialized = () => {
-      return inited;
-    };
+    fds.initialized = () => inited;
 
     fds.close = () => {
       fds.stop();

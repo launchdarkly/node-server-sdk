@@ -1,18 +1,18 @@
-
 function EventSummarizer() {
   const es = {};
 
   let startDate = 0,
     endDate = 0,
     counters = {};
-  
+
   es.summarizeEvent = event => {
     if (event.kind === 'feature') {
-      const counterKey = event.key +
+      const counterKey =
+        event.key +
         ':' +
-        ((event.variation !== null && event.variation !== undefined) ? event.variation : '') +
+        (event.variation !== null && event.variation !== undefined ? event.variation : '') +
         ':' +
-        ((event.version !== null && event.version !== undefined) ? event.version : '');
+        (event.version !== null && event.version !== undefined ? event.version : '');
       const counterVal = counters[counterKey];
       if (counterVal) {
         counterVal.count = counterVal.count + 1;
@@ -23,7 +23,7 @@ function EventSummarizer() {
           version: event.version,
           variation: event.variation,
           value: event.value,
-          default: event.default
+          default: event.default,
         };
       }
       if (startDate === 0 || event.creationDate < startDate) {
@@ -37,19 +37,19 @@ function EventSummarizer() {
 
   es.getSummary = () => {
     const flagsOut = {};
-    for (let i in counters) {
+    for (const i in counters) {
       const c = counters[i];
       let flag = flagsOut[c.key];
       if (!flag) {
         flag = {
           default: c.default,
-          counters: []
+          counters: [],
         };
         flagsOut[c.key] = flag;
       }
       const counterOut = {
         value: c.value,
-        count: c.count
+        count: c.count,
       };
       if (c.variation !== undefined && c.variation !== null) {
         counterOut.variation = c.variation;
@@ -64,7 +64,7 @@ function EventSummarizer() {
     return {
       startDate: startDate,
       endDate: endDate,
-      features: flagsOut
+      features: flagsOut,
     };
   };
 

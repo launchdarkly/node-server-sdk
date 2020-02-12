@@ -18,11 +18,12 @@ module.exports = (function() {
       useLdd: false,
       allAttributesPrivate: false,
       privateAttributeNames: [],
+      inlineUsersInEvents: false,
       userKeysCapacity: 1000,
       userKeysFlushInterval: 300,
       diagnosticOptOut: false,
       diagnosticRecordingInterval: 900,
-      featureStore: InMemoryFeatureStore()
+      featureStore: InMemoryFeatureStore(),
     };
   };
 
@@ -42,9 +43,10 @@ module.exports = (function() {
     tlsParams: 'object', // LDTLSOptions
     updateProcessor: 'factory', // gets special handling in validation
     wrapperName: 'string',
-    wrapperVersion: 'string'
+    wrapperVersion: 'string',
   };
 
+  /* eslint-disable camelcase */
   const deprecatedOptions = {
     base_uri: 'baseUri',
     stream_uri: 'streamUri',
@@ -58,11 +60,13 @@ module.exports = (function() {
     feature_store: 'featureStore',
     use_ldd: 'useLdd',
     all_attributes_private: 'allAttributesPrivate',
-    private_attribute_names: 'privateAttributeNames'
+    private_attribute_names: 'privateAttributeNames',
   };
+  /* eslint-enable camelcase */
 
-  function checkDeprecatedOptions(config) {
-    Object.keys(deprecatedOptions).forEach(function(oldName) {
+  function checkDeprecatedOptions(configIn) {
+    const config = configIn;
+    Object.keys(deprecatedOptions).forEach(oldName => {
       if (config[oldName] !== undefined) {
         const newName = deprecatedOptions[oldName];
         config.logger.warn(messages.deprecated(oldName, newName));
@@ -90,7 +94,8 @@ module.exports = (function() {
     return uri.replace(/\/+$/, '');
   }
 
-  function validateTypesAndNames(config, defaultConfig) {
+  function validateTypesAndNames(configIn, defaultConfig) {
+    const config = configIn;
     const typeDescForValue = value => {
       if (value === null || value === undefined) {
         return undefined;
@@ -98,7 +103,7 @@ module.exports = (function() {
       if (Array.isArray(value)) {
         return 'array';
       }
-      const t = typeof(value);
+      const t = typeof value;
       if (t === 'boolean' || t === 'string' || t === 'number') {
         return t;
       }
@@ -115,7 +120,7 @@ module.exports = (function() {
           const expectedType = typeDesc || typeDescForValue(defaultValue);
           const actualType = typeDescForValue(value);
           if (actualType !== expectedType) {
-            if (expectedType == 'factory' && (typeof value === 'function' || typeof value === 'object')) {
+            if (expectedType === 'factory' && (typeof value === 'function' || typeof value === 'object')) {
               // for some properties, we allow either a factory function or an instance
               return;
             }
@@ -132,28 +137,29 @@ module.exports = (function() {
     });
   }
 
-  function enforceMinimum(config, name, min) {
+  function enforceMinimum(configIn, name, min) {
+    const config = configIn;
     if (config[name] < min) {
       config.logger.warn(messages.optionBelowMinimum(name, config[name], min));
       config[name] = min;
     }
   }
+
   function validate(options) {
     let config = Object.assign({}, options || {});
-    
-    config.logger = (config.logger ||
+    config.logger =
+      config.logger ||
       new winston.Logger({
         level: 'info',
         transports: [
-          new (winston.transports.Console)(({
+          new winston.transports.Console({
             formatter: function(options) {
               return '[LaunchDarkly] ' + (options.message ? options.message : '');
-            }
-          })),
-        ]
-      })
-    );
-    
+            },
+          }),
+        ],
+      });
+
     checkDeprecatedOptions(config);
 
     const defaultConfig = defaults();
@@ -164,7 +170,7 @@ module.exports = (function() {
     config.baseUri = canonicalizeUri(config.baseUri);
     config.streamUri = canonicalizeUri(config.streamUri);
     config.eventsUri = canonicalizeUri(config.eventsUri);
-    
+
     enforceMinimum(config, 'pollInterval', 30);
     enforceMinimum(config, 'diagnosticRecordingInterval', 60);
 
@@ -173,6 +179,6 @@ module.exports = (function() {
 
   return {
     validate: validate,
-    defaults: defaults
+    defaults: defaults,
   };
 })();
