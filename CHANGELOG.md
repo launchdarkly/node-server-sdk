@@ -2,6 +2,19 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.11.0] - 2020-02-12
+Note: if you are using the LaunchDarkly Relay Proxy to forward events, update the Relay to version 5.10.0 or later before updating to this Node SDK version.
+
+### Added:
+- The SDK now periodically sends diagnostic data to LaunchDarkly, describing the version and configuration of the SDK, the architecture and version of the runtime platform, and performance statistics. No credentials, hostnames, or other identifiable values are included. This behavior can be disabled with the `diagnosticOptOut` option, or configured with `diagnosticRecordingInterval`.
+
+### Fixed:
+- Setting the `inlineUsersInEvents` option caused a spurious warning message saying it was an unknown option. This did not prevent it from working.
+- Updated comment on `init` to clarify the intended singleton usage pattern.
+
+### Removed:
+- Removed an unnecessary dependency on the package `node-sha1`. ([#173](https://github.com/launchdarkly/node-server-sdk/issues/173))
+
 ## [5.10.3] - 2020-01-15
 ### Fixed:
 - The SDK now specifies a uniquely identifiable request header when sending events to LaunchDarkly to ensure that events are only processed once, even if the SDK sends them two times due to a failed initial attempt.
