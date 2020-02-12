@@ -11,7 +11,7 @@ async function withAllServers(asyncCallback) {
           baseUri: pollingServer.url,
           streamUri: streamingServer.url,
           eventsUri: eventsServer.url,
-          logger: stubLogger()
+          logger: stubLogger(),
         };
         return await asyncCallback(servers, baseConfig);
       })
@@ -38,6 +38,7 @@ describe('LDClient end-to-end', () => {
     await withAllServers(async (servers, config) => {
       servers.polling.forMethodAndPath('get', '/sdk/latest-all', TestHttpHandlers.respondJson(allData));
       servers.events.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(200));
+      servers.events.forMethodAndPath('post', '/diagnostic', TestHttpHandlers.respond(200));
 
       config.stream = false;
       await withCloseable(LDClient.init(sdkKey, config), async client => {
@@ -52,7 +53,11 @@ describe('LDClient end-to-end', () => {
 
       expect(servers.polling.requestCount()).toEqual(1);
       expect(servers.streaming.requestCount()).toEqual(0);
-      expect(servers.events.requestCount()).toEqual(1);
+      expect(servers.events.requestCount()).toEqual(2);
+      const req0 = await servers.events.nextRequest();
+      expect(req0.path).toEqual('/diagnostic');
+      const req1 = await servers.events.nextRequest();
+      expect(req1.path).toEqual('/bulk');
     });
   });
   
@@ -60,6 +65,7 @@ describe('LDClient end-to-end', () => {
     await withAllServers(async (servers, config) => {
       servers.polling.forMethodAndPath('get', '/sdk/latest-all', TestHttpHandlers.respond(401));
       servers.events.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(200));
+      servers.events.forMethodAndPath('post', '/diagnostic', TestHttpHandlers.respond(200));
 
       config.stream = false;
 
@@ -80,6 +86,7 @@ describe('LDClient end-to-end', () => {
         events.add(streamEvent);
         servers.streaming.forMethodAndPath('get', '/all', TestHttpHandlers.sseStream(events));
         servers.events.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(200));
+        servers.events.forMethodAndPath('post', '/diagnostic', TestHttpHandlers.respond(200));
 
         await withCloseable(LDClient.init(sdkKey, config), async client => {
           await client.waitForInitialization();
@@ -93,7 +100,11 @@ describe('LDClient end-to-end', () => {
 
         expect(servers.polling.requestCount()).toEqual(0);
         expect(servers.streaming.requestCount()).toEqual(1);
-        expect(servers.events.requestCount()).toEqual(1);
+        expect(servers.events.requestCount()).toEqual(2);
+        const req0 = await servers.events.nextRequest();
+        expect(req0.path).toEqual('/diagnostic');
+        const req1 = await servers.events.nextRequest();
+        expect(req1.path).toEqual('/bulk');
       });
     });
   });
@@ -102,6 +113,7 @@ describe('LDClient end-to-end', () => {
     await withAllServers(async (servers, config) => {
       servers.streaming.forMethodAndPath('get', '/all', TestHttpHandlers.respond(401));
       servers.events.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(200));
+      servers.events.forMethodAndPath('post', '/diagnostic', TestHttpHandlers.respond(200));
 
       await withCloseable(LDClient.init(sdkKey, config), async client => {
         await expect(client.waitForInitialization()).rejects.toThrow();

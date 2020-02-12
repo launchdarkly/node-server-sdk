@@ -28,5 +28,5 @@ function safeAsyncEachSeries(collection, iteratee, resultCallback) {
 
 module.exports = {
   safeAsyncEach: safeAsyncEach,
-  safeAsyncEachSeries: safeAsyncEachSeries
+  safeAsyncEachSeries: safeAsyncEachSeries,
 };

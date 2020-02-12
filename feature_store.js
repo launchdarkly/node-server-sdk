@@ -1,4 +1,3 @@
-
 // The default in-memory implementation of a feature store, which holds feature flags and
 // other related data received from LaunchDarkly.
 //
@@ -47,7 +46,7 @@ function InMemoryFeatureStore() {
     const results = {};
     const items = allData[kind.namespace] || {};
 
-    for (let key in items) {
+    for (const key in items) {
       if (Object.hasOwnProperty.call(items, key)) {
         const item = items[key];
         if (item && !item.deleted) {
@@ -76,7 +75,7 @@ function InMemoryFeatureStore() {
       const old = items[key];
       if (!old || old.version < version) {
         items[key] = deletedItem;
-      } 
+      }
     } else {
       items[key] = deletedItem;
     }
@@ -111,6 +110,8 @@ function InMemoryFeatureStore() {
   store.close = () => {
     // Close on the in-memory store is a no-op
   };
+
+  store.description = 'memory';
 
   return store;
 }

@@ -1,5 +1,7 @@
 import Requestor from '../requestor';
+import * as httpUtils from '../utils/httpUtils';
 import * as dataKind from '../versioned_data_kind';
+
 import { promisify, TestHttpHandlers, TestHttpServer, withCloseable } from 'launchdarkly-js-test-helpers';
 
 describe('Requestor', () => {
@@ -24,6 +26,16 @@ describe('Requestor', () => {
         const r = Requestor(sdkKey, { baseUri: server.url });
         const result = await promisify(r.requestObject)(dataKind.segments, 'key');
         expect(JSON.parse(result)).toEqual(someData);
+      })
+    );
+
+    it('passes expected headers', async () =>
+      await withCloseable(TestHttpServer.start, async server => {
+        server.forMethodAndPath('get', '/sdk/latest-flags/key', TestHttpHandlers.respondJson(someData));
+        const r = Requestor(sdkKey, { baseUri: server.url });
+        await promisify(r.requestObject)(dataKind.features, 'key');
+        const req = await server.nextRequest();
+        expect(req.headers).toMatchObject(httpUtils.getDefaultHeaders(sdkKey, {}));
       })
     );
 

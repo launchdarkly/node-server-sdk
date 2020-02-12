@@ -1,4 +1,3 @@
-
 /*
   These objects denote the types of data that can be stored in the feature store and
   referenced in the API.  If we add another storable data type in the future, as long as it
@@ -19,17 +18,17 @@ const features = {
       return [];
     }
     return flag.prerequisites.map(p => p.key);
-  }
+  },
 };
 
 const segments = {
   namespace: 'segments',
   streamApiPath: '/segments/',
   requestPath: '/sdk/latest-segments/',
-  priority: 0
+  priority: 0,
 };
 
 module.exports = {
   features: features,
-  segments: segments
+  segments: segments,
 };

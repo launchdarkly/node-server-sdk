@@ -3,28 +3,28 @@ const redis = require('redis'),
   dataKind = require('./versioned_data_kind'),
   CachingStoreWrapper = require('./caching_store_wrapper');
 
-const noop = function(){};
-
+const noop = function() {};
 
 function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger, preconfiguredClient) {
-  return new CachingStoreWrapper(new redisFeatureStoreInternal(redisOpts, prefix, logger, preconfiguredClient), cacheTTL);
+  return new CachingStoreWrapper(
+    new redisFeatureStoreInternal(redisOpts, prefix, logger, preconfiguredClient),
+    cacheTTL,
+    'Redis'
+  );
 }
 
-function redisFeatureStoreInternal(redisOpts, prefix, logger, preconfiguredClient) {
-
+function redisFeatureStoreInternal(redisOpts, prefix, specifiedLogger, preconfiguredClient) {
   const client = preconfiguredClient || redisOpts.client || redis.createClient(redisOpts),
     store = {},
     itemsPrefix = (prefix || 'launchdarkly') + ':',
     initedKey = itemsPrefix + '$inited';
 
-  logger = (logger ||
+  const logger =
+    specifiedLogger ||
     new winston.Logger({
       level: 'info',
-      transports: [
-        new (winston.transports.Console)(),
-      ]
-    })
-  );
+      transports: [new winston.transports.Console()],
+    });
 
   let connected = !!redisOpts.client;
   let initialConnect = !redisOpts.client;
@@ -34,8 +34,7 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger, preconfiguredClien
     logger.error('Redis error - ' + err);
   });
   client.on('reconnecting', info => {
-    logger.info('Attempting to reconnect to Redis (attempt #' + info.attempt +
-      ', delay: ' + info.delay + 'ms)');
+    logger.info('Attempting to reconnect to Redis (attempt #' + info.attempt + ', delay: ' + info.delay + 'ms)');
   });
   client.on('connect', () => {
     if (!initialConnect) {
@@ -58,8 +57,8 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger, preconfiguredClien
   }
 
   // A helper that performs a get with the redis client
-  function doGet(kind, key, cb) {
-    cb = cb || noop;
+  function doGet(kind, key, maybeCallback) {
+    const cb = maybeCallback || noop;
 
     if (!connected) {
       logger.warn('Attempted to fetch key ' + key + ' while Redis connection is down');
@@ -69,7 +68,7 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger, preconfiguredClien
 
     client.hget(itemsKey(kind), key, (err, obj) => {
       if (err) {
-        logger.error('Error fetching key ' + key + ' from Redis in \'' + kind.namespace + '\'', err);
+        logger.error('Error fetching key ' + key + " from Redis in '" + kind.namespace + "'", err); // eslint-disable-line quotes
         cb(null);
       } else {
         const item = JSON.parse(obj);
@@ -78,8 +77,8 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger, preconfiguredClien
     });
   }
 
-  store.getInternal = (kind, key, cb) => {
-    cb = cb || noop;
+  store.getInternal = (kind, key, maybeCallback) => {
+    const cb = maybeCallback || noop;
     doGet(kind, key, item => {
       if (item && !item.deleted) {
         cb(item);
@@ -89,8 +88,8 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger, preconfiguredClien
     });
   };
 
-  store.getAllInternal = (kind, cb) => {
-    cb = cb || noop;
+  store.getAllInternal = (kind, maybeCallback) => {
+    const cb = maybeCallback || noop;
     if (!connected) {
       logger.warn('Attempted to fetch all keys while Redis connection is down');
       cb(null);
@@ -99,13 +98,13 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger, preconfiguredClien
 
     client.hgetall(itemsKey(kind), (err, obj) => {
       if (err) {
-        logger.error('Error fetching \'' + kind.namespace + '\' from Redis', err);
+        logger.error("Error fetching '" + kind.namespace + "' from Redis", err); // eslint-disable-line quotes
         cb(null);
       } else {
         const results = {},
           items = obj;
 
-        for (let key in items) {
+        for (const key in items) {
           if (Object.hasOwnProperty.call(items, key)) {
             results[key] = JSON.parse(items[key]);
           }
@@ -118,14 +117,14 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger, preconfiguredClien
   store.initInternal = (allData, cb) => {
     const multi = client.multi();
 
-    for (let kindNamespace in allData) {
+    for (const kindNamespace in allData) {
       if (Object.hasOwnProperty.call(allData, kindNamespace)) {
         const kind = dataKind[kindNamespace];
         const baseKey = itemsKey(kind);
         const items = allData[kindNamespace];
         const stringified = {};
         multi.del(baseKey);
-        for (let key in items) {
+        for (const key in items) {
           if (Object.hasOwnProperty.call(items, key)) {
             stringified[key] = JSON.stringify(items[key]);
           }
@@ -138,7 +137,7 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger, preconfiguredClien
     }
 
     multi.set(initedKey, '');
-    
+
     multi.exec(err => {
       if (err) {
         logger.error('Error initializing Redis store', err);
@@ -150,7 +149,7 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger, preconfiguredClien
   store.upsertInternal = (kind, item, cb) => {
     updateItemWithVersioning(kind, item, (err, attemptedWrite) => {
       if (err) {
-        logger.error('Error upserting key ' + item.key + ' in \'' + kind.namespace + '\'', err);
+        logger.error('Error upserting key ' + item.key + " in '" + kind.namespace + "'", err); // eslint-disable-line quotes
       }
       cb(err, attemptedWrite);
     });
@@ -160,7 +159,11 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger, preconfiguredClien
     client.watch(itemsKey(kind));
     const multi = client.multi();
     // testUpdateHook is instrumentation, used only by the unit tests
-    const prepare = store.testUpdateHook || function(prepareCb) { prepareCb(); };
+    const prepare =
+      store.testUpdateHook ||
+      function(prepareCb) {
+        prepareCb();
+      };
     prepare(() => {
       doGet(kind, newItem.key, oldItem => {
         if (oldItem && oldItem.version >= newItem.version) {
@@ -182,9 +185,9 @@ function redisFeatureStoreInternal(redisOpts, prefix, logger, preconfiguredClien
     });
   }
 
-  store.initializedInternal = cb => {
-    cb = cb || noop;
-    client.exists(initedKey, function(err, obj) {
+  store.initializedInternal = maybeCallback => {
+    const cb = maybeCallback || noop;
+    client.exists(initedKey, (err, obj) => {
       cb(Boolean(!err && obj));
     });
   };

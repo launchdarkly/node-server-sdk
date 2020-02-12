@@ -1,3 +1,5 @@
+/* eslint-disable */ // this is copied code which will eventually be replaced by our js-eventsource package
+
 // taken from https://github.com/aslakhellesoy/eventsource-node/blob/v0.1.6/package.json
 
 var parse = require('url').parse

@@ -1,3 +1,4 @@
+const { DiagnosticsManager, DiagnosticId } = require('../diagnostic_events');
 const EventProcessor = require('../event_processor');
 const { sleepAsync, TestHttpHandlers, TestHttpServer, withCloseable } = require('launchdarkly-js-test-helpers');
 
@@ -11,6 +12,7 @@ describe('EventProcessor', () => {
     flushInterval: 30,
     userKeysCapacity: 1000,
     userKeysFlushInterval: 300,
+    diagnosticRecordingInterval: 900,
     logger: {
       debug: jest.fn(),
       warn: jest.fn()
@@ -26,14 +28,28 @@ describe('EventProcessor', () => {
   function eventsServerTest(asyncCallback) {
     return async () => withCloseable(TestHttpServer.start, async server => {
       server.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(200));
+      server.forMethodAndPath('post', '/diagnostic', TestHttpHandlers.respond(200));
       return await asyncCallback(server);
     });
   }
 
-  async function withEventProcessor(config, server, asyncCallback) {
-    const ep = EventProcessor(sdkKey, Object.assign({}, config, { eventsUri: server.url }));
+  async function withEventProcessor(baseConfig, server, asyncCallback) {
+    const config = Object.assign({}, baseConfig, { eventsUri: server.url, diagnosticOptOut: true });
+    const ep = EventProcessor(sdkKey, config);
     try {
       return await asyncCallback(ep);
+    } finally {
+      ep.close();
+    }
+  }
+
+  async function withDiagnosticEventProcessor(baseConfig, server, asyncCallback) {
+    const config = Object.assign({}, baseConfig, { eventsUri: server.url });
+    const id = DiagnosticId(sdkKey);
+    const manager = DiagnosticsManager(config, id, new Date().getTime());
+    const ep = EventProcessor(sdkKey, config, null, manager);
+    try {
+      return await asyncCallback(ep, id, manager);
     } finally {
       ep.close();
     }
@@ -571,4 +587,120 @@ describe('EventProcessor', () => {
       expect(s.requestCount()).toEqual(2);
     });
   }));
+
+  describe('diagnostic events', () => {
+    it('sends initial diagnostic event', eventsServerTest(async s => {
+      const startTime = new Date().getTime();
+      await withDiagnosticEventProcessor(defaultConfig, s, async (ep, id) => {
+        const req = await s.nextRequest();
+        expect(req.path).toEqual('/diagnostic');
+        const data = JSON.parse(req.body);
+        expect(data.kind).toEqual('diagnostic-init');
+        expect(data.id).toEqual(id);
+        expect(data.creationDate).toBeGreaterThanOrEqual(startTime);
+        expect(data.configuration).toMatchObject({ customEventsURI: true });
+        expect(data.sdk).toMatchObject({ name: 'node-server-sdk' });
+        expect(data.platform).toMatchObject({ name: 'Node' });
+      });
+    }));
+  
+    it('sends periodic diagnostic event', eventsServerTest(async s => {
+      const startTime = new Date().getTime();
+      const config = Object.assign({}, defaultConfig, { diagnosticRecordingInterval: 0.1 });
+      await withDiagnosticEventProcessor(config, s, async (ep, id) => {
+        const req0 = await s.nextRequest();
+        expect(req0.path).toEqual('/diagnostic');
+        
+        const req1 = await s.nextRequest();
+        expect(req1.path).toEqual('/diagnostic');
+        const data = JSON.parse(req1.body);
+        expect(data.kind).toEqual('diagnostic');
+        expect(data.id).toEqual(id);
+        expect(data.creationDate).toBeGreaterThanOrEqual(startTime);
+        expect(data.dataSinceDate).toBeGreaterThanOrEqual(startTime);
+        expect(data.droppedEvents).toEqual(0);
+        expect(data.deduplicatedUsers).toEqual(0);
+        expect(data.eventsInLastBatch).toEqual(0);
+      });
+    }));
+  
+    it('counts events in queue from last flush and dropped events', eventsServerTest(async s => {
+      const startTime = new Date().getTime();
+      const config = Object.assign({}, defaultConfig, { diagnosticRecordingInterval: 0.1, capacity: 2 });
+      await withDiagnosticEventProcessor(config, s, async (ep, id) => {
+        const req0 = await s.nextRequest();
+        expect(req0.path).toEqual('/diagnostic');
+
+        ep.sendEvent({ kind: 'identify', creationDate: 1000, user: user });
+        ep.sendEvent({ kind: 'identify', creationDate: 1001, user: user });
+        ep.sendEvent({ kind: 'identify', creationDate: 1002, user: user });
+        await ep.flush();
+
+        // We can't be sure which will be posted first, the regular events or the diagnostic event
+        const requests = [];
+        const req1 = await s.nextRequest();
+        requests.push({ path: req1.path, data: JSON.parse(req1.body) });
+        const req2 = await s.nextRequest();
+        requests.push({ path: req2.path, data: JSON.parse(req2.body) });
+
+        expect(requests).toContainEqual({
+          path: '/bulk',
+          data: expect.arrayContaining([
+            expect.objectContaining({ kind: 'identify', creationDate: 1000 }),
+            expect.objectContaining({ kind: 'identify', creationDate: 1001 }),
+          ]),
+        });
+
+        expect(requests).toContainEqual({
+          path: '/diagnostic',
+          data: expect.objectContaining({
+            kind: 'diagnostic',
+            id: id,
+            droppedEvents: 1,
+            deduplicatedUsers: 0,
+            eventsInLastBatch: 2,
+         }),
+        });
+      });
+    }));
+  
+    it('counts deduplicated users', eventsServerTest(async s => {
+      const startTime = new Date().getTime();
+      const config = Object.assign({}, defaultConfig, { diagnosticRecordingInterval: 0.1 });
+      await withDiagnosticEventProcessor(config, s, async (ep, id) => {
+        const req0 = await s.nextRequest();
+        expect(req0.path).toEqual('/diagnostic');
+
+        ep.sendEvent({ kind: 'track', key: 'eventkey1', creationDate: 1000, user: user });
+        ep.sendEvent({ kind: 'track', key: 'eventkey2', creationDate: 1001, user: user });
+        await ep.flush();
+
+        // We can't be sure which will be posted first, the regular events or the diagnostic event
+        const requests = [];
+        const req1 = await s.nextRequest();
+        requests.push({ path: req1.path, data: JSON.parse(req1.body) });
+        const req2 = await s.nextRequest();
+        requests.push({ path: req2.path, data: JSON.parse(req2.body) });
+
+        expect(requests).toContainEqual({
+          path: '/bulk',
+          data: expect.arrayContaining([
+            expect.objectContaining({ kind: 'track', creationDate: 1000 }),
+            expect.objectContaining({ kind: 'track', creationDate: 1001 }),
+          ]),
+        });
+
+        expect(requests).toContainEqual({
+          path: '/diagnostic',
+          data: expect.objectContaining({
+            kind: 'diagnostic',
+            id: id,
+            droppedEvents: 0,
+            deduplicatedUsers: 1,
+            eventsInLastBatch: 3, // 2 "track" + 1 "index"
+         }),
+        });
+      });
+    }));
+  });
 });
