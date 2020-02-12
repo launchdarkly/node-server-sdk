@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<title>&quot;launchdarkly-node-server-sdk&quot; | LaunchDarkly Server-Side Node SDK (5.10.3)</title>
+	<title>&quot;launchdarkly-node-server-sdk&quot; | LaunchDarkly Server-Side Node SDK (5.11.0)</title>
 	<meta name="description" content="">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="assets/css/main.css">
@@ -22,7 +22,7 @@
 						<li class="state loading">Preparing search index...</li>
 						<li class="state failure">The search index is not available</li>
 					</ul>
-					<a href="index.html" class="title">LaunchDarkly Server-Side Node SDK (5.10.3)</a>
+					<a href="index.html" class="title">LaunchDarkly Server-Side Node SDK (5.11.0)</a>
 				</div>
 				<div class="table-cell" id="tsd-widgets">
 					<div id="tsd-filter">
@@ -125,7 +125,7 @@
 					<div class="tsd-signature tsd-kind-icon">LDFlag<wbr>Value<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">any</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/de2e95a/index.d.ts#L75">index.d.ts:75</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/09b39b4/index.d.ts#L76">index.d.ts:76</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -148,7 +148,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/de2e95a/index.d.ts#L987">index.d.ts:987</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/09b39b4/index.d.ts#L1022">index.d.ts:1022</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -189,7 +189,7 @@ var<span class="hljs-built_in"> config </span>= { updateProcessor: dataSource };
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/de2e95a/index.d.ts#L62">index.d.ts:62</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/09b39b4/index.d.ts#L63">index.d.ts:63</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -249,14 +249,15 @@ var<span class="hljs-built_in"> config </span>= { updateProcessor: dataSource };
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/de2e95a/index.d.ts#L38">index.d.ts:38</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/09b39b4/index.d.ts#L39">index.d.ts:39</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
 								<div class="lead">
 									<p>Creates an instance of the LaunchDarkly client.</p>
 								</div>
-								<p>The client will begin attempting to connect to LaunchDarkly as soon as it is created. To
+								<p>Applications should instantiate a single instance for the lifetime of the application.
+									The client will begin attempting to connect to LaunchDarkly as soon as it is created. To
 									determine when it is ready to use, call <a href="interfaces/_launchdarkly_node_server_sdk_.ldclient.html#waitforinitialization">LDClient.waitForInitialization</a>, or register an
 								event listener for the <code>&quot;ready&quot;</code> event using <a href="interfaces/_launchdarkly_node_server_sdk_.ldclient.html#on">LDClient.on</a>.</p>
 							</div>
