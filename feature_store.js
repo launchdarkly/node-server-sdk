@@ -112,6 +112,8 @@ function InMemoryFeatureStore() {
     // Close on the in-memory store is a no-op
   };
 
+  store.description = 'memory';
+
   return store;
 }
 

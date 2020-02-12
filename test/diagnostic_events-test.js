@@ -49,8 +49,9 @@ describe('DiagnosticsManager', () => {
     expect(event.platform).toEqual({
       name: 'Node',
       osArch: os.arch(),
-      osName: os.platform(),
+      osName: event.platform.osName, // this may have been transformed by normalizePlatformName
       osVersion: os.release(),
+      nodeVersion: process.versions.node,
     });
   });
 
@@ -68,6 +69,7 @@ describe('DiagnosticsManager', () => {
       customBaseURI: false,
       customEventsURI: false,
       customStreamURI: false,
+      dataStoreType: 'memory',
       diagnosticRecordingIntervalMillis: 900000,
       eventsCapacity: 10000,
       eventsFlushIntervalMillis: 5000,
@@ -117,7 +119,7 @@ describe('DiagnosticsManager', () => {
     verifyConfig({ proxyAgent: fakeProxy, proxyAuth: 'basic' }, { usingProxy: true, usingProxyAuthenticator: true });
 
     const fakeStore = { description: 'WeirdStore' };
-    verifyConfig({ featureStore: fakeStore }, { featureStore: fakeStore.description });
+    verifyConfig({ featureStore: fakeStore }, { dataStoreType: fakeStore.description });
   });
 
   it('creates periodic event from stats, then resets', () => {

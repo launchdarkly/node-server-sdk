@@ -87,6 +87,13 @@ function makeConfigData(config) {
   const defaults = configuration.defaults();
   const secondsToMillis = sec => Math.trunc(sec * 1000);
 
+  function getComponentDescription(component, defaultName) {
+    if (component) {
+      return component.description || 'custom';
+    }
+    return defaultName;
+  }
+
   const configData = {
     customBaseURI: config.baseUri !== defaults.baseUri,
     customStreamURI: config.streamUri !== defaults.streamUri,
@@ -108,11 +115,9 @@ function makeConfigData(config) {
     userKeysFlushIntervalMillis: secondsToMillis(config.userKeysFlushInterval),
     usingProxy: !!(config.proxyAgent || config.proxyHost),
     usingProxyAuthenticator: !!config.proxyAuth,
-    diagnosticRecordingIntervalMillis: secondsToMillis(config.diagnosticRecordingInterval)
+    diagnosticRecordingIntervalMillis: secondsToMillis(config.diagnosticRecordingInterval),
+    dataStoreType: getComponentDescription(config.featureStore, 'memory')
   };
-  if (config.featureStore && config.featureStore.description) {
-    configData.featureStore = config.featureStore.description;
-  }
 
   return configData;
 }
@@ -121,12 +126,27 @@ function makePlatformData() {
   return {
     name: 'Node',
     osArch: os.arch(),
-    osName: os.platform(),
-    osVersion: os.release()
+    osName: normalizePlatformName(os.platform()),
+    osVersion: os.release(),
     // Note that os.release() is not the same OS version string that would be reported by other languages.
     // It's defined as being the value returned by "uname -r" (e.g. on Mac OS 10.14, this is "18.7.0"; on
     // Ubuntu 16.04, it is "4.4.0-1095-aws"), or GetVersionExW in Windows.
+    nodeVersion: process.versions.node
   };
+}
+
+function normalizePlatformName(platformName) {
+  // The following logic is based on how Node.js reports the platform name
+  switch (platformName) {
+  case 'darwin':
+    return 'MacOS';
+  case 'win32':
+    return 'Windows';
+  case 'linux':
+    return 'Linux';
+  default:
+    return platformName;
+  }
 }
 
 module.exports = {
