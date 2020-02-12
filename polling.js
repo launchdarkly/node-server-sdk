@@ -7,16 +7,14 @@ function PollingProcessor(config, requestor) {
     featureStore = config.featureStore;
   let stopped = false;
 
-  function poll(cb) {
-    let startTime;
-
-    cb = cb || function(){};
+  function poll(maybeCallback) {
+    const cb = maybeCallback || function() {};
 
     if (stopped) {
       return;
     }
 
-    startTime = new Date().getTime();
+    const startTime = new Date().getTime();
     config.logger.debug('Polling LaunchDarkly for feature flag updates');
     requestor.requestAllData((err, resp) => {
       const elapsed = new Date().getTime() - startTime;
@@ -30,7 +28,9 @@ function PollingProcessor(config, requestor) {
         } else {
           config.logger.warn(messages.httpErrorMessage(err.status || err.message, 'polling request', 'will retry'));
           // Recursively call poll after the appropriate delay
-          setTimeout(() => { poll(cb); }, sleepFor);
+          setTimeout(() => {
+            poll(cb);
+          }, sleepFor);
         }
       } else {
         const allData = JSON.parse(resp);
@@ -40,7 +40,9 @@ function PollingProcessor(config, requestor) {
         featureStore.init(initData, () => {
           cb();
           // Recursively call poll after the appropriate delay
-          setTimeout(() => { poll(cb); }, sleepFor);
+          setTimeout(() => {
+            poll(cb);
+          }, sleepFor);
         });
       }
     });

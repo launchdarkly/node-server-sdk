@@ -3,26 +3,28 @@ const messages = require('./messages');
 const EventSource = require('./eventsource');
 const dataKind = require('./versioned_data_kind');
 
-function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
+function StreamProcessor(sdkKey, config, requestor, specifiedEventSourceFactory) {
   const processor = {},
     featureStore = config.featureStore;
   let es;
 
-  eventSourceFactory = eventSourceFactory || EventSource;
+  const eventSourceFactory = specifiedEventSourceFactory || EventSource;
 
   function getKeyFromPath(kind, path) {
     return path.startsWith(kind.streamApiPath) ? path.substring(kind.streamApiPath.length) : null;
   }
 
   processor.start = fn => {
-    const cb = fn || function(){};
-    es = new eventSourceFactory(config.streamUri + '/all', 
-      {
-        agent: config.proxyAgent, 
-        headers: {'Authorization': sdkKey,'User-Agent': config.userAgent},
-        tlsParams: config.tlsParams
-      });
-      
+    const cb = fn || function() {};
+    es = new eventSourceFactory(config.streamUri + '/all', {
+      agent: config.proxyAgent,
+      headers: {
+        Authorization: sdkKey,
+        'User-Agent': config.userAgent,
+      },
+      tlsParams: config.tlsParams,
+    });
+
     es.onerror = err => {
       if (err.status && !errors.isHttpErrorRecoverable(err.status)) {
         const message = messages.httpErrorMessage(err.status, 'streaming request');
@@ -72,10 +74,10 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
           reportJsonError('patch', e.data);
           return;
         }
-        for (let k in dataKind) {
+        for (const k in dataKind) {
           const kind = dataKind[k];
           const key = getKeyFromPath(kind, patch.path);
-          if (key != null) {
+          if (key !== null) {
             config.logger.debug('Updating ' + key + ' in ' + kind.namespace);
             featureStore.upsert(kind, patch.data);
             break;
@@ -88,19 +90,19 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
 
     es.addEventListener('delete', e => {
       config.logger.debug('Received delete event');
-      if (e && e.data) {        
-        let data, version;
+      if (e && e.data) {
+        let data;
         try {
           data = JSON.parse(e.data);
         } catch (err) {
           reportJsonError('delete', e.data);
           return;
         }
-        version = data.version;
-        for (let k in dataKind) {
+        const version = data.version;
+        for (const k in dataKind) {
           const kind = dataKind[k];
           const key = getKeyFromPath(kind, data.path);
-          if (key != null) {
+          if (key !== null) {
             config.logger.debug('Deleting ' + key + ' in ' + kind.namespace);
             featureStore.delete(kind, key, version);
             break;
@@ -132,10 +134,10 @@ function StreamProcessor(sdkKey, config, requestor, eventSourceFactory) {
       config.logger.debug('Received indirect patch event');
       if (e && e.data) {
         const path = e.data;
-        for (let k in dataKind) {
+        for (const k in dataKind) {
           const kind = dataKind[k];
           const key = getKeyFromPath(kind, path);
-          if (key != null) {
+          if (key !== null) {
             requestor.requestObject(kind, key, (err, resp) => {
               if (err) {
                 cb(new errors.LDStreamingError('Unexpected error requesting ' + key + ' in ' + kind.namespace));

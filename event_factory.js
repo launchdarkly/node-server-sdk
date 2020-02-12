@@ -1,20 +1,19 @@
-
 function EventFactory(withReasons) {
   const ef = {};
-  
+
   function isExperiment(flag, reason) {
     if (reason) {
       switch (reason.kind) {
-      case 'RULE_MATCH': {
-        const index = reason.ruleIndex;
-        if (index !== undefined) {
-          const rules = flag.rules || [];
-          return index >= 0 && index < rules.length && !!rules[index].trackEvents;
+        case 'RULE_MATCH': {
+          const index = reason.ruleIndex;
+          if (index !== undefined) {
+            const rules = flag.rules || [];
+            return index >= 0 && index < rules.length && !!rules[index].trackEvents;
+          }
+          break;
         }
-        break;
-      }
-      case 'FALLTHROUGH':
-        return !!flag.trackEventsFallthrough;
+        case 'FALLTHROUGH':
+          return !!flag.trackEventsFallthrough;
       }
     }
     return false;
@@ -30,7 +29,7 @@ function EventFactory(withReasons) {
       value: detail.value,
       variation: detail.variationIndex,
       default: defaultVal,
-      version: flag.version
+      version: flag.version,
     };
     // the following properties are handled separately so we don't waste bandwidth on unused keys
     if (addExperimentData || flag.trackEvents) {
@@ -56,7 +55,7 @@ function EventFactory(withReasons) {
       user: user,
       value: detail.value,
       default: detail.value,
-      version: flag.version
+      version: flag.version,
     };
     // the following properties are handled separately so we don't waste bandwidth on unused keys
     if (flag.trackEvents) {
@@ -78,7 +77,7 @@ function EventFactory(withReasons) {
       key: key,
       user: user,
       value: detail.value,
-      default: detail.value
+      default: detail.value,
     };
     if (withReasons) {
       e.reason = detail.reason;
@@ -86,21 +85,19 @@ function EventFactory(withReasons) {
     return e;
   };
 
-  ef.newIdentifyEvent = user => {
-    return {
-      kind: 'identify',
-      creationDate: new Date().getTime(),
-      key: user.key,
-      user: user
-    };
-  };
+  ef.newIdentifyEvent = user => ({
+    kind: 'identify',
+    creationDate: new Date().getTime(),
+    key: user.key,
+    user: user,
+  });
 
   ef.newCustomEvent = (eventName, user, data, metricValue) => {
     const e = {
       kind: 'custom',
       creationDate: new Date().getTime(),
       key: eventName,
-      user: user
+      user: user,
     };
     if (data !== null && data !== undefined) {
       e.data = data;

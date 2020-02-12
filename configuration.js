@@ -1,7 +1,7 @@
 const winston = require('winston');
 const InMemoryFeatureStore = require('./feature_store');
 const messages = require('./messages');
-const package_json = require('./package.json');
+const packageJson = require('./package.json');
 
 module.exports = (function() {
   const defaults = function() {
@@ -21,7 +21,7 @@ module.exports = (function() {
       privateAttributeNames: [],
       userKeysCapacity: 1000,
       userKeysFlushInterval: 300,
-      featureStore: InMemoryFeatureStore()
+      featureStore: InMemoryFeatureStore(),
     };
   };
 
@@ -40,9 +40,10 @@ module.exports = (function() {
     proxyScheme: 'string',
     tlsParams: 'object', // LDTLSOptions
     updateProcessor: 'factory', // gets special handling in validation
-    userAgent: 'string'
+    userAgent: 'string',
   };
 
+  /* eslint-disable camelcase */
   const deprecatedOptions = {
     base_uri: 'baseUri',
     stream_uri: 'streamUri',
@@ -56,11 +57,13 @@ module.exports = (function() {
     feature_store: 'featureStore',
     use_ldd: 'useLdd',
     all_attributes_private: 'allAttributesPrivate',
-    private_attribute_names: 'privateAttributeNames'
+    private_attribute_names: 'privateAttributeNames',
   };
+  /* eslint-enable camelcase */
 
-  function checkDeprecatedOptions(config) {
-    Object.keys(deprecatedOptions).forEach(function(oldName) {
+  function checkDeprecatedOptions(configIn) {
+    const config = configIn;
+    Object.keys(deprecatedOptions).forEach(oldName => {
       if (config[oldName] !== undefined) {
         const newName = deprecatedOptions[oldName];
         config.logger.warn(messages.deprecated(oldName, newName));
@@ -88,7 +91,8 @@ module.exports = (function() {
     return uri.replace(/\/+$/, '');
   }
 
-  function validateTypesAndNames(config, defaultConfig) {
+  function validateTypesAndNames(configIn, defaultConfig) {
+    const config = configIn;
     const typeDescForValue = value => {
       if (value === null || value === undefined) {
         return undefined;
@@ -96,7 +100,7 @@ module.exports = (function() {
       if (Array.isArray(value)) {
         return 'array';
       }
-      const t = typeof(value);
+      const t = typeof value;
       if (t === 'boolean' || t === 'string' || t === 'number') {
         return t;
       }
@@ -113,7 +117,7 @@ module.exports = (function() {
           const expectedType = typeDesc || typeDescForValue(defaultValue);
           const actualType = typeDescForValue(value);
           if (actualType !== expectedType) {
-            if (expectedType == 'factory' && (typeof value === 'function' || typeof value === 'object')) {
+            if (expectedType === 'factory' && (typeof value === 'function' || typeof value === 'object')) {
               // for some properties, we allow either a factory function or an instance
               return;
             }
@@ -132,21 +136,20 @@ module.exports = (function() {
 
   function validate(options) {
     let config = Object.assign({}, options || {});
-    
-    config.userAgent = 'NodeJSClient/' + package_json.version;
-    config.logger = (config.logger ||
+    config.userAgent = 'NodeJSClient/' + packageJson.version;
+    config.logger =
+      config.logger ||
       new winston.Logger({
         level: 'info',
         transports: [
-          new (winston.transports.Console)(({
+          new winston.transports.Console({
             formatter: function(options) {
               return '[LaunchDarkly] ' + (options.message ? options.message : '');
-            }
-          })),
-        ]
-      })
-    );
-    
+            },
+          }),
+        ],
+      });
+
     checkDeprecatedOptions(config);
 
     const defaultConfig = defaults();
@@ -164,6 +167,6 @@ module.exports = (function() {
 
   return {
     validate: validate,
-    defaults: defaults
+    defaults: defaults,
   };
 })();

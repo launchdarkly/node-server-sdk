@@ -1,8 +1,7 @@
-
 function UpdateQueue() {
   const updateQueue = [];
   this.enqueue = (updateFn, fnArgs, cb) => {
-    updateQueue.push([ updateFn, fnArgs, cb ]);
+    updateQueue.push([updateFn, fnArgs, cb]);
     if (updateQueue.length === 1) {
       // if nothing else is in progress, we can start this one right away
       executePendingUpdates();
