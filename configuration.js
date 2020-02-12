@@ -19,6 +19,7 @@ module.exports = (function() {
       useLdd: false,
       allAttributesPrivate: false,
       privateAttributeNames: [],
+      inlineUsersInEvents: false,
       userKeysCapacity: 1000,
       userKeysFlushInterval: 300,
       featureStore: InMemoryFeatureStore(),
