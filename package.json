@@ -28,7 +28,6 @@
     "async": "3.1.0",
     "lrucache": "^1.0.3",
     "node-cache": "^4.2.0",
-    "node-sha1": "0.0.1",
     "redis": "^2.6.0-2",
     "request": "2.88.0",
     "request-etag": "^2.0.3",

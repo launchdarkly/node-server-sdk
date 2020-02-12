@@ -1,7 +1,8 @@
+const crypto = require('crypto');
+
 const operators = require('./operators');
 const dataKind = require('./versioned_data_kind');
 const util = require('util');
-const sha1 = require('node-sha1');
 const stringifyAttrs = require('./utils/stringifyAttrs');
 const { safeAsyncEachSeries } = require('./utils/asyncUtils');
 
@@ -361,7 +362,7 @@ function bucketUser(user, key, attr, salt) {
   }
 
   const hashKey = util.format('%s.%s.%s', key, salt, idHash);
-  const hashVal = parseInt(sha1(hashKey).substring(0, 15), 16);
+  const hashVal = parseInt(sha1Hex(hashKey).substring(0, 15), 16);
 
   return hashVal / 0xfffffffffffffff;
 }
@@ -374,6 +375,12 @@ function bucketableStringValue(value) {
     return '' + value;
   }
   return null;
+}
+
+function sha1Hex(input) {
+  const hash = crypto.createHash('sha1');
+  hash.update(input);
+  return hash.digest('hex');
 }
 
 module.exports = { evaluate: evaluate, bucketUser: bucketUser };
