@@ -59,7 +59,7 @@ module.exports = (function() {
     all_attributes_private: 'allAttributesPrivate',
     private_attribute_names: 'privateAttributeNames',
   };
-  /* eslint-disable camelcase */
+  /* eslint-enable camelcase */
 
   function checkDeprecatedOptions(configIn) {
     const config = configIn;

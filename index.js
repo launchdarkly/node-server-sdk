@@ -197,12 +197,12 @@ const newClient = function(sdkKey, originalConfig) {
       config.featureStore.initialized(storeInited => {
         if (storeInited) {
           config.logger.warn(
-            "Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using last known values from feature store" // eslint-disable-line quotes
+            "Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using last known values from feature store"
           );
           variationInternal(key, user, defaultVal, eventFactory, resolve, reject);
         } else {
           const err = new errors.LDClientError(
-            "Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using default value" // eslint-disable-line quotes
+            "Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using default value"
           );
           maybeReportError(err);
           const result = errorResult('CLIENT_NOT_READY', defaultVal);
