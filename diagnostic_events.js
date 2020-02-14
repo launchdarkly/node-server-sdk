@@ -27,10 +27,7 @@ function DiagnosticsManager(config, diagnosticId, startTime) {
   // durationMillis: Elapsed time between starting timestamp and when we either gave up/lost the
   //   connection or received a successful "put".
   acc.recordStreamInit = (timestamp, failed, durationMillis) => {
-    const item = { timestamp, durationMillis };
-    if (failed) {
-      item.failed = true; // omit this property if false
-    }
+    const item = { timestamp, failed, durationMillis };
     streamInits.push(item);
   };
 
