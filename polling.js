@@ -33,17 +33,19 @@ function PollingProcessor(config, requestor) {
           }, sleepFor);
         }
       } else {
-        const allData = JSON.parse(resp);
-        const initData = {};
-        initData[dataKind.features.namespace] = allData.flags;
-        initData[dataKind.segments.namespace] = allData.segments;
-        featureStore.init(initData, () => {
-          cb();
-          // Recursively call poll after the appropriate delay
-          setTimeout(() => {
-            poll(cb);
-          }, sleepFor);
-        });
+        if (resp) {
+          const allData = JSON.parse(resp);
+          const initData = {};
+          initData[dataKind.features.namespace] = allData.flags;
+          initData[dataKind.segments.namespace] = allData.segments;
+          featureStore.init(initData, () => {
+            cb();
+            // Recursively call poll after the appropriate delay
+            setTimeout(() => {
+              poll(cb);
+            }, sleepFor);
+          });
+        }
       }
     });
   }
