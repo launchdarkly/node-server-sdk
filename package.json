@@ -41,6 +41,7 @@
   "devDependencies": {
     "@babel/core": "7.4.3",
     "@babel/preset-env": "7.4.3",
+    "@types/node": "13.7.4",
     "babel-jest": "24.7.1",
     "eslint": "^6.5.1",
     "eslint-config-prettier": "^6.10.0",
@@ -51,7 +52,7 @@
     "launchdarkly-js-test-helpers": "1.0.0",
     "prettier": "1.19.1",
     "tmp": "0.0.33",
-    "typescript": "3.0.1"
+    "typescript": "^3.7.5"
   },
   "jest": {
     "rootDir": ".",
