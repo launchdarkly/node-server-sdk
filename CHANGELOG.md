@@ -2,6 +2,10 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.11.2] - 2020-02-20
+### Changed:
+- Updated the `request` package dependency due to a [vulnerability warning](https://www.sourceclear.com/vulnerability-database/security/prototype-pollution/javascript/sid-21913), even though the SDK was not using the functionality described in that warning.
+
 ## [5.11.1] - 2020-02-13
 ### Fixed:
 - When sending stream connection statistics in diagnostic event data, always specify the `failed` property even if it is false. This only affects LaunchDarkly&#39;s internal analytics.
