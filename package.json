@@ -43,6 +43,7 @@
   "devDependencies": {
     "@babel/core": "7.4.3",
     "@babel/preset-env": "7.4.3",
+    "@types/node": "13.7.4",
     "babel-jest": "24.7.1",
     "eslint": "^6.5.1",
     "eslint-config-prettier": "^6.10.0",
