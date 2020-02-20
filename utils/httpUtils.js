@@ -19,7 +19,7 @@ function getDefaultHeaders(sdkKey, config) {
       : config.wrapperName;
   }
   return ret;
-};
+}
 
 // Convenience wrapper for making an HTTP/HTTPS request via Node's standard modules. Unlike http.request,
 // the callback takes (error, response, body) parameters instead of just (response).
@@ -33,7 +33,7 @@ function httpRequest(requestUrl, options, body, config, callback) {
     config && config.tlsParams,
     urlOpts,
     {
-      timeout: (config && config.timeout) ? config.timeout * 1000 : undefined,
+      timeout: config && config.timeout ? config.timeout * 1000 : undefined,
       agent: config && config.proxyAgent,
     },
     options

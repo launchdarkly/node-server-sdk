@@ -228,10 +228,7 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
       }
     };
 
-    const headers = Object.assign(
-      { 'Content-Type': 'application/json' },
-      httpUtils.getDefaultHeaders(sdkKey, config)
-    );
+    const headers = Object.assign({ 'Content-Type': 'application/json' }, httpUtils.getDefaultHeaders(sdkKey, config));
     if (payloadId) {
       headers['X-LaunchDarkly-Payload-ID'] = payloadId;
       headers['X-LaunchDarkly-Event-Schema'] = '3';
