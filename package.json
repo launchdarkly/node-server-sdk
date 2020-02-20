@@ -25,17 +25,17 @@
   "homepage": "https://github.com/launchdarkly/node-server-sdk",
   "dependencies": {
     "@types/redis": "2.8.6",
-    "async": "3.1.0",
+    "async": "^3.1.0",
     "lrucache": "^1.0.3",
     "node-cache": "^4.2.0",
     "redis": "^2.6.0-2",
-    "request": "2.88.0",
+    "request": "^2.88.2",
     "request-etag": "^2.0.3",
     "semver": "^6.3.0",
     "tunnel": "0.0.6",
     "uuid": "^3.3.3",
-    "winston": "2.4.1",
-    "yaml": "1.0.1"
+    "winston": "^2.4.1",
+    "yaml": "^1.0.1"
   },
   "engines": {
     "node": ">= 0.8.x"
