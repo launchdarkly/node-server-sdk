@@ -2,6 +2,14 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.11.3] - 2020-03-09
+### Changed:
+- The SDK no longer has dependencies on the deprecated `request` package and `request-etag`. Instead it uses the Node HTTP API directly.
+
+### Fixed:
+- Fixed a bug that, in polling mode, could cause polls to fail with the error &#34;Cannot read property &#39;data&#39; of undefined&#34; if the network became unavailable on the previous poll attempt but then became available again.
+
+
 ## [5.11.2] - 2020-02-20
 ### Changed:
 - Updated the `request` package dependency due to a [vulnerability warning](https://www.sourceclear.com/vulnerability-database/security/prototype-pollution/javascript/sid-21913), even though the SDK was not using the functionality described in that warning.
