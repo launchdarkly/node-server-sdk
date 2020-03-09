@@ -79,5 +79,27 @@ describe('Requestor', () => {
       const req = promisify(r.requestAllData)();
       await expect(req).rejects.toThrow(/bad-uri/);
     });
+
+    it('stores and sends etag', async () => {
+      const etag = "abc123";
+      await withCloseable(TestHttpServer.start, async server => {
+        server.forMethodAndPath('get', '/sdk/latest-all', (req, res) => {
+          if (req.headers['if-none-match'] === etag) {
+            TestHttpHandlers.respond(304)(req, res);
+          } else {
+            TestHttpHandlers.respond(200, { 'content-type': 'application/json', etag }, JSON.stringify(allData))(req, res);
+          }
+        });
+        const r = Requestor(sdkKey, { baseUri: server.url });
+        const result1 = await promisify(r.requestAllData)();
+        expect(JSON.parse(result1)).toEqual(allData);
+        const result2 = await promisify(r.requestAllData)();
+        expect(result2).toEqual(null);
+        const req1 = await server.nextRequest();
+        const req2 = await server.nextRequest();
+        expect(req1.headers['if-none-match']).toBe(undefined);
+        expect(req2.headers['if-none-match']).toEqual(etag);
+      })
+    });
   });
 });
