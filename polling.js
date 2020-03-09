@@ -16,7 +16,7 @@ function PollingProcessor(config, requestor) {
 
     const startTime = new Date().getTime();
     config.logger.debug('Polling LaunchDarkly for feature flag updates');
-    requestor.requestAllData((err, resp) => {
+    requestor.requestAllData((err, respBody) => {
       const elapsed = new Date().getTime() - startTime;
       const sleepFor = Math.max(config.pollInterval * 1000 - elapsed, 0);
       config.logger.debug('Elapsed: %d ms, sleeping for %d ms', elapsed, sleepFor);
@@ -33,8 +33,8 @@ function PollingProcessor(config, requestor) {
           }, sleepFor);
         }
       } else {
-        if (resp) {
-          const allData = JSON.parse(resp);
+        if (respBody) {
+          const allData = JSON.parse(respBody);
           const initData = {};
           initData[dataKind.features.namespace] = allData.flags;
           initData[dataKind.segments.namespace] = allData.segments;
@@ -45,6 +45,11 @@ function PollingProcessor(config, requestor) {
               poll(cb);
             }, sleepFor);
           });
+        } else {
+          // There wasn't an error but there wasn't any new data either, so just keep polling
+          setTimeout(() => {
+            poll(cb);
+          }, sleepFor);
         }
       }
     });
