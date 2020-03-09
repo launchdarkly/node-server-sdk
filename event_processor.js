@@ -1,6 +1,6 @@
 const LRUCache = require('lrucache');
-const request = require('request');
 const uuidv4 = require('uuid/v4');
+
 const EventSummarizer = require('./event_summarizer');
 const UserFilter = require('./user_filter');
 const errors = require('./errors');
@@ -228,47 +228,40 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
       }
     };
 
-    const headers = Object.assign({ 'X-LaunchDarkly-Event-Schema': '3' }, httpUtils.getDefaultHeaders(sdkKey, config));
+    const headers = Object.assign({ 'Content-Type': 'application/json' }, httpUtils.getDefaultHeaders(sdkKey, config));
     if (payloadId) {
       headers['X-LaunchDarkly-Payload-ID'] = payloadId;
       headers['X-LaunchDarkly-Event-Schema'] = '3';
     }
 
-    const options = Object.assign({}, config.tlsParams, {
-      method: 'POST',
-      url: uri,
-      headers,
-      json: true,
-      body: events,
-      timeout: config.timeout * 1000,
-      agent: config.proxyAgent,
-    });
-    request(options)
-      .on('response', (resp, body) => {
-        if (resp.headers['date']) {
-          const date = Date.parse(resp.headers['date']);
-          if (date) {
-            lastKnownPastTime = date;
-          }
-        }
-        if (resp.statusCode > 204) {
-          const err = new errors.LDUnexpectedResponseError(
-            messages.httpErrorMessage(resp.statusCode, 'event posting', 'some events were dropped')
-          );
-          errorReporter && errorReporter(err);
-          if (!errors.isHttpErrorRecoverable(resp.statusCode)) {
-            reject(err);
-            shutdown = true;
-          } else {
-            retryOrReject(err);
-          }
-        } else {
-          resolve(resp, body);
-        }
-      })
-      .on('error', err => {
+    const options = { method: 'POST', headers };
+    const body = JSON.stringify(events);
+    httpUtils.httpRequest(uri, options, body, config, (err, resp) => {
+      if (err) {
         retryOrReject(err);
-      });
+        return;
+      }
+      if (resp.headers['date']) {
+        const date = Date.parse(resp.headers['date']);
+        if (date) {
+          lastKnownPastTime = date;
+        }
+      }
+      if (resp.statusCode > 204) {
+        const err = new errors.LDUnexpectedResponseError(
+          messages.httpErrorMessage(resp.statusCode, 'event posting', 'some events were dropped')
+        );
+        errorReporter && errorReporter(err);
+        if (!errors.isHttpErrorRecoverable(resp.statusCode)) {
+          reject(err);
+          shutdown = true;
+        } else {
+          retryOrReject(err);
+        }
+      } else {
+        resolve();
+      }
+    });
   }
 
   function postDiagnosticEvent(event) {

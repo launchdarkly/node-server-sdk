@@ -1,4 +1,3 @@
-const ETagRequest = require('request-etag');
 const httpUtils = require('./utils/httpUtils');
 
 /**
@@ -16,31 +15,14 @@ function Requestor(sdkKey, config) {
   const requestor = {};
 
   const headers = httpUtils.getDefaultHeaders(sdkKey, config);
+  const requestWithETagCaching = httpUtils.httpWithETagCache();
 
-  const cacheConfig = {
-    max: 100,
-    // LRUCache passes each cached item through the "length" function to determine how many units it should
-    // count for toward "max".  We want our cache limit to be based on the number of responses, not their
-    // size; that is in fact the default behavior of LRUCache, but request-etag overrides it unless we do this:
-    length: function() {
-      return 1;
-    },
-  };
-  const requestWithETagCaching = new ETagRequest(cacheConfig);
-
-  function makeRequest(resource) {
-    const requestParams = Object.assign({}, config.tlsParams, {
-      method: 'GET',
-      url: config.baseUri + resource,
-      headers,
-      timeout: config.timeout * 1000,
-      agent: config.proxyAgent,
-    });
-
+  function makeRequest(resource, useCache) {
+    const url = config.baseUri + resource;
+    const requestParams = { method: 'GET', headers };
     return (cb, errCb) => {
-      requestWithETagCaching(requestParams, (err, resp, body) => {
-        // Note that when request-etag gives us a cached response, the body will only be in the "body"
-        // callback parameter -- not in resp.getBody().  For a fresh response, it'll be in both.
+      const requestFn = useCache ? requestWithETagCaching : httpUtils.httpRequest;
+      requestFn(url, requestParams, null, config, (err, resp, body) => {
         if (err) {
           errCb(err);
         } else {
@@ -57,7 +39,7 @@ function Requestor(sdkKey, config) {
         err.status = response.statusCode;
         cb(err, null);
       } else {
-        cb(null, body);
+        cb(null, response.statusCode === 304 ? null : body);
       }
     };
   }
@@ -69,12 +51,14 @@ function Requestor(sdkKey, config) {
   }
 
   requestor.requestObject = (kind, key, cb) => {
-    const req = makeRequest(kind.requestPath + key);
+    const req = makeRequest(kind.requestPath + key, false);
     req(processResponse(cb), processErrorResponse(cb));
   };
 
+  // Note that requestAllData will pass (null, null) rather than (null, body) if it gets a 304 response;
+  // this is deliberate so that we don't keep updating the data store unnecessarily if there are no changes.
   requestor.requestAllData = cb => {
-    const req = makeRequest('/sdk/latest-all');
+    const req = makeRequest('/sdk/latest-all', true);
     req(processResponse(cb), processErrorResponse(cb));
   };
 
