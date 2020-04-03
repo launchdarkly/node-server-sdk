@@ -21,6 +21,12 @@ describe('StreamProcessor', () => {
       this.close = () => {
         es.closed = true;
       };
+      this.simulateError = e => {
+        const shouldRetry = es.options.errorFilter(e);
+        if (!shouldRetry) {
+          es.closed = true;
+        }
+      }
       es.instance = this;
     };
     return es;
@@ -334,7 +340,7 @@ describe('StreamProcessor', () => {
     let errReceived;
     sp.start(e => { errReceived = e; });
 
-    es.instance.onerror(err);
+    es.instance.simulateError(err);
     await sleepAsync(300);
 
     expect(config.logger.warn).toHaveBeenCalledTimes(1);
@@ -375,7 +381,7 @@ describe('StreamProcessor', () => {
     const sp = createProcessor(config, es, null, manager);
 
     const waitForStart = promisifySingle(sp.start)();  
-    es.instance.onerror(err);
+    es.instance.simulateError(err);
     const errReceived = await waitForStart;
 
     expect(errReceived).toEqual(err);

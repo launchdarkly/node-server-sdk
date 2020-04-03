@@ -26,6 +26,7 @@
   "dependencies": {
     "@types/redis": "2.8.6",
     "async": "^3.1.0",
+    "launchdarkly-eventsource": "1.2.0",
     "lrucache": "^1.0.3",
     "node-cache": "^4.2.0",
     "redis": "^2.6.0-2",
