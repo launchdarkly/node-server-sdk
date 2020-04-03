@@ -2,6 +2,20 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.12.0] - 2020-04-03
+### Added:
+- New configuration option `streamInitialReconnectDelayMillis` allows setting the initial delay (not including jitter) for stream reconnections.
+
+### Changed:
+The stream reconnection behavior has been changed to be consistent with other LaunchDarkly SDKs, as follows:
+
+- Previously, there was a fixed delay of 125 milliseconds for the first attempt to reconnect after a stream failure, which would then increase with an exponential backoff for subsbequent retries up to a maximum of 15 seconds (but the backoff was used only after HTTP error responses, not connection failures).
+- Now, the delay starts at 1000 milliseconds, unless changed with `streamInitialReconnectDelayMillis`.
+- The new maximum is 30 seconds.
+- The backoff now applies to all types of stream failures.
+- There is now a jitter that randomly reduces each delay by up to 50%.
+- The delay now resets to the initial level if the stream has been active for at least 60 seconds. 
+
 ## [5.11.3] - 2020-03-09
 ### Changed:
 - The SDK no longer has dependencies on the deprecated `request` package and `request-etag`. Instead it uses the Node HTTP API directly.
