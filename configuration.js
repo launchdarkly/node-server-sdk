@@ -9,7 +9,7 @@ module.exports = (function() {
       streamUri: 'https://stream.launchdarkly.com',
       eventsUri: 'https://events.launchdarkly.com',
       stream: true,
-      streamInitialReconnectDelayMillis: 1000,
+      streamInitialReconnectDelay: 1,
       sendEvents: true,
       timeout: 5,
       capacity: 10000,
@@ -42,6 +42,7 @@ module.exports = (function() {
     proxyPort: 'number',
     proxyScheme: 'string',
     tlsParams: 'object', // LDTLSOptions
+    streamInitialReconnectDelayMillis: 'number', // deprecated - overridden by streamInitialReconnectDelay
     updateProcessor: 'factory', // gets special handling in validation
     wrapperName: 'string',
     wrapperVersion: 'string',
