@@ -307,6 +307,17 @@ declare module 'launchdarkly-node-server-sdk' {
     stream?: boolean;
 
     /**
+     * Sets the initial reconnect delay for the streaming connection, in milliseconds.
+     *
+     * The streaming service uses a backoff algorithm (with jitter) every time the connection needs
+     * to be reestablished. The delay for the first reconnection will start near this value, and then
+     * increase exponentially for any subsequent connection failures.
+     *
+     * The default value is 1000.
+     */
+    streamInitialReconnectDelayMillis?: number;
+
+    /**
      * Whether you are using the LaunchDarkly relay proxy in daemon mode.
      *
      * In this configuration, the client will not connect to LaunchDarkly to get feature flags,

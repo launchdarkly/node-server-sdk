@@ -9,6 +9,7 @@ module.exports = (function() {
       streamUri: 'https://stream.launchdarkly.com',
       eventsUri: 'https://events.launchdarkly.com',
       stream: true,
+      streamInitialReconnectDelayMillis: 1000,
       sendEvents: true,
       timeout: 5,
       capacity: 10000,
