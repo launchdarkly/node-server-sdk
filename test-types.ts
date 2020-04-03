@@ -19,6 +19,7 @@ var allOptions: ld.LDOptions = {
   eventsUri: '',
   streamUri: '',
   stream: true,
+  streamInitialReconnectDelayMillis: 1500,
   sendEvents: true,
   allAttributesPrivate: true,
   privateAttributeNames: [ 'x' ],

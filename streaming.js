@@ -1,7 +1,7 @@
 const errors = require('./errors');
 const httpUtils = require('./utils/httpUtils');
 const messages = require('./messages');
-const EventSource = require('./eventsource');
+const { EventSource } = require('launchdarkly-eventsource');
 const dataKind = require('./versioned_data_kind');
 
 function StreamProcessor(sdkKey, config, requestor, diagnosticsManager, specifiedEventSourceFactory) {
@@ -38,25 +38,44 @@ function StreamProcessor(sdkKey, config, requestor, diagnosticsManager, specifie
 
     logConnectionStarted();
 
-    es = new eventSourceFactory(config.streamUri + '/all', {
-      agent: config.proxyAgent,
-      headers,
-      tlsParams: config.tlsParams,
-    });
-
-    es.onerror = err => {
+    function handleError(err) {
+      // launchdarkly-eventsource expects this function to return true if it should retry, false to shut down.
       if (err.status && !errors.isHttpErrorRecoverable(err.status)) {
         const message = messages.httpErrorMessage(err.status, 'streaming request');
         config.logger.error(message);
-        es && es.close();
         logConnectionResult(false);
         cb(new errors.LDStreamingError(err.message, err.status));
-      } else {
-        const message = messages.httpErrorMessage(err.status, 'streaming request', 'will retry');
-        config.logger.warn(message);
-        logConnectionResult(false);
-        logConnectionStarted();
+        return false;
       }
+      const message = messages.httpErrorMessage(err.status, 'streaming request', 'will retry');
+      config.logger.warn(message);
+      logConnectionResult(false);
+      logConnectionStarted();
+      return true;
+    }
+
+    es = new eventSourceFactory(config.streamUri + '/all', {
+      agent: config.proxyAgent,
+      errorFilter: handleError,
+      headers,
+      initialRetryDelayMillis: config.streamInitialReconnectDelayMillis,
+      retryResetIntervalMillis: 60000,
+      tlsParams: config.tlsParams,
+    });
+
+    es.onclose = () => {
+      config.logger.info('Closed LaunchDarkly stream connection');
+    };
+
+    // This stub handler only exists because error events must have a listener; handleError() does the work.
+    es.onerror = () => {};
+
+    es.onopen = () => {
+      config.logger.info('Opened LaunchDarkly stream connection');
+    };
+
+    es.onretrying = e => {
+      config.logger.info('Will retry stream connection in ' + e.delayMillis + ' milliseconds');
     };
 
     function reportJsonError(type, data) {
