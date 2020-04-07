@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.13.0] - 2020-04-07
+### Added:
+- Configuration option `streamInitialReconnectDelay`, which is the same as the recently-added `streamInitialReconnectDelayMillis` but measured in seconds instead of milliseconds; this makes it consistent with how durations are represented in other options.
+
+### Deprecated:
+- Configuration option `streamInitialReconnectDelayMillis`.
+
 ## [5.12.0] - 2020-04-03
 ### Added:
 - New configuration option `streamInitialReconnectDelayMillis` allows setting the initial delay (not including jitter) for stream reconnections.
