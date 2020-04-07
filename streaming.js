@@ -58,7 +58,9 @@ function StreamProcessor(sdkKey, config, requestor, diagnosticsManager, specifie
       agent: config.proxyAgent,
       errorFilter: handleError,
       headers,
-      initialRetryDelayMillis: config.streamInitialReconnectDelayMillis,
+      initialRetryDelayMillis: config.streamInitialReconnectDelayMillis
+        ? config.streamInitialReconnectDelayMillis
+        : 1000 * config.streamInitialReconnectDelay,
       retryResetIntervalMillis: 60000,
       tlsParams: config.tlsParams,
     });
