@@ -307,13 +307,21 @@ declare module 'launchdarkly-node-server-sdk' {
     stream?: boolean;
 
     /**
-     * Sets the initial reconnect delay for the streaming connection, in milliseconds.
+     * Sets the initial reconnect delay for the streaming connection, in seconds.
      *
      * The streaming service uses a backoff algorithm (with jitter) every time the connection needs
      * to be reestablished. The delay for the first reconnection will start near this value, and then
      * increase exponentially for any subsequent connection failures.
      *
-     * The default value is 1000.
+     * The default value is 1.
+     */
+    streamInitialReconnectDelay?: number;
+
+    /**
+     * Deprecated alternative to `streamInitialReconnectDelay`.
+     *
+     * @deprecated Use `streamInitialReconnectDelay` instead, which is measured in seconds like the other
+     *   time interval properties.
      */
     streamInitialReconnectDelayMillis?: number;
 
