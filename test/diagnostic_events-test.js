@@ -109,6 +109,8 @@ describe('DiagnosticsManager', () => {
     verifyConfig({ capacity: 999 }, { eventsCapacity: 999 });
     verifyConfig({ flushInterval: 33 }, { eventsFlushIntervalMillis: 33000 });
     verifyConfig({ stream: false }, { streamingDisabled: true });
+    verifyConfig({ streamInitialReconnectDelay: 33 }, { reconnectTimeMillis: 33000 });
+    verifyConfig({ streamInitialReconnectDelayMillis: 3333 }, { reconnectTimeMillis: 3333 });
     verifyConfig({ userKeysCapacity: 111 }, { userKeysCapacity: 111 });
     verifyConfig({ userKeysFlushInterval: 33 }, { userKeysFlushIntervalMillis: 33000 });
     verifyConfig({ useLdd: true }, { usingRelayDaemon: true });
