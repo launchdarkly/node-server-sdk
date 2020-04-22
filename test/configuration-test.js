@@ -183,4 +183,14 @@ describe('configuration', function() {
     configuration.validate(configIn);
     expect(configIn.logger.warn).toHaveBeenCalledTimes(1);
   });
+
+  it('throws an error if you pass in a logger with missing methods', () => {
+    const methods = ['error', 'warn', 'info', 'debug'];
+
+    methods.forEach(method => {
+      const configIn = emptyConfigWithMockLogger();
+      delete configIn.logger[method];
+      expect(() => configuration.validate(configIn)).toThrow(/Provided logger instance must support .* method/);
+    });
+  });
 });

@@ -150,7 +150,7 @@ module.exports = (function() {
   function validateLogger(logger) {
     ['error', 'warn', 'info', 'debug'].forEach(function (level) {
       if (!logger[level] || typeof logger[level] !== 'function') {
-        throw new Error('Provided logger instance must support logger.' + level + '(...)');
+        throw new Error('Provided logger instance must support logger.' + level + '(...) method');
       }
     })
   }
