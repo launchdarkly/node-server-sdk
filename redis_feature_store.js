@@ -47,11 +47,6 @@ function redisFeatureStoreInternal(redisOpts, prefix, specifiedLogger, preconfig
     connected = false;
   });
 
-  if (!redisOpts.client) {
-    // Allow driver programs to exit, even if the Redis socket is active
-    client.unref();
-  }
-
   function itemsKey(kind) {
     return itemsPrefix + kind.namespace;
   }
