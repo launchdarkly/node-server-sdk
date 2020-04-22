@@ -147,20 +147,34 @@ module.exports = (function() {
     }
   }
 
+  function validateLogger(logger) {
+    ['error', 'warn', 'info', 'debug'].forEach(function (level) {
+      if (!logger[level] || typeof logger[level] !== 'function') {
+        throw new Error('Provided logger instance must support logger.' + level + '(...)');
+      }
+    })
+  }
+
+  function defaultLogger() {
+    return new winston.Logger({
+      level: 'info',
+      transports: [
+        new winston.transports.Console({
+          formatter: function (options) {
+            return '[LaunchDarkly] ' + (options.message ? options.message : '');
+          },
+        }),
+      ],
+    });
+  }
+
   function validate(options) {
     let config = Object.assign({}, options || {});
-    config.logger =
-      config.logger ||
-      new winston.Logger({
-        level: 'info',
-        transports: [
-          new winston.transports.Console({
-            formatter: function(options) {
-              return '[LaunchDarkly] ' + (options.message ? options.message : '');
-            },
-          }),
-        ],
-      });
+    if (config.logger) {
+      validateLogger(config.logger);
+    } else {
+      config.logger = defaultLogger();
+    }
 
     checkDeprecatedOptions(config);
 
