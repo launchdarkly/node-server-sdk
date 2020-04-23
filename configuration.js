@@ -1,6 +1,7 @@
 const winston = require('winston');
 const InMemoryFeatureStore = require('./feature_store');
 const messages = require('./messages');
+const LoggerWrapper = require('./logger_wrapper');
 
 module.exports = (function() {
   const defaults = function() {
@@ -147,20 +148,12 @@ module.exports = (function() {
     }
   }
 
-  function validateLogger(logger) {
-    ['error', 'warn', 'info', 'debug'].forEach(function (level) {
-      if (!logger[level] || typeof logger[level] !== 'function') {
-        throw new Error('Provided logger instance must support logger.' + level + '(...) method');
-      }
-    })
-  }
-
-  function defaultLogger() {
+  function fallbackLogger() {
     return new winston.Logger({
       level: 'info',
       transports: [
         new winston.transports.Console({
-          formatter: function (options) {
+          formatter: function(options) {
             return '[LaunchDarkly] ' + (options.message ? options.message : '');
           },
         }),
@@ -170,11 +163,8 @@ module.exports = (function() {
 
   function validate(options) {
     let config = Object.assign({}, options || {});
-    if (config.logger) {
-      validateLogger(config.logger);
-    } else {
-      config.logger = defaultLogger();
-    }
+
+    config.logger = config.logger ? LoggerWrapper(config.logger, fallbackLogger()) : fallbackLogger();
 
     checkDeprecatedOptions(config);
 

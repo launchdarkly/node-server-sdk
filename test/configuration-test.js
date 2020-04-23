@@ -22,12 +22,12 @@ describe('configuration', function() {
 
   function checkDeprecated(oldName, newName, value) {
     it('allows "' + oldName + '" as a deprecated equivalent to "' + newName + '"', function() {
-      var config0 = emptyConfigWithMockLogger();
-      config0[oldName] = value;
-      var config1 = configuration.validate(config0);
+      const configIn = emptyConfigWithMockLogger();
+      configIn[oldName] = value;
+      const config1 = configuration.validate(configIn);
       expect(config1[newName]).toEqual(value);
       expect(config1[oldName]).toBeUndefined();
-      expect(config1.logger.warn).toHaveBeenCalledTimes(1);
+      expect(configIn.logger.warn).toHaveBeenCalledTimes(1);
     });
   }
 
