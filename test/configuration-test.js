@@ -2,9 +2,15 @@ var configuration = require('../configuration');
 
 describe('configuration', function() {
   const defaults = configuration.defaults();
-  
+
   function emptyConfigWithMockLogger() {
-    return { logger: { warn: jest.fn() } };
+    const logger = {
+      error: jest.fn(),
+      warn: jest.fn(),
+      info: jest.fn(),
+      debug: jest.fn(),
+    };
+    return { logger };
   }
 
   function expectDefault(name) {
@@ -16,17 +22,12 @@ describe('configuration', function() {
 
   function checkDeprecated(oldName, newName, value) {
     it('allows "' + oldName + '" as a deprecated equivalent to "' + newName + '"', function() {
-      var logger = {
-        warn: jest.fn()
-      };
-      var config0 = {
-        logger: logger
-      };
-      config0[oldName] = value;
-      var config1 = configuration.validate(config0);
+      const configIn = emptyConfigWithMockLogger();
+      configIn[oldName] = value;
+      const config1 = configuration.validate(configIn);
       expect(config1[newName]).toEqual(value);
       expect(config1[oldName]).toBeUndefined();
-      expect(logger.warn).toHaveBeenCalledTimes(1);
+      expect(configIn.logger.warn).toHaveBeenCalledTimes(1);
     });
   }
 
@@ -106,7 +107,7 @@ describe('configuration', function() {
   checkNumericProperty('userKeysCapacity', 500);
   checkNumericProperty('userKeysFlushInterval', 45);
   checkNumericProperty('diagnosticRecordingInterval', 110);
-  
+
   function checkNumericRange(name, minimum, maximum) {
     if (minimum !== undefined) {
       it('enforces minimum for "' + name + '"', () => {
@@ -181,5 +182,15 @@ describe('configuration', function() {
     configIn.unsupportedThing = true;
     configuration.validate(configIn);
     expect(configIn.logger.warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws an error if you pass in a logger with missing methods', () => {
+    const methods = ['error', 'warn', 'info', 'debug'];
+
+    methods.forEach(method => {
+      const configIn = emptyConfigWithMockLogger();
+      delete configIn.logger[method];
+      expect(() => configuration.validate(configIn)).toThrow(/Provided logger instance must support .* method/);
+    });
   });
 });
