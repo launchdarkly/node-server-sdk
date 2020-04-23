@@ -153,9 +153,7 @@ module.exports = (function() {
       level: 'info',
       transports: [
         new winston.transports.Console({
-          formatter: function(options) {
-            return '[LaunchDarkly] ' + (options.message ? options.message : '');
-          },
+          formatter: options => '[LaunchDarkly] ' + (options.message ? options.message : ''),
         }),
       ],
     });
