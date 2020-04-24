@@ -419,16 +419,12 @@ function createProxyAgent(config) {
       proxyAuth: config.proxyAuth,
     },
   };
-
+  const isTargetServerSecure =
+    (config.stream && (!config.streamUri || config.streamUri.startsWith('https'))) ||
+    (!config.stream && (!config.baseUri || config.baseUri.startsWith('https')));
   if (config.proxyScheme === 'https') {
-    if (!config.baseUri || config.baseUri.startsWith('https')) {
-      return tunnel.httpsOverHttps(options);
-    } else {
-      return tunnel.httpOverHttps(options);
-    }
-  } else if (!config.baseUri || config.baseUri.startsWith('https')) {
-    return tunnel.httpsOverHttp(options);
+    return isTargetServerSecure ? tunnel.httpsOverHttps(options) : tunnel.httpOverHttps(options);
   } else {
-    return tunnel.httpOverHttp(options);
+    return isTargetServerSecure ? tunnel.httpsOverHttp(options) : tunnel.httpOverHttp(options);
   }
 }

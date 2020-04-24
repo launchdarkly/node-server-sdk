@@ -22,11 +22,11 @@ function PollingProcessor(config, requestor) {
       config.logger.debug('Elapsed: %d ms, sleeping for %d ms', elapsed, sleepFor);
       if (err) {
         if (err.status && !errors.isHttpErrorRecoverable(err.status)) {
-          const message = messages.httpErrorMessage(err.status, 'polling request');
+          const message = messages.httpErrorMessage(err, 'polling request');
           config.logger.error(message);
           cb(new errors.LDPollingError(message));
         } else {
-          config.logger.warn(messages.httpErrorMessage(err.status || err.message, 'polling request', 'will retry'));
+          config.logger.warn(messages.httpErrorMessage(err, 'polling request', 'will retry'));
           // Recursively call poll after the appropriate delay
           setTimeout(() => {
             poll(cb);
