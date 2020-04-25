@@ -124,4 +124,95 @@ describe('LDClient end-to-end', () => {
       expect(servers.streaming.requestCount()).toEqual(1);
     });
   });
+  
+  it('can use proxy in polling mode', async () => {
+    await withCloseable(TestHttpServer.startProxy, async fakeProxyServer => {
+      await withCloseable(TestHttpServer.start, async pollingServer => {
+        pollingServer.forMethodAndPath('get', '/sdk/latest-all', TestHttpHandlers.respondJson(allData));
+
+        const config = {
+          baseUri: pollingServer.url,
+          proxyHost: fakeProxyServer.hostname,
+          proxyPort: fakeProxyServer.port,
+          stream: false,
+          sendEvents: false,
+          logger: stubLogger(),
+        };
+
+        await withCloseable(LDClient.init(sdkKey, config), async client => {
+          await client.waitForInitialization();
+          expect(client.initialized()).toBe(true);
+
+          // If the proxy server did not log a request then the SDK did not actually use the proxy
+          expect(fakeProxyServer.requestCount()).toEqual(1);
+          const req = await fakeProxyServer.nextRequest();
+          expect(req.path).toEqual(pollingServer.url);
+        });
+      });
+    });
+  });
+
+  it('can use proxy in streaming mode', async () => {
+    await withCloseable(TestHttpServer.startProxy, async fakeProxyServer => {
+      await withCloseable(TestHttpServer.start, async streamingServer => {
+        const streamEvent = { type: 'put', data: JSON.stringify({ data: allData }) };
+        await withCloseable(new AsyncQueue(), async events => {
+          events.add(streamEvent);
+          streamingServer.forMethodAndPath('get', '/all', TestHttpHandlers.sseStream(events));
+  
+          const config = {
+            streamUri: streamingServer.url,
+            proxyHost: fakeProxyServer.hostname,
+            proxyPort: fakeProxyServer.port,
+            sendEvents: false,
+            logger: stubLogger(),
+          };
+
+          await withCloseable(LDClient.init(sdkKey, config), async client => {
+            await client.waitForInitialization();
+            expect(client.initialized()).toBe(true);
+
+            // If the proxy server did not log a request then the SDK did not actually use the proxy
+            expect(fakeProxyServer.requestCount()).toEqual(1);
+            const req = await fakeProxyServer.nextRequest();
+            expect(req.path).toEqual(streamingServer.url);
+          });
+        });
+      });
+    });
+  });
+  
+  it('can use proxy for events', async () => {
+    await withCloseable(TestHttpServer.startProxy, async fakeProxyServer => {
+      await withAllServers(async (servers) => {
+        servers.polling.forMethodAndPath('get', '/sdk/latest-all', TestHttpHandlers.respondJson(allData));
+        servers.events.forMethodAndPath('post', '/diagnostic', TestHttpHandlers.respond(200));
+
+        const config = {
+          baseUri: servers.polling.url,
+          eventsUri: servers.events.url,
+          proxyHost: fakeProxyServer.hostname,
+          proxyPort: fakeProxyServer.port,
+          stream: false,
+          logger: stubLogger(),
+        };
+
+        await withCloseable(LDClient.init(sdkKey, config), async client => {
+          await client.waitForInitialization();
+          expect(client.initialized()).toBe(true);
+
+          // If the proxy server did not log a request then the SDK did not actually use the proxy
+          expect(fakeProxyServer.requestCount()).toEqual(2);
+          const req0 = await fakeProxyServer.nextRequest();
+          const req1 = await fakeProxyServer.nextRequest();
+          if (req0.path === servers.polling.url) {
+            expect(req1.path).toEqual(servers.events.url);
+          } else {
+            expect(req0.path).toEqual(servers.events.url);
+            expect(req1.path).toEqual(servers.polling.url);
+          }
+        });
+      });
+    });
+  });
 });

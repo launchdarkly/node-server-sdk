@@ -7,7 +7,7 @@ const noop = function() {};
 
 function RedisFeatureStore(redisOpts, cacheTTL, prefix, logger, preconfiguredClient) {
   return new CachingStoreWrapper(
-    new redisFeatureStoreInternal(redisOpts, prefix, logger, preconfiguredClient),
+    new redisFeatureStoreInternal(redisOpts || {}, prefix, logger, preconfiguredClient),
     cacheTTL,
     'Redis'
   );
@@ -46,11 +46,6 @@ function redisFeatureStoreInternal(redisOpts, prefix, specifiedLogger, preconfig
   client.on('end', () => {
     connected = false;
   });
-
-  if (!redisOpts.client) {
-    // Allow driver programs to exit, even if the Redis socket is active
-    client.unref();
-  }
 
   function itemsKey(kind) {
     return itemsPrefix + kind.namespace;
