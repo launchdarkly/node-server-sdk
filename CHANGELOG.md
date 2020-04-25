@@ -2,6 +2,15 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.13.1] - 2020-04-24
+### Changed:
+- The `redis` package dependency has been updated to major version 3, which removes some deprecated usages (see [#184](https://github.com/launchdarkly/node-server-sdk/issues/184)) and adds support for `rediss:` URLs. This should not affect any application code even if the application is passing in a pre-built Redis client that was created with version 2.x, since the Redis methods that are used by the SDK have not changed.
+
+### Fixed:
+- If a proxy server was specified in the configuration, streaming connections still did not use the proxy. This bug was introduced in version 5.12.0. ([#186](https://github.com/launchdarkly/node-server-sdk/issues/186))
+- The SDK could cause a crash if the application provided a configuration where `logger` was either not a logger at all (that is, some other object that did not have the methods defined in the `LDLogger` interface), or was a broken logger that could throw an exception while the SDK was trying to log an error. The former case (not a logger) is now treated as a severely invalid configuration, causing `LDClient.init()` to throw an exception just as it would if the SDK key were omitted. The latter (logger method throws an exception) is now handled by catching the exception and logging an error message to the _default_ console logger. (Thanks, [maxwellgerber](https://github.com/launchdarkly/node-server-sdk/pull/185)!)
+- The Redis integration no longer calls `unref()` on the Redis client object after creating it. This was originally done to ensure that the SDK client would not prevent an application from exiting due to a still-open Redis connection, but that is no longer applicable since the application must close the SDK client anyway before exiting, which will cause the Redis client to be closed as well. The `unref()` call caused problems when running in Lambda, for unclear reasons. ([#76](https://github.com/launchdarkly/node-server-sdk/issues/76))
+
 ## [5.13.0] - 2020-04-07
 ### Added:
 - Configuration option `streamInitialReconnectDelay`, which is the same as the recently-added `streamInitialReconnectDelayMillis` but measured in seconds instead of milliseconds; this makes it consistent with how durations are represented in other options.
