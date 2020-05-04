@@ -249,7 +249,7 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
       }
       if (resp.statusCode > 204) {
         const err = new errors.LDUnexpectedResponseError(
-          messages.httpErrorMessage(resp.statusCode, 'event posting', 'some events were dropped')
+          messages.httpErrorMessage({ status: resp.statusCode }, 'event posting', 'some events were dropped')
         );
         errorReporter && errorReporter(err);
         if (!errors.isHttpErrorRecoverable(resp.statusCode)) {

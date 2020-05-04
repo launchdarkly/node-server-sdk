@@ -2,14 +2,14 @@ const errors = require('./errors');
 
 exports.deprecated = (oldName, newName) => `"${oldName}" is deprecated, please use "${newName}"`;
 
-exports.httpErrorMessage = (status, context, retryMessage) => {
+exports.httpErrorMessage = (err, context, retryMessage) => {
   let desc;
-  if (status) {
-    desc = `error ${status}${status === 401 ? ' (invalid SDK key)' : ''}`;
+  if (err.status) {
+    desc = `error ${err.status}${err.status === 401 ? ' (invalid SDK key)' : ''}`;
   } else {
-    desc = 'I/O error';
+    desc = `I/O error (${err.message || err})`;
   }
-  const action = errors.isHttpErrorRecoverable(status) ? retryMessage : 'giving up permanently';
+  const action = errors.isHttpErrorRecoverable(err.status) ? retryMessage : 'giving up permanently';
   return `Received ${desc} for ${context} - ${action}`;
 };
 

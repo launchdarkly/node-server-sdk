@@ -41,13 +41,13 @@ function StreamProcessor(sdkKey, config, requestor, diagnosticsManager, specifie
     function handleError(err) {
       // launchdarkly-eventsource expects this function to return true if it should retry, false to shut down.
       if (err.status && !errors.isHttpErrorRecoverable(err.status)) {
-        const message = messages.httpErrorMessage(err.status, 'streaming request');
+        const message = messages.httpErrorMessage(err, 'streaming request');
         config.logger.error(message);
         logConnectionResult(false);
         cb(new errors.LDStreamingError(err.message, err.status));
         return false;
       }
-      const message = messages.httpErrorMessage(err.status, 'streaming request', 'will retry');
+      const message = messages.httpErrorMessage(err, 'streaming request', 'will retry');
       config.logger.warn(message);
       logConnectionResult(false);
       logConnectionStarted();
