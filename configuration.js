@@ -149,13 +149,17 @@ module.exports = (function() {
   }
 
   function fallbackLogger() {
-    return new winston.Logger({
+    const prefixFormat = winston.format(info => {
+      // eslint-disable-next-line no-param-reassign
+      info.message = '[LaunchDarkly] ' + (info.message ? info.message : '');
+      return info;
+    });
+
+    return winston.createLogger({
       level: 'info',
       transports: [
         new winston.transports.Console({
-          formatter: function(options) {
-            return '[LaunchDarkly] ' + (options.message ? options.message : '');
-          },
+          format: prefixFormat(),
         }),
       ],
     });
