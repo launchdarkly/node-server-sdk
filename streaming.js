@@ -4,6 +4,9 @@ const messages = require('./messages');
 const { EventSource } = require('launchdarkly-eventsource');
 const dataKind = require('./versioned_data_kind');
 
+// Note that the requestor parameter is unused now that LD no longer uses "indirect" stream
+// events. The parameter is retained here for backward compatibility with any code that uses
+// this constructor directly, since it is documented in index.d.ts.
 function StreamProcessor(sdkKey, config, requestor, diagnosticsManager, specifiedEventSourceFactory) {
   const processor = {},
     featureStore = config.featureStore;
@@ -149,47 +152,6 @@ function StreamProcessor(sdkKey, config, requestor, diagnosticsManager, specifie
           if (key !== null) {
             config.logger.debug('Deleting ' + key + ' in ' + kind.namespace);
             featureStore.delete(kind, key, version);
-            break;
-          }
-        }
-      } else {
-        cb(new errors.LDStreamingError('Unexpected payload from event stream'));
-      }
-    });
-
-    es.addEventListener('indirect/put', () => {
-      config.logger.debug('Received indirect put event');
-      requestor.requestAllData((err, resp) => {
-        if (err) {
-          cb(err);
-        } else {
-          const all = JSON.parse(resp);
-          const initData = {};
-          initData[dataKind.features.namespace] = all.flags;
-          initData[dataKind.segments.namespace] = all.segments;
-          featureStore.init(initData, () => {
-            cb();
-          });
-        }
-      });
-    });
-
-    es.addEventListener('indirect/patch', e => {
-      config.logger.debug('Received indirect patch event');
-      if (e && e.data) {
-        const path = e.data;
-        for (const k in dataKind) {
-          const kind = dataKind[k];
-          const key = getKeyFromPath(kind, path);
-          if (key !== null) {
-            requestor.requestObject(kind, key, (err, resp) => {
-              if (err) {
-                cb(new errors.LDStreamingError('Unexpected error requesting ' + key + ' in ' + kind.namespace));
-              } else {
-                config.logger.debug('Updating ' + key + ' in ' + kind.namespace);
-                featureStore.upsert(kind, JSON.parse(resp));
-              }
-            });
             break;
           }
         }

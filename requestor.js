@@ -17,12 +17,11 @@ function Requestor(sdkKey, config) {
   const headers = httpUtils.getDefaultHeaders(sdkKey, config);
   const requestWithETagCaching = httpUtils.httpWithETagCache();
 
-  function makeRequest(resource, useCache) {
+  function makeRequest(resource) {
     const url = config.baseUri + resource;
     const requestParams = { method: 'GET', headers };
     return (cb, errCb) => {
-      const requestFn = useCache ? requestWithETagCaching : httpUtils.httpRequest;
-      requestFn(url, requestParams, null, config, (err, resp, body) => {
+      requestWithETagCaching(url, requestParams, null, config, (err, resp, body) => {
         if (err) {
           errCb(err);
         } else {
@@ -50,15 +49,10 @@ function Requestor(sdkKey, config) {
     };
   }
 
-  requestor.requestObject = (kind, key, cb) => {
-    const req = makeRequest(kind.requestPath + key, false);
-    req(processResponse(cb), processErrorResponse(cb));
-  };
-
   // Note that requestAllData will pass (null, null) rather than (null, body) if it gets a 304 response;
   // this is deliberate so that we don't keep updating the data store unnecessarily if there are no changes.
   requestor.requestAllData = cb => {
-    const req = makeRequest('/sdk/latest-all', true);
+    const req = makeRequest('/sdk/latest-all');
     req(processResponse(cb), processErrorResponse(cb));
   };
 

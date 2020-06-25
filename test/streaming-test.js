@@ -32,8 +32,8 @@ describe('StreamProcessor', () => {
     return es;
   }
 
-  function createProcessor(config, es, requestor, diagnosticsManager) {
-    return StreamProcessor(sdkKey, config, requestor, diagnosticsManager, es.constructor);
+  function createProcessor(config, es, diagnosticsManager) {
+    return StreamProcessor(sdkKey, config, null, diagnosticsManager, es.constructor);
   }
 
   function expectJsonError(err, config) {
@@ -121,7 +121,7 @@ describe('StreamProcessor', () => {
       const startTime = new Date().getTime();
 
       const es = fakeEventSource();
-      const sp = createProcessor(config, es, null, manager);
+      const sp = createProcessor(config, es, manager);
 
       const waitUntilStarted = promisifySingle(sp.start)();
       es.handlers.put({ data: JSON.stringify(putData) });
@@ -240,91 +240,6 @@ describe('StreamProcessor', () => {
     });
   });
 
-  describe('indirect put message', function() {
-    var allData = {
-      flags: {
-        flagkey: { key: 'flagkey', version: 1 }
-      },
-      segments: {
-        segkey: { key: 'segkey', version: 2 }
-      }
-    };
-    var fakeRequestor = {
-      requestAllData: function(cb) {
-        cb(null, JSON.stringify(allData));
-      }
-    };
-
-    it('requests and stores flags and segments', async () => {
-      var featureStore = InMemoryFeatureStore();
-      var config = { featureStore: featureStore, logger: stubs.stubLogger() };
-      var es = fakeEventSource();
-      var sp = createProcessor(config, es, fakeRequestor);
-
-      sp.start();
-
-      es.handlers['indirect/put']({});
-
-      await sleepAsync(0);
-      var f = await promisifySingle(featureStore.get)(dataKind.features, 'flagkey');
-      expect(f.version).toEqual(1);
-      var s = await promisifySingle(featureStore.get)(dataKind.segments, 'segkey');
-      expect(s.version).toEqual(2);
-      var value = await promisifySingle(featureStore.initialized)();
-      expect(value).toBe(true);
-    });
-  });
-
-  describe('indirect patch message', function() {
-    it('requests and updates flag', async () => {
-      var flag = { key: 'flagkey', version: 1 };
-      var fakeRequestor = {
-        requestObject: function(kind, key, cb) {
-          expect(kind).toBe(dataKind.features);
-          expect(key).toEqual(flag.key);
-          cb(null, JSON.stringify(flag));
-        }
-      };
-
-      var featureStore = InMemoryFeatureStore();
-      var config = { featureStore: featureStore, logger: stubs.stubLogger() };
-      var es = fakeEventSource();
-      var sp = createProcessor(config, es, fakeRequestor);
-
-      sp.start();
-
-      es.handlers['indirect/patch']({ data: '/flags/flagkey' });
-
-      await sleepAsync(0);
-      var f = await promisifySingle(featureStore.get)(dataKind.features, 'flagkey');
-      expect(f.version).toEqual(1);
-    });
-
-    it('requests and updates segment', async () => {
-      var segment = { key: 'segkey', version: 1 };
-      var fakeRequestor = {
-        requestObject: function(kind, key, cb) {
-          expect(kind).toBe(dataKind.segments);
-          expect(key).toEqual(segment.key);
-          cb(null, JSON.stringify(segment));
-        }
-      };
-
-      var featureStore = InMemoryFeatureStore();
-      var config = { featureStore: featureStore, logger: stubs.stubLogger() };
-      var es = fakeEventSource();
-      var sp = createProcessor(config, es, fakeRequestor);
-
-      sp.start();
-
-      es.handlers['indirect/patch']({ data: '/segments/segkey' });
-
-      await sleepAsync(0);
-      var s = await promisifySingle(featureStore.get)(dataKind.segments, 'segkey');
-      expect(s.version).toEqual(1);
-    });
-  });
-
   async function testRecoverableError(err) {
     const featureStore = InMemoryFeatureStore();
     const config = { featureStore: featureStore, logger: stubs.stubLogger() };
@@ -333,7 +248,7 @@ describe('StreamProcessor', () => {
     const startTime = new Date().getTime();
 
     const es = fakeEventSource();
-    const sp = createProcessor(config, es, null, manager);
+    const sp = createProcessor(config, es, manager);
 
     // Note that the callback for start() will *not* be called; it only reports failure and provides the
     // error object if it's an unrecovable error.
@@ -378,7 +293,7 @@ describe('StreamProcessor', () => {
     const startTime = new Date().getTime();
 
     const es = fakeEventSource();
-    const sp = createProcessor(config, es, null, manager);
+    const sp = createProcessor(config, es, manager);
 
     const waitForStart = promisifySingle(sp.start)();  
     es.instance.simulateError(err);

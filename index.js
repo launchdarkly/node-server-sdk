@@ -96,14 +96,13 @@ const newClient = function(sdkKey, originalConfig) {
     if (config.useLdd || config.offline) {
       return NullUpdateProcessor();
     } else {
-      requestor = Requestor(sdkKey, config);
-
       if (config.stream) {
         config.logger.info('Initializing stream processor to receive feature flag updates');
-        return StreamingProcessor(sdkKey, config, requestor, diagnosticsManager);
+        return StreamingProcessor(sdkKey, config, null, diagnosticsManager);
       } else {
         config.logger.info('Initializing polling processor to receive feature flag updates');
         config.logger.warn('You should only disable the streaming API if instructed to do so by LaunchDarkly support');
+        requestor = Requestor(sdkKey, config);
         return PollingProcessor(config, requestor);
       }
     }
