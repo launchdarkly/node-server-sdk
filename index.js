@@ -58,7 +58,8 @@ const newClient = function(sdkKey, originalConfig) {
     failure,
     requestor,
     updateProcessor,
-    eventProcessor;
+    eventProcessor,
+    waitForInitializationPromise;
 
   const config = configuration.validate(originalConfig);
 
@@ -152,19 +153,23 @@ const newClient = function(sdkKey, originalConfig) {
   };
 
   client.waitForInitialization = () => {
-    if (initComplete) {
-      return Promise.resolve(client);
-    }
-    if (failure) {
-      return Promise.reject(failure);
+    if (waitForInitializationPromise) {
+      return waitForInitializationPromise;
     }
 
-    return new Promise((resolve, reject) => {
-      client.once('ready', () => {
-        resolve(client);
+    if (initComplete) {
+      waitForInitializationPromise = Promise.resolve(client);
+    } else if (failure) {
+      waitForInitializationPromise = Promise.reject(failure);
+    } else {
+      waitForInitializationPromise = new Promise((resolve, reject) => {
+        client.once('ready', () => {
+          resolve(client);
+        });
+        client.once('failed', reject);
       });
-      client.once('failed', reject);
-    });
+    }
+    return waitForInitializationPromise;
   };
 
   client.variation = (key, user, defaultVal, callback) =>

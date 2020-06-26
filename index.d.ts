@@ -782,6 +782,8 @@ declare module 'launchdarkly-node-server-sdk' {
      *
      * The Promise will be resolved if the client successfully initializes, or rejected if client
      * initialization has irrevocably failed (for instance, if it detects that the SDK key is invalid).
+     * Keep in mind that unhandled Promise rejections can be fatal in Node, so if you call this method,
+     * be sure to attach a rejection handler to it (or, if using async/await, a catch block).
      *
      * Note that you can also use event listeners ([[on]]) for the same purpose: the event `"ready"`
      * indicates success, and `"failed"` indicates failure.
