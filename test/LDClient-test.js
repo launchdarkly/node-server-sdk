@@ -94,6 +94,15 @@ describe('LDClient', () => {
       var client = stubs.createClient({ updateProcessor: updateProcessor }, {});
       await expect(client.waitForInitialization()).rejects.toBe(err);
     });
+
+    it('creates only one Promise', async () => {
+      const updateProcessor = stubs.stubUpdateProcessor();
+      updateProcessor.shouldInitialize = false;
+      const client = stubs.createClient({ updateProcessor: updateProcessor }, {});
+      const p1 = client.waitForInitialization();
+      const p2 = client.waitForInitialization();
+      expect(p2).toBe(p1);
+    })
   });
 
   describe('close()', () => {
