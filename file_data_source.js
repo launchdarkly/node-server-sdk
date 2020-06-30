@@ -22,7 +22,7 @@ function FileDataSource(options) {
     let inited = false;
 
     function defaultLogger() {
-      return new winston.Logger({
+      return winston.createLogger({
         level: 'info',
         transports: [new winston.transports.Console()],
       });

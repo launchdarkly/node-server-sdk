@@ -21,7 +21,7 @@ describe('configuration', function() {
   }
 
   function checkDeprecated(oldName, newName, value) {
-    it('allows "' + oldName + '" as a deprecated equivalent to "' + newName + '"', function() {
+    it(`allows "${oldName}" as a deprecated equivalent to "${newName}"`, function() {
       const configIn = emptyConfigWithMockLogger();
       configIn[oldName] = value;
       const config1 = configuration.validate(configIn);
@@ -46,7 +46,7 @@ describe('configuration', function() {
   checkDeprecated('feature_store', 'featureStore', {});
 
   function checkBooleanProperty(name) {
-    it('enforces boolean type and default for "' + name + '"', () => {
+    it(`enforces boolean type and default for "${name}"`, () => {
       expectDefault(name);
 
       const configIn1 = emptyConfigWithMockLogger();
@@ -83,7 +83,7 @@ describe('configuration', function() {
   checkBooleanProperty('diagnosticOptOut');
 
   function checkNumericProperty(name, validValue) {
-    it('enforces numeric type and default for "' + name + '"', () => {
+    it(`enforces numeric type and default for "${name}"`, () => {
       expectDefault(name);
 
       const configIn1 = emptyConfigWithMockLogger();
@@ -110,7 +110,7 @@ describe('configuration', function() {
 
   function checkNumericRange(name, minimum, maximum) {
     if (minimum !== undefined) {
-      it('enforces minimum for "' + name + '"', () => {
+      it(`enforces minimum for "${name}"`, () => {
         const configIn = emptyConfigWithMockLogger();
         configIn[name] = minimum - 1;
         const config = configuration.validate(configIn);
@@ -119,7 +119,7 @@ describe('configuration', function() {
       });
     }
     if (maximum !== undefined) {
-      it('enforces maximum for "' + name + '"', () => {
+      it(`enforces maximum for "${name}"`, () => {
         const configIn = emptyConfigWithMockLogger();
         configIn[name] = maximum + 1;
         const config = configuration.validate(configIn);

@@ -58,7 +58,8 @@ const newClient = function(sdkKey, originalConfig) {
     failure,
     requestor,
     updateProcessor,
-    eventProcessor;
+    eventProcessor,
+    waitForInitializationPromise;
 
   const config = configuration.validate(originalConfig);
 
@@ -96,14 +97,13 @@ const newClient = function(sdkKey, originalConfig) {
     if (config.useLdd || config.offline) {
       return NullUpdateProcessor();
     } else {
-      requestor = Requestor(sdkKey, config);
-
       if (config.stream) {
         config.logger.info('Initializing stream processor to receive feature flag updates');
-        return StreamingProcessor(sdkKey, config, requestor, diagnosticsManager);
+        return StreamingProcessor(sdkKey, config, null, diagnosticsManager);
       } else {
         config.logger.info('Initializing polling processor to receive feature flag updates');
         config.logger.warn('You should only disable the streaming API if instructed to do so by LaunchDarkly support');
+        requestor = Requestor(sdkKey, config);
         return PollingProcessor(config, requestor);
       }
     }
@@ -153,19 +153,23 @@ const newClient = function(sdkKey, originalConfig) {
   };
 
   client.waitForInitialization = () => {
-    if (initComplete) {
-      return Promise.resolve(client);
-    }
-    if (failure) {
-      return Promise.reject(failure);
+    if (waitForInitializationPromise) {
+      return waitForInitializationPromise;
     }
 
-    return new Promise((resolve, reject) => {
-      client.once('ready', () => {
-        resolve(client);
+    if (initComplete) {
+      waitForInitializationPromise = Promise.resolve(client);
+    } else if (failure) {
+      waitForInitializationPromise = Promise.reject(failure);
+    } else {
+      waitForInitializationPromise = new Promise((resolve, reject) => {
+        client.once('ready', () => {
+          resolve(client);
+        });
+        client.once('failed', reject);
       });
-      client.once('failed', reject);
-    });
+    }
+    return waitForInitializationPromise;
   };
 
   client.variation = (key, user, defaultVal, callback) =>

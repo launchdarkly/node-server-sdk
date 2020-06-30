@@ -10,51 +10,6 @@ describe('Requestor', () => {
   const someData = { key: { version: 1 } };
   const allData = { flags: someData, segments: someData };
 
-  describe('requestObject', () => {
-    it('gets flag data', async () =>
-      await withCloseable(TestHttpServer.start, async server => {
-        server.forMethodAndPath('get', '/sdk/latest-flags/key', TestHttpHandlers.respondJson(someData));
-        const r = Requestor(sdkKey, { baseUri: server.url });
-        const result = await promisify(r.requestObject)(dataKind.features, 'key');
-        expect(JSON.parse(result)).toEqual(someData);
-      })
-    );
-  
-    it('gets segment data', async () =>
-      await withCloseable(TestHttpServer.start, async server => {
-        server.forMethodAndPath('get', '/sdk/latest-segments/key', TestHttpHandlers.respondJson(someData));
-        const r = Requestor(sdkKey, { baseUri: server.url });
-        const result = await promisify(r.requestObject)(dataKind.segments, 'key');
-        expect(JSON.parse(result)).toEqual(someData);
-      })
-    );
-
-    it('passes expected headers', async () =>
-      await withCloseable(TestHttpServer.start, async server => {
-        server.forMethodAndPath('get', '/sdk/latest-flags/key', TestHttpHandlers.respondJson(someData));
-        const r = Requestor(sdkKey, { baseUri: server.url });
-        await promisify(r.requestObject)(dataKind.features, 'key');
-        const req = await server.nextRequest();
-        expect(req.headers).toMatchObject(httpUtils.getDefaultHeaders(sdkKey, {}));
-      })
-    );
-
-    it('returns error result for HTTP error', async () =>
-      await withCloseable(TestHttpServer.start, async server => {
-        server.forMethodAndPath('get', '/sdk/latest-flags/key', TestHttpHandlers.respond(404));
-        const r = Requestor(sdkKey, { baseUri: server.url });
-        const req = promisify(r.requestObject)(dataKind.features, 'key');
-        await expect(req).rejects.toThrow(/404/);
-      })
-    );
-
-    it('returns error result for network error', async () => {
-      const r = Requestor(sdkKey, { baseUri: badUri });
-      const req = promisify(r.requestObject)(dataKind.features, 'key');
-      await expect(req).rejects.toThrow(/bad-uri/);
-    });
-  });
-
   describe('requestAllData', () => {
     it('gets data', async () =>
       await withCloseable(TestHttpServer.start, async server => {
