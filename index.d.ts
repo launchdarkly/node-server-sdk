@@ -28,6 +28,9 @@ declare module 'launchdarkly-node-server-sdk' {
    * The client will begin attempting to connect to LaunchDarkly as soon as it is created. To
    * determine when it is ready to use, call [[LDClient.waitForInitialization]], or register an
    * event listener for the `"ready"` event using [[LDClient.on]].
+   * 
+   * **Important:** Do **not** try to instantiate `LDClient` with its constructor (`new LDClient()`); the SDK
+   * does not currently support this.
    *
    * @param key
    *   The SDK key.
@@ -734,23 +737,15 @@ declare module 'launchdarkly-node-server-sdk' {
   /**
    * The LaunchDarkly SDK client object.
    *
-   * Applications should configure the client at startup time and continue to use it throughout the lifetime
-   * of the application, rather than creating instances on the fly.
+   * Create this object with [[init]]. Applications should configure the client at startup time and continue
+   * to use it throughout the lifetime of the application, rather than creating instances on the fly.
    *
    * Note that `LDClient` inherits from `EventEmitter`, so you can use the standard `on()`, `once()`, and
-   * `off()` methods to receive events. The client can emit the following kinds of events:
+   * `off()` methods to receive events. The standard `EventEmitter` methods are not documented here; see the
+   * {@link https://nodejs.org/api/events.html#events_class_eventemitter|Node API documentation}. For a
+   * description of events you can listen for, see [[on]].
    *
-   * - `"ready"`: Sent only once, when the client has successfully connected to LaunchDarkly.
-   * - `"failed"`: Sent only once, if the client has permanently failed to connect to LaunchDarkly.
-   * - `"error"`: Contains an error object describing some abnormal condition that the client has detected
-   *   (such as a network error).
-   * - `"update"`: The client has received a change to a feature flag. The event parameter is an object
-   *   containing a single property, `key`, the flag key. Note that this does not necessarily mean the flag's
-   *   value has changed for any particular user, only that some part of the flag configuration was changed.
-   * - `"update:KEY"`: The client has received a change to the feature flag whose key is KEY. This is the
-   *   same as `"update"` but allows you to listen for a specific flag.
-   * 
-   * For more information, see the [SDK Reference Guide](http://docs.launchdarkly.com/docs/node-sdk-reference).
+   * @see {@link http://docs.launchdarkly.com/docs/node-sdk-reference|SDK Reference Guide}
    */
   export interface LDClient extends EventEmitter {
     /**
@@ -769,7 +764,7 @@ declare module 'launchdarkly-node-server-sdk' {
     /**
      * Returns a Promise that tracks the client's initialization state.
      *
-     * **Deprecated**: please use [[waitForInitialization]] instead. The difference between that method
+     * @deprecated Please use [[waitForInitialization]] instead. The difference between that method
      * and this one is that `waitUntilReady` never rejects the Promise, even if initialization fails.
      *
      * @returns
@@ -781,16 +776,44 @@ declare module 'launchdarkly-node-server-sdk' {
      * Returns a Promise that tracks the client's initialization state.
      *
      * The Promise will be resolved if the client successfully initializes, or rejected if client
-     * initialization has irrevocably failed (for instance, if it detects that the SDK key is invalid).
+     * initialization has failed unrecoverably (for instance, if it detects that the SDK key is invalid).
      * Keep in mind that unhandled Promise rejections can be fatal in Node, so if you call this method,
-     * be sure to attach a rejection handler to it (or, if using async/await, a catch block).
+     * be sure to attach a rejection handler to it (or, if using `async`/`await`, a catch block).
      *
      * Note that you can also use event listeners ([[on]]) for the same purpose: the event `"ready"`
      * indicates success, and `"failed"` indicates failure.
      * 
+     * There is no built-in timeout for this method. If you want your code to stop waiting on the
+     * Promise after some amount of time, you could use
+     * {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/race|`Promise.race()`}
+     * or one of the several NPM helper packages that provides a standard mechanism for this. Regardless
+     * of whether you continue to wait, the SDK will still retry all connection failures indefinitely
+     * unless it gets an unrecoverable error as described above.
+     * 
      * @returns
      *   A Promise that will be resolved if the client initializes successfully, or rejected if it
      *   fails. If successful, the result is the same client object.
+     * 
+     * @example
+     * This example shows use of Promise chaining methods for specifying handlers:
+     * ```javascript
+     *   client.waitForInitialization().then(() => {
+     *     // do whatever is appropriate if initialization has succeeded
+     *   }).catch(err => {
+     *     // do whatever is appropriate if initialization has failed
+     *   })
+     * ```
+     *
+     * @example
+     * This example shows use of `async`/`await` syntax for specifying handlers:
+     * ```javascript
+     *   try {
+     *     await client.waitForInitialization();
+     *     // do whatever is appropriate if initialization has succeeded
+     *   } catch (err) {
+     *     // do whatever is appropriate if initialization has failed
+     *   }
+     * ```
      */
     waitForInitialization(): Promise<LDClient>;
 
@@ -850,7 +873,7 @@ declare module 'launchdarkly-node-server-sdk' {
     /**
      * Synonym for [[variation]].
      *
-     * **Deprecated**. Please use [[variation]] instead.
+     * @deprecated Please use [[variation]] instead.
      */
     toggle(
       key: string,
@@ -862,8 +885,8 @@ declare module 'launchdarkly-node-server-sdk' {
     /**
      * Retrieves the set of all flag values for a user.
      *
-     * **Deprecated**: use [[allFlagsState]] instead. Current versions of the client-side
-     * SDK will not generate analytics events correctly if you pass the result of `allFlags()`.
+     * @deprecated Use [[allFlagsState]] instead. Current versions of the client-side SDK will
+     * not generate analytics events correctly if you pass the result of `allFlags()`.
      *
      * @param user
      *   The end user requesting the feature flags.
@@ -941,13 +964,10 @@ declare module 'launchdarkly-node-server-sdk' {
      * section of the dashboard. This can be used to track custom goals or other events that do
      * not currently have goals.
      *
-     * As of this version's release date, the LaunchDarkly service does not support the `metricValue`
-     * parameter. As a result, specifying `metricValue` will not yet produce any different behavior
-     * from omitting it. Refer to the [SDK reference guide](https://docs.launchdarkly.com/docs/node-sdk-reference#section-track)
-     * for the latest status.
-     * 
-     * If the user is omitted or has no key, the client will log a warning
-     * and will not send an event.
+     * Note that event delivery is asynchronous, so the event may not actually be sent until later;
+     * see [[flush]].
+     *
+     * If the user is omitted or has no key, the client will log a warning and will not send an event.
      *
      * @param key
      *   The name of the event, which may correspond to a goal in A/B tests.
@@ -982,10 +1002,12 @@ declare module 'launchdarkly-node-server-sdk' {
      *
      * Normally, batches of events are delivered in the background at intervals determined by the
      * `flushInterval` property of [[LDOptions]]. Calling `flush()` triggers an immediate delivery.
+     * However, like Node I/O in general, this is still an asynchronous operation so you must still
+     * use Promise chaining, a callback, or `async`/`await` to detect when it has finished or failed.
      *
      * @param callback
-     *   A function which will be called when the flush completes. If omitted, you
-     *   will receive a Promise instead.
+     *   A function which will be called when the flush completes (meaning that all pending events
+     *   have been delivered to LaunchDarkly). If omitted, you will receive a Promise instead.
      *
      * @returns
      *   If you provided a callback, then nothing. Otherwise, a Promise which resolves once
@@ -993,6 +1015,51 @@ declare module 'launchdarkly-node-server-sdk' {
      *   fails, so be sure to attach a rejection handler to it.
      */
     flush(callback?: (err: Error, res: boolean) => void): Promise<void>;
+
+    /**
+     * Registers an event listener that will be called when the client triggers some type of event.
+     * 
+     * This is the standard `on` method inherited from Node's `EventEmitter`; see the
+     * {@link https://nodejs.org/api/events.html#events_class_eventemitter|Node API docs} for more
+     * details on how to manage event listeners. Here is a description of the event types defined
+     * by `LDClient`.
+     * 
+     * - `"ready"`: Sent only once, when the client has successfully connected to LaunchDarkly.
+     * Alternately, you can detect this with [[waitForInitialization]].
+     * - `"failed"`: Sent only once, if the client has permanently failed to connect to LaunchDarkly.
+     * Alternately, you can detect this with [[waitForInitialization]].
+     * - `"error"`: Contains an error object describing some abnormal condition that the client has detected
+     * (such as a network error).
+     * - `"update"`: The client has received a change to a feature flag. The event parameter is an object
+     * containing a single property, `key`, the flag key. Note that this does not necessarily mean the flag's
+     * value has changed for any particular user, only that some part of the flag configuration was changed.
+     * - `"update:KEY"`: The client has received a change to the feature flag whose key is KEY. This is the
+     * same as `"update"` but allows you to listen for a specific flag.
+     *
+     * @param event the name of the event to listen for
+     * @param listener the function to call when the event happens
+     */
+    on(event: string | symbol, listener: (...args: any[]) => void): this;
+
+    // The following are symbols that LDClient inherits from EventEmitter, which we are declaring
+    // again here only so that we can use @ignore to exclude them from the generated docs.
+    // Unfortunately it does not seem possible to exclude these inherited methods en masse without
+    // using a Typedoc plugin.
+
+    /** @ignore */ addListener(event: string | symbol, listener: (...args: any[]) => void): this;
+    /** @ignore */ emit(event: string | symbol, ...args: any[]): boolean;
+    /** @ignore */ eventNames(): Array<string | symbol>;
+    /** @ignore */ getMaxListeners(): number;
+    /** @ignore */ listenerCount(type: string | symbol): number;
+    /** @ignore */ listeners(event: string | symbol): Function[];
+    /** @ignore */ prependListener(event: string | symbol, listener: (...args: any[]) => void): this;
+    /** @ignore */ prependOnceListener(event: string | symbol, listener: (...args: any[]) => void): this;
+    /** @ignore */ rawListeners(event: string | symbol): Function[];
+    /** @ignore */ removeAllListeners(event?: string | symbol): this;
+    /** @ignore */ removeListener(event: string | symbol, listener: (...args: any[]) => void): this;
+    /** @ignore */ setMaxListeners(n: number): this;
+    /** @ignore */ once(event: string | symbol, listener: (...args: any[]) => void): this;
+    /** @ignore */ off(event: string | symbol, listener: (...args: any[]) => void): this;
   }
 
   /**
