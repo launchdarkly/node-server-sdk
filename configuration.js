@@ -159,7 +159,7 @@ module.exports = (function() {
       level: 'info',
       transports: [
         new winston.transports.Console({
-          format: prefixFormat(),
+          format: winston.format.combine(prefixFormat(), winston.format.simple()),
         }),
       ],
     });
