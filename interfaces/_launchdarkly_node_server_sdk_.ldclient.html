@@ -3,8 +3,8 @@
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<title>LDClient | LaunchDarkly Server-Side Node SDK (5.13.1)</title>
-	<meta name="description" content="Documentation for LaunchDarkly Server-Side Node SDK (5.13.1)">
+	<title>LDClient | LaunchDarkly Server-Side Node SDK (5.13.2)</title>
+	<meta name="description" content="Documentation for LaunchDarkly Server-Side Node SDK (5.13.2)">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="../assets/css/main.css">
 </head>
@@ -22,7 +22,7 @@
 						<li class="state loading">Preparing search index...</li>
 						<li class="state failure">The search index is not available</li>
 					</ul>
-					<a href="../index.html" class="title">LaunchDarkly Server-Side Node SDK (5.13.1)</a>
+					<a href="../index.html" class="title">LaunchDarkly Server-Side Node SDK (5.13.2)</a>
 				</div>
 				<div class="table-cell" id="tsd-widgets">
 					<div id="tsd-filter">
@@ -71,22 +71,17 @@
 					<div class="lead">
 						<p>The LaunchDarkly SDK client object.</p>
 					</div>
-					<p>Applications should configure the client at startup time and continue to use it throughout the lifetime
-					of the application, rather than creating instances on the fly.</p>
+					<p>Create this object with <a href="../index.html#init">init</a>. Applications should configure the client at startup time and continue
+					to use it throughout the lifetime of the application, rather than creating instances on the fly.</p>
 					<p>Note that <code>LDClient</code> inherits from <code>EventEmitter</code>, so you can use the standard <code>on()</code>, <code>once()</code>, and
-					<code>off()</code> methods to receive events. The client can emit the following kinds of events:</p>
-					<ul>
-						<li><code>&quot;ready&quot;</code>: Sent only once, when the client has successfully connected to LaunchDarkly.</li>
-						<li><code>&quot;failed&quot;</code>: Sent only once, if the client has permanently failed to connect to LaunchDarkly.</li>
-						<li><code>&quot;error&quot;</code>: Contains an error object describing some abnormal condition that the client has detected
-						(such as a network error).</li>
-						<li><code>&quot;update&quot;</code>: The client has received a change to a feature flag. The event parameter is an object
-							containing a single property, <code>key</code>, the flag key. Note that this does not necessarily mean the flag&#39;s
-						value has changed for any particular user, only that some part of the flag configuration was changed.</li>
-						<li><code>&quot;update:KEY&quot;</code>: The client has received a change to the feature flag whose key is KEY. This is the
-						same as <code>&quot;update&quot;</code> but allows you to listen for a specific flag.</li>
-					</ul>
-					<p>For more information, see the <a href="http://docs.launchdarkly.com/docs/node-sdk-reference">SDK Reference Guide</a>.</p>
+						<code>off()</code> methods to receive events. The standard <code>EventEmitter</code> methods are not documented here; see the
+						<a href="https://nodejs.org/api/events.html#events_class_eventemitter" class="external">Node API documentation</a>. For a
+					description of events you can listen for, see <a href="_launchdarkly_node_server_sdk_.ldclient.html#on">on</a>.</p>
+					<dl class="tsd-comment-tags">
+						<dt>see</dt>
+						<dd><p><a href="http://docs.launchdarkly.com/docs/node-sdk-reference" class="external">SDK Reference Guide</a></p>
+						</dd>
+					</dl>
 				</div>
 			</section>
 			<section class="tsd-panel tsd-hierarchy">
@@ -121,36 +116,22 @@
 						<section class="tsd-index-section ">
 							<h3>Methods</h3>
 							<ul class="tsd-index-list">
-								<li class="tsd-kind-method tsd-parent-kind-interface tsd-is-inherited"><a href="_launchdarkly_node_server_sdk_.ldclient.html#addlistener" class="tsd-kind-icon">add<wbr>Listener</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldclient.html#allflags" class="tsd-kind-icon">all<wbr>Flags</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldclient.html#allflagsstate" class="tsd-kind-icon">all<wbr>Flags<wbr>State</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldclient.html#close" class="tsd-kind-icon">close</a></li>
-								<li class="tsd-kind-method tsd-parent-kind-interface tsd-is-inherited"><a href="_launchdarkly_node_server_sdk_.ldclient.html#emit" class="tsd-kind-icon">emit</a></li>
-								<li class="tsd-kind-method tsd-parent-kind-interface tsd-is-inherited"><a href="_launchdarkly_node_server_sdk_.ldclient.html#eventnames" class="tsd-kind-icon">event<wbr>Names</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldclient.html#flush" class="tsd-kind-icon">flush</a></li>
-								<li class="tsd-kind-method tsd-parent-kind-interface tsd-is-inherited"><a href="_launchdarkly_node_server_sdk_.ldclient.html#getmaxlisteners" class="tsd-kind-icon">get<wbr>Max<wbr>Listeners</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldclient.html#identify" class="tsd-kind-icon">identify</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldclient.html#initialized" class="tsd-kind-icon">initialized</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldclient.html#isoffline" class="tsd-kind-icon">is<wbr>Offline</a></li>
-								<li class="tsd-kind-method tsd-parent-kind-interface tsd-is-inherited"><a href="_launchdarkly_node_server_sdk_.ldclient.html#listenercount" class="tsd-kind-icon">listener<wbr>Count</a></li>
-								<li class="tsd-kind-method tsd-parent-kind-interface tsd-is-inherited"><a href="_launchdarkly_node_server_sdk_.ldclient.html#listeners" class="tsd-kind-icon">listeners</a></li>
-								<li class="tsd-kind-method tsd-parent-kind-interface tsd-is-inherited"><a href="_launchdarkly_node_server_sdk_.ldclient.html#off" class="tsd-kind-icon">off</a></li>
-								<li class="tsd-kind-method tsd-parent-kind-interface tsd-is-inherited"><a href="_launchdarkly_node_server_sdk_.ldclient.html#on" class="tsd-kind-icon">on</a></li>
-								<li class="tsd-kind-method tsd-parent-kind-interface tsd-is-inherited"><a href="_launchdarkly_node_server_sdk_.ldclient.html#once" class="tsd-kind-icon">once</a></li>
-								<li class="tsd-kind-method tsd-parent-kind-interface tsd-is-inherited"><a href="_launchdarkly_node_server_sdk_.ldclient.html#prependlistener" class="tsd-kind-icon">prepend<wbr>Listener</a></li>
-								<li class="tsd-kind-method tsd-parent-kind-interface tsd-is-inherited"><a href="_launchdarkly_node_server_sdk_.ldclient.html#prependoncelistener" class="tsd-kind-icon">prepend<wbr>Once<wbr>Listener</a></li>
-								<li class="tsd-kind-method tsd-parent-kind-interface tsd-is-inherited"><a href="_launchdarkly_node_server_sdk_.ldclient.html#rawlisteners" class="tsd-kind-icon">raw<wbr>Listeners</a></li>
-								<li class="tsd-kind-method tsd-parent-kind-interface tsd-is-inherited"><a href="_launchdarkly_node_server_sdk_.ldclient.html#removealllisteners" class="tsd-kind-icon">remove<wbr>All<wbr>Listeners</a></li>
-								<li class="tsd-kind-method tsd-parent-kind-interface tsd-is-inherited"><a href="_launchdarkly_node_server_sdk_.ldclient.html#removelistener" class="tsd-kind-icon">remove<wbr>Listener</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-interface tsd-is-overwrite"><a href="_launchdarkly_node_server_sdk_.ldclient.html#on" class="tsd-kind-icon">on</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldclient.html#securemodehash" class="tsd-kind-icon">secure<wbr>Mode<wbr>Hash</a></li>
-								<li class="tsd-kind-method tsd-parent-kind-interface tsd-is-inherited"><a href="_launchdarkly_node_server_sdk_.ldclient.html#setmaxlisteners" class="tsd-kind-icon">set<wbr>Max<wbr>Listeners</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldclient.html#toggle" class="tsd-kind-icon">toggle</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldclient.html#track" class="tsd-kind-icon">track</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldclient.html#variation" class="tsd-kind-icon">variation</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldclient.html#variationdetail" class="tsd-kind-icon">variation<wbr>Detail</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldclient.html#waitforinitialization" class="tsd-kind-icon">wait<wbr>For<wbr>Initialization</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldclient.html#waituntilready" class="tsd-kind-icon">wait<wbr>Until<wbr>Ready</a></li>
-								<li class="tsd-kind-method tsd-parent-kind-interface tsd-is-inherited tsd-is-static"><a href="_launchdarkly_node_server_sdk_.ldclient.html#listenercount-1" class="tsd-kind-icon">listener<wbr>Count</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-interface tsd-is-inherited tsd-is-static"><a href="_launchdarkly_node_server_sdk_.ldclient.html#listenercount" class="tsd-kind-icon">listener<wbr>Count</a></li>
 							</ul>
 						</section>
 					</div>
@@ -199,51 +180,6 @@
 			</section>
 			<section class="tsd-panel-group tsd-member-group ">
 				<h2>Methods</h2>
-				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-					<a name="addlistener" class="tsd-anchor"></a>
-					<h3>add<wbr>Listener</h3>
-					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-						<li class="tsd-signature tsd-kind-icon">add<wbr>Listener<span class="tsd-signature-symbol">(</span>event<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span>, listener<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">this</span></li>
-					</ul>
-					<ul class="tsd-descriptions">
-						<li class="tsd-description">
-							<aside class="tsd-sources">
-								<p>Inherited from <a href="_launchdarkly_node_server_sdk_.ldclient.html">LDClient</a>.<a href="_launchdarkly_node_server_sdk_.ldclient.html#addlistener">addListener</a></p>
-								<ul>
-									<li>Defined in node_modules/@types/node/globals.d.ts:547</li>
-								</ul>
-							</aside>
-							<h4 class="tsd-parameters-title">Parameters</h4>
-							<ul class="tsd-parameters">
-								<li>
-									<h5>event: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span></h5>
-								</li>
-								<li>
-									<h5>listener: <span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span></h5>
-									<ul class="tsd-parameters">
-										<li class="tsd-parameter-signature">
-											<ul class="tsd-signatures tsd-kind-type-literal">
-												<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
-											</ul>
-											<ul class="tsd-descriptions">
-												<li class="tsd-description">
-													<h4 class="tsd-parameters-title">Parameters</h4>
-													<ul class="tsd-parameters">
-														<li>
-															<h5><span class="tsd-flag ts-flagRest">Rest</span> <span class="tsd-signature-symbol">...</span>args: <span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span></h5>
-														</li>
-													</ul>
-													<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
-												</li>
-											</ul>
-										</li>
-									</ul>
-								</li>
-							</ul>
-							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4>
-						</li>
-					</ul>
-				</section>
 				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface">
 					<a name="allflags" class="tsd-anchor"></a>
 					<h3>all<wbr>Flags</h3>
@@ -254,15 +190,19 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/3005386/index.d.ts#L875">index.d.ts:875</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/44228a7/index.d.ts#L900">index.d.ts:900</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
 								<div class="lead">
 									<p>Retrieves the set of all flag values for a user.</p>
 								</div>
-								<p><strong>Deprecated</strong>: use <a href="_launchdarkly_node_server_sdk_.ldclient.html#allflagsstate">allFlagsState</a> instead. Current versions of the client-side
-								SDK will not generate analytics events correctly if you pass the result of <code>allFlags()</code>.</p>
+								<dl class="tsd-comment-tags">
+									<dt>deprecated</dt>
+									<dd><p>Use <a href="_launchdarkly_node_server_sdk_.ldclient.html#allflagsstate">allFlagsState</a> instead. Current versions of the client-side SDK will
+										not generate analytics events correctly if you pass the result of <code>allFlags()</code>.</p>
+									</dd>
+								</dl>
 							</div>
 							<h4 class="tsd-parameters-title">Parameters</h4>
 							<ul class="tsd-parameters">
@@ -296,7 +236,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/3005386/index.d.ts#L900">index.d.ts:900</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/44228a7/index.d.ts#L925">index.d.ts:925</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -347,7 +287,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/3005386/index.d.ts#L925">index.d.ts:925</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/44228a7/index.d.ts#L950">index.d.ts:950</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -357,51 +297,6 @@
 								<p>Do not attempt to use the client after calling this method.</p>
 							</div>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
-						</li>
-					</ul>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-					<a name="emit" class="tsd-anchor"></a>
-					<h3>emit</h3>
-					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-						<li class="tsd-signature tsd-kind-icon">emit<span class="tsd-signature-symbol">(</span>event<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span>, <span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">boolean</span></li>
-					</ul>
-					<ul class="tsd-descriptions">
-						<li class="tsd-description">
-							<aside class="tsd-sources">
-								<p>Inherited from <a href="_launchdarkly_node_server_sdk_.ldclient.html">LDClient</a>.<a href="_launchdarkly_node_server_sdk_.ldclient.html#emit">emit</a></p>
-								<ul>
-									<li>Defined in node_modules/@types/node/globals.d.ts:557</li>
-								</ul>
-							</aside>
-							<h4 class="tsd-parameters-title">Parameters</h4>
-							<ul class="tsd-parameters">
-								<li>
-									<h5>event: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span></h5>
-								</li>
-								<li>
-									<h5><span class="tsd-flag ts-flagRest">Rest</span> <span class="tsd-signature-symbol">...</span>args: <span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span></h5>
-								</li>
-							</ul>
-							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4>
-						</li>
-					</ul>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-					<a name="eventnames" class="tsd-anchor"></a>
-					<h3>event<wbr>Names</h3>
-					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-						<li class="tsd-signature tsd-kind-icon">event<wbr>Names<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Array</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span><span class="tsd-signature-symbol">&gt;</span></li>
-					</ul>
-					<ul class="tsd-descriptions">
-						<li class="tsd-description">
-							<aside class="tsd-sources">
-								<p>Inherited from <a href="_launchdarkly_node_server_sdk_.ldclient.html">LDClient</a>.<a href="_launchdarkly_node_server_sdk_.ldclient.html#eventnames">eventNames</a></p>
-								<ul>
-									<li>Defined in node_modules/@types/node/globals.d.ts:562</li>
-								</ul>
-							</aside>
-							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Array</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span><span class="tsd-signature-symbol">&gt;</span></h4>
 						</li>
 					</ul>
 				</section>
@@ -415,7 +310,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/3005386/index.d.ts#L993">index.d.ts:993</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/44228a7/index.d.ts#L1017">index.d.ts:1017</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -423,15 +318,17 @@
 									<p>Flushes all pending analytics events.</p>
 								</div>
 								<p>Normally, batches of events are delivered in the background at intervals determined by the
-								<code>flushInterval</code> property of <a href="_launchdarkly_node_server_sdk_.ldoptions.html">LDOptions</a>. Calling <code>flush()</code> triggers an immediate delivery.</p>
+									<code>flushInterval</code> property of <a href="_launchdarkly_node_server_sdk_.ldoptions.html">LDOptions</a>. Calling <code>flush()</code> triggers an immediate delivery.
+									However, like Node I/O in general, this is still an asynchronous operation so you must still
+								use Promise chaining, a callback, or <code>async</code>/<code>await</code> to detect when it has finished or failed.</p>
 							</div>
 							<h4 class="tsd-parameters-title">Parameters</h4>
 							<ul class="tsd-parameters">
 								<li>
 									<h5><span class="tsd-flag ts-flagOptional">Optional</span> callback: <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">(</span>err<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Error</span>, res<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">)</span></h5>
 									<div class="tsd-comment tsd-typography">
-										<p>  A function which will be called when the flush completes. If omitted, you
-										will receive a Promise instead.</p>
+										<p>  A function which will be called when the flush completes (meaning that all pending events
+										have been delivered to LaunchDarkly). If omitted, you will receive a Promise instead.</p>
 									</div>
 								</li>
 							</ul>
@@ -439,24 +336,6 @@
 							<p>  If you provided a callback, then nothing. Otherwise, a Promise which resolves once
 								flushing is finished. Note that the Promise will be rejected if the HTTP request
 							fails, so be sure to attach a rejection handler to it.</p>
-						</li>
-					</ul>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-					<a name="getmaxlisteners" class="tsd-anchor"></a>
-					<h3>get<wbr>Max<wbr>Listeners</h3>
-					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-						<li class="tsd-signature tsd-kind-icon">get<wbr>Max<wbr>Listeners<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span></li>
-					</ul>
-					<ul class="tsd-descriptions">
-						<li class="tsd-description">
-							<aside class="tsd-sources">
-								<p>Inherited from <a href="_launchdarkly_node_server_sdk_.ldclient.html">LDClient</a>.<a href="_launchdarkly_node_server_sdk_.ldclient.html#getmaxlisteners">getMaxListeners</a></p>
-								<ul>
-									<li>Defined in node_modules/@types/node/globals.d.ts:554</li>
-								</ul>
-							</aside>
-							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4>
 						</li>
 					</ul>
 				</section>
@@ -470,7 +349,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/3005386/index.d.ts#L976">index.d.ts:976</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/44228a7/index.d.ts#L998">index.d.ts:998</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -506,7 +385,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/3005386/index.d.ts#L767">index.d.ts:767</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/44228a7/index.d.ts#L762">index.d.ts:762</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -533,7 +412,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/3005386/index.d.ts#L933">index.d.ts:933</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/44228a7/index.d.ts#L958">index.d.ts:958</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -546,348 +425,55 @@
 						</li>
 					</ul>
 				</section>
-				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-					<a name="listenercount" class="tsd-anchor"></a>
-					<h3>listener<wbr>Count</h3>
-					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-						<li class="tsd-signature tsd-kind-icon">listener<wbr>Count<span class="tsd-signature-symbol">(</span>type<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span></li>
-					</ul>
-					<ul class="tsd-descriptions">
-						<li class="tsd-description">
-							<aside class="tsd-sources">
-								<p>Inherited from <a href="_launchdarkly_node_server_sdk_.ldclient.html">LDClient</a>.<a href="_launchdarkly_node_server_sdk_.ldclient.html#listenercount">listenerCount</a></p>
-								<ul>
-									<li>Defined in node_modules/@types/node/globals.d.ts:558</li>
-								</ul>
-							</aside>
-							<h4 class="tsd-parameters-title">Parameters</h4>
-							<ul class="tsd-parameters">
-								<li>
-									<h5>type: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span></h5>
-								</li>
-							</ul>
-							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4>
-						</li>
-					</ul>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-					<a name="listeners" class="tsd-anchor"></a>
-					<h3>listeners</h3>
-					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-						<li class="tsd-signature tsd-kind-icon">listeners<span class="tsd-signature-symbol">(</span>event<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Function</span><span class="tsd-signature-symbol">[]</span></li>
-					</ul>
-					<ul class="tsd-descriptions">
-						<li class="tsd-description">
-							<aside class="tsd-sources">
-								<p>Inherited from <a href="_launchdarkly_node_server_sdk_.ldclient.html">LDClient</a>.<a href="_launchdarkly_node_server_sdk_.ldclient.html#listeners">listeners</a></p>
-								<ul>
-									<li>Defined in node_modules/@types/node/globals.d.ts:555</li>
-								</ul>
-							</aside>
-							<h4 class="tsd-parameters-title">Parameters</h4>
-							<ul class="tsd-parameters">
-								<li>
-									<h5>event: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span></h5>
-								</li>
-							</ul>
-							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Function</span><span class="tsd-signature-symbol">[]</span></h4>
-						</li>
-					</ul>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-					<a name="off" class="tsd-anchor"></a>
-					<h3>off</h3>
-					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-						<li class="tsd-signature tsd-kind-icon">off<span class="tsd-signature-symbol">(</span>event<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span>, listener<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">this</span></li>
-					</ul>
-					<ul class="tsd-descriptions">
-						<li class="tsd-description">
-							<aside class="tsd-sources">
-								<p>Inherited from <a href="_launchdarkly_node_server_sdk_.ldclient.html">LDClient</a>.<a href="_launchdarkly_node_server_sdk_.ldclient.html#off">off</a></p>
-								<ul>
-									<li>Defined in node_modules/@types/node/globals.d.ts:551</li>
-								</ul>
-							</aside>
-							<h4 class="tsd-parameters-title">Parameters</h4>
-							<ul class="tsd-parameters">
-								<li>
-									<h5>event: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span></h5>
-								</li>
-								<li>
-									<h5>listener: <span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span></h5>
-									<ul class="tsd-parameters">
-										<li class="tsd-parameter-signature">
-											<ul class="tsd-signatures tsd-kind-type-literal">
-												<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
-											</ul>
-											<ul class="tsd-descriptions">
-												<li class="tsd-description">
-													<h4 class="tsd-parameters-title">Parameters</h4>
-													<ul class="tsd-parameters">
-														<li>
-															<h5><span class="tsd-flag ts-flagRest">Rest</span> <span class="tsd-signature-symbol">...</span>args: <span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span></h5>
-														</li>
-													</ul>
-													<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
-												</li>
-											</ul>
-										</li>
-									</ul>
-								</li>
-							</ul>
-							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4>
-						</li>
-					</ul>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface tsd-is-overwrite">
 					<a name="on" class="tsd-anchor"></a>
 					<h3>on</h3>
-					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface tsd-is-overwrite">
 						<li class="tsd-signature tsd-kind-icon">on<span class="tsd-signature-symbol">(</span>event<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span>, listener<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">this</span></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
-								<p>Inherited from <a href="_launchdarkly_node_server_sdk_.ldclient.html">LDClient</a>.<a href="_launchdarkly_node_server_sdk_.ldclient.html#on">on</a></p>
+								<p>Overrides EventEmitter.on</p>
 								<ul>
-									<li>Defined in node_modules/@types/node/globals.d.ts:548</li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/44228a7/index.d.ts#L1042">index.d.ts:1042</a></li>
 								</ul>
 							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Registers an event listener that will be called when the client triggers some type of event.</p>
+								</div>
+								<p>This is the standard <code>on</code> method inherited from Node&#39;s <code>EventEmitter</code>; see the
+									<a href="https://nodejs.org/api/events.html#events_class_eventemitter" class="external">Node API docs</a> for more
+									details on how to manage event listeners. Here is a description of the event types defined
+								by <code>LDClient</code>.</p>
+								<ul>
+									<li><code>&quot;ready&quot;</code>: Sent only once, when the client has successfully connected to LaunchDarkly.
+									Alternately, you can detect this with <a href="_launchdarkly_node_server_sdk_.ldclient.html#waitforinitialization">waitForInitialization</a>.</li>
+									<li><code>&quot;failed&quot;</code>: Sent only once, if the client has permanently failed to connect to LaunchDarkly.
+									Alternately, you can detect this with <a href="_launchdarkly_node_server_sdk_.ldclient.html#waitforinitialization">waitForInitialization</a>.</li>
+									<li><code>&quot;error&quot;</code>: Contains an error object describing some abnormal condition that the client has detected
+									(such as a network error).</li>
+									<li><code>&quot;update&quot;</code>: The client has received a change to a feature flag. The event parameter is an object
+										containing a single property, <code>key</code>, the flag key. Note that this does not necessarily mean the flag&#39;s
+									value has changed for any particular user, only that some part of the flag configuration was changed.</li>
+									<li><code>&quot;update:KEY&quot;</code>: The client has received a change to the feature flag whose key is KEY. This is the
+									same as <code>&quot;update&quot;</code> but allows you to listen for a specific flag.</li>
+								</ul>
+							</div>
 							<h4 class="tsd-parameters-title">Parameters</h4>
 							<ul class="tsd-parameters">
 								<li>
 									<h5>event: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span></h5>
+									<div class="tsd-comment tsd-typography">
+										<p>the name of the event to listen for</p>
+									</div>
 								</li>
 								<li>
 									<h5>listener: <span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span></h5>
-									<ul class="tsd-parameters">
-										<li class="tsd-parameter-signature">
-											<ul class="tsd-signatures tsd-kind-type-literal">
-												<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
-											</ul>
-											<ul class="tsd-descriptions">
-												<li class="tsd-description">
-													<h4 class="tsd-parameters-title">Parameters</h4>
-													<ul class="tsd-parameters">
-														<li>
-															<h5><span class="tsd-flag ts-flagRest">Rest</span> <span class="tsd-signature-symbol">...</span>args: <span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span></h5>
-														</li>
-													</ul>
-													<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
-												</li>
-											</ul>
-										</li>
-									</ul>
-								</li>
-							</ul>
-							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4>
-						</li>
-					</ul>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-					<a name="once" class="tsd-anchor"></a>
-					<h3>once</h3>
-					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-						<li class="tsd-signature tsd-kind-icon">once<span class="tsd-signature-symbol">(</span>event<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span>, listener<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">this</span></li>
-					</ul>
-					<ul class="tsd-descriptions">
-						<li class="tsd-description">
-							<aside class="tsd-sources">
-								<p>Inherited from <a href="_launchdarkly_node_server_sdk_.ldclient.html">LDClient</a>.<a href="_launchdarkly_node_server_sdk_.ldclient.html#once">once</a></p>
-								<ul>
-									<li>Defined in node_modules/@types/node/globals.d.ts:549</li>
-								</ul>
-							</aside>
-							<h4 class="tsd-parameters-title">Parameters</h4>
-							<ul class="tsd-parameters">
-								<li>
-									<h5>event: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span></h5>
-								</li>
-								<li>
-									<h5>listener: <span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span></h5>
-									<ul class="tsd-parameters">
-										<li class="tsd-parameter-signature">
-											<ul class="tsd-signatures tsd-kind-type-literal">
-												<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
-											</ul>
-											<ul class="tsd-descriptions">
-												<li class="tsd-description">
-													<h4 class="tsd-parameters-title">Parameters</h4>
-													<ul class="tsd-parameters">
-														<li>
-															<h5><span class="tsd-flag ts-flagRest">Rest</span> <span class="tsd-signature-symbol">...</span>args: <span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span></h5>
-														</li>
-													</ul>
-													<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
-												</li>
-											</ul>
-										</li>
-									</ul>
-								</li>
-							</ul>
-							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4>
-						</li>
-					</ul>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-					<a name="prependlistener" class="tsd-anchor"></a>
-					<h3>prepend<wbr>Listener</h3>
-					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-						<li class="tsd-signature tsd-kind-icon">prepend<wbr>Listener<span class="tsd-signature-symbol">(</span>event<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span>, listener<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">this</span></li>
-					</ul>
-					<ul class="tsd-descriptions">
-						<li class="tsd-description">
-							<aside class="tsd-sources">
-								<p>Inherited from <a href="_launchdarkly_node_server_sdk_.ldclient.html">LDClient</a>.<a href="_launchdarkly_node_server_sdk_.ldclient.html#prependlistener">prependListener</a></p>
-								<ul>
-									<li>Defined in node_modules/@types/node/globals.d.ts:560</li>
-								</ul>
-							</aside>
-							<h4 class="tsd-parameters-title">Parameters</h4>
-							<ul class="tsd-parameters">
-								<li>
-									<h5>event: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span></h5>
-								</li>
-								<li>
-									<h5>listener: <span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span></h5>
-									<ul class="tsd-parameters">
-										<li class="tsd-parameter-signature">
-											<ul class="tsd-signatures tsd-kind-type-literal">
-												<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
-											</ul>
-											<ul class="tsd-descriptions">
-												<li class="tsd-description">
-													<h4 class="tsd-parameters-title">Parameters</h4>
-													<ul class="tsd-parameters">
-														<li>
-															<h5><span class="tsd-flag ts-flagRest">Rest</span> <span class="tsd-signature-symbol">...</span>args: <span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span></h5>
-														</li>
-													</ul>
-													<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
-												</li>
-											</ul>
-										</li>
-									</ul>
-								</li>
-							</ul>
-							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4>
-						</li>
-					</ul>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-					<a name="prependoncelistener" class="tsd-anchor"></a>
-					<h3>prepend<wbr>Once<wbr>Listener</h3>
-					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-						<li class="tsd-signature tsd-kind-icon">prepend<wbr>Once<wbr>Listener<span class="tsd-signature-symbol">(</span>event<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span>, listener<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">this</span></li>
-					</ul>
-					<ul class="tsd-descriptions">
-						<li class="tsd-description">
-							<aside class="tsd-sources">
-								<p>Inherited from <a href="_launchdarkly_node_server_sdk_.ldclient.html">LDClient</a>.<a href="_launchdarkly_node_server_sdk_.ldclient.html#prependoncelistener">prependOnceListener</a></p>
-								<ul>
-									<li>Defined in node_modules/@types/node/globals.d.ts:561</li>
-								</ul>
-							</aside>
-							<h4 class="tsd-parameters-title">Parameters</h4>
-							<ul class="tsd-parameters">
-								<li>
-									<h5>event: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span></h5>
-								</li>
-								<li>
-									<h5>listener: <span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span></h5>
-									<ul class="tsd-parameters">
-										<li class="tsd-parameter-signature">
-											<ul class="tsd-signatures tsd-kind-type-literal">
-												<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
-											</ul>
-											<ul class="tsd-descriptions">
-												<li class="tsd-description">
-													<h4 class="tsd-parameters-title">Parameters</h4>
-													<ul class="tsd-parameters">
-														<li>
-															<h5><span class="tsd-flag ts-flagRest">Rest</span> <span class="tsd-signature-symbol">...</span>args: <span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span></h5>
-														</li>
-													</ul>
-													<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
-												</li>
-											</ul>
-										</li>
-									</ul>
-								</li>
-							</ul>
-							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4>
-						</li>
-					</ul>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-					<a name="rawlisteners" class="tsd-anchor"></a>
-					<h3>raw<wbr>Listeners</h3>
-					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-						<li class="tsd-signature tsd-kind-icon">raw<wbr>Listeners<span class="tsd-signature-symbol">(</span>event<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Function</span><span class="tsd-signature-symbol">[]</span></li>
-					</ul>
-					<ul class="tsd-descriptions">
-						<li class="tsd-description">
-							<aside class="tsd-sources">
-								<p>Inherited from <a href="_launchdarkly_node_server_sdk_.ldclient.html">LDClient</a>.<a href="_launchdarkly_node_server_sdk_.ldclient.html#rawlisteners">rawListeners</a></p>
-								<ul>
-									<li>Defined in node_modules/@types/node/globals.d.ts:556</li>
-								</ul>
-							</aside>
-							<h4 class="tsd-parameters-title">Parameters</h4>
-							<ul class="tsd-parameters">
-								<li>
-									<h5>event: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span></h5>
-								</li>
-							</ul>
-							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Function</span><span class="tsd-signature-symbol">[]</span></h4>
-						</li>
-					</ul>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-					<a name="removealllisteners" class="tsd-anchor"></a>
-					<h3>remove<wbr>All<wbr>Listeners</h3>
-					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-						<li class="tsd-signature tsd-kind-icon">remove<wbr>All<wbr>Listeners<span class="tsd-signature-symbol">(</span>event<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">this</span></li>
-					</ul>
-					<ul class="tsd-descriptions">
-						<li class="tsd-description">
-							<aside class="tsd-sources">
-								<p>Inherited from <a href="_launchdarkly_node_server_sdk_.ldclient.html">LDClient</a>.<a href="_launchdarkly_node_server_sdk_.ldclient.html#removealllisteners">removeAllListeners</a></p>
-								<ul>
-									<li>Defined in node_modules/@types/node/globals.d.ts:552</li>
-								</ul>
-							</aside>
-							<h4 class="tsd-parameters-title">Parameters</h4>
-							<ul class="tsd-parameters">
-								<li>
-									<h5><span class="tsd-flag ts-flagOptional">Optional</span> event: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span></h5>
-								</li>
-							</ul>
-							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4>
-						</li>
-					</ul>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-					<a name="removelistener" class="tsd-anchor"></a>
-					<h3>remove<wbr>Listener</h3>
-					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-						<li class="tsd-signature tsd-kind-icon">remove<wbr>Listener<span class="tsd-signature-symbol">(</span>event<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span>, listener<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">this</span></li>
-					</ul>
-					<ul class="tsd-descriptions">
-						<li class="tsd-description">
-							<aside class="tsd-sources">
-								<p>Inherited from <a href="_launchdarkly_node_server_sdk_.ldclient.html">LDClient</a>.<a href="_launchdarkly_node_server_sdk_.ldclient.html#removelistener">removeListener</a></p>
-								<ul>
-									<li>Defined in node_modules/@types/node/globals.d.ts:550</li>
-								</ul>
-							</aside>
-							<h4 class="tsd-parameters-title">Parameters</h4>
-							<ul class="tsd-parameters">
-								<li>
-									<h5>event: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span></h5>
-								</li>
-								<li>
-									<h5>listener: <span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span></h5>
+									<div class="tsd-comment tsd-typography">
+										<p>the function to call when the event happens</p>
+									</div>
 									<ul class="tsd-parameters">
 										<li class="tsd-parameter-signature">
 											<ul class="tsd-signatures tsd-kind-type-literal">
@@ -922,7 +508,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/3005386/index.d.ts#L918">index.d.ts:918</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/44228a7/index.d.ts#L943">index.d.ts:943</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -946,30 +532,6 @@
 						</li>
 					</ul>
 				</section>
-				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-					<a name="setmaxlisteners" class="tsd-anchor"></a>
-					<h3>set<wbr>Max<wbr>Listeners</h3>
-					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-						<li class="tsd-signature tsd-kind-icon">set<wbr>Max<wbr>Listeners<span class="tsd-signature-symbol">(</span>n<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">this</span></li>
-					</ul>
-					<ul class="tsd-descriptions">
-						<li class="tsd-description">
-							<aside class="tsd-sources">
-								<p>Inherited from <a href="_launchdarkly_node_server_sdk_.ldclient.html">LDClient</a>.<a href="_launchdarkly_node_server_sdk_.ldclient.html#setmaxlisteners">setMaxListeners</a></p>
-								<ul>
-									<li>Defined in node_modules/@types/node/globals.d.ts:553</li>
-								</ul>
-							</aside>
-							<h4 class="tsd-parameters-title">Parameters</h4>
-							<ul class="tsd-parameters">
-								<li>
-									<h5>n: <span class="tsd-signature-type">number</span></h5>
-								</li>
-							</ul>
-							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4>
-						</li>
-					</ul>
-				</section>
 				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface">
 					<a name="toggle" class="tsd-anchor"></a>
 					<h3>toggle</h3>
@@ -980,14 +542,18 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/3005386/index.d.ts#L853">index.d.ts:853</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/44228a7/index.d.ts#L878">index.d.ts:878</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
 								<div class="lead">
 									<p>Synonym for <a href="_launchdarkly_node_server_sdk_.ldclient.html#variation">variation</a>.</p>
 								</div>
-								<p><strong>Deprecated</strong>. Please use <a href="_launchdarkly_node_server_sdk_.ldclient.html#variation">variation</a> instead.</p>
+								<dl class="tsd-comment-tags">
+									<dt>deprecated</dt>
+									<dd><p>Please use <a href="_launchdarkly_node_server_sdk_.ldclient.html#variation">variation</a> instead.</p>
+									</dd>
+								</dl>
 							</div>
 							<h4 class="tsd-parameters-title">Parameters</h4>
 							<ul class="tsd-parameters">
@@ -1018,7 +584,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/3005386/index.d.ts#L961">index.d.ts:961</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/44228a7/index.d.ts#L983">index.d.ts:983</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -1028,12 +594,9 @@
 								<p>LaunchDarkly automatically tracks pageviews and clicks that are specified in the Goals
 									section of the dashboard. This can be used to track custom goals or other events that do
 								not currently have goals.</p>
-								<p>As of this version&#39;s release date, the LaunchDarkly service does not support the <code>metricValue</code>
-									parameter. As a result, specifying <code>metricValue</code> will not yet produce any different behavior
-									from omitting it. Refer to the <a href="https://docs.launchdarkly.com/docs/node-sdk-reference#section-track">SDK reference guide</a>
-								for the latest status.</p>
-								<p>If the user is omitted or has no key, the client will log a warning
-								and will not send an event.</p>
+								<p>Note that event delivery is asynchronous, so the event may not actually be sent until later;
+								see <a href="_launchdarkly_node_server_sdk_.ldclient.html#flush">flush</a>.</p>
+								<p>If the user is omitted or has no key, the client will log a warning and will not send an event.</p>
 							</div>
 							<h4 class="tsd-parameters-title">Parameters</h4>
 							<ul class="tsd-parameters">
@@ -1078,7 +641,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/3005386/index.d.ts#L811">index.d.ts:811</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/44228a7/index.d.ts#L836">index.d.ts:836</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -1130,7 +693,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/3005386/index.d.ts#L841">index.d.ts:841</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/44228a7/index.d.ts#L866">index.d.ts:866</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -1187,7 +750,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/3005386/index.d.ts#L793">index.d.ts:793</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/44228a7/index.d.ts#L818">index.d.ts:818</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -1195,9 +758,36 @@
 									<p>Returns a Promise that tracks the client&#39;s initialization state.</p>
 								</div>
 								<p>The Promise will be resolved if the client successfully initializes, or rejected if client
-								initialization has irrevocably failed (for instance, if it detects that the SDK key is invalid).</p>
+									initialization has failed unrecoverably (for instance, if it detects that the SDK key is invalid).
+									Keep in mind that unhandled Promise rejections can be fatal in Node, so if you call this method,
+								be sure to attach a rejection handler to it (or, if using <code>async</code>/<code>await</code>, a catch block).</p>
 								<p>Note that you can also use event listeners (<a href="_launchdarkly_node_server_sdk_.ldclient.html#on">on</a>) for the same purpose: the event <code>&quot;ready&quot;</code>
 								indicates success, and <code>&quot;failed&quot;</code> indicates failure.</p>
+								<p>There is no built-in timeout for this method. If you want your code to stop waiting on the
+									Promise after some amount of time, you could use
+									<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/race" class="external"><code>Promise.race()</code></a>
+									or one of the several NPM helper packages that provides a standard mechanism for this. Regardless
+									of whether you continue to wait, the SDK will still retry all connection failures indefinitely
+								unless it gets an unrecoverable error as described above.</p>
+								<dl class="tsd-comment-tags">
+									<dt>example</dt>
+									<dd><p>This example shows use of Promise chaining methods for specifying handlers:</p>
+										<pre><code class="language-javascript">  client.waitForInitialization().then(<span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-comment">// do whatever is appropriate if initialization has succeeded</span>
+  }).catch(<span class="hljs-function"><span class="hljs-params">err</span> =&gt;</span> {
+    <span class="hljs-comment">// do whatever is appropriate if initialization has failed</span>
+  })</code></pre>
+									</dd>
+									<dt>example</dt>
+									<dd><p>This example shows use of <code>async</code>/<code>await</code> syntax for specifying handlers:</p>
+										<pre><code class="language-javascript">  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">await</span> client.waitForInitialization();
+    <span class="hljs-comment">// do whatever is appropriate if initialization has succeeded</span>
+  } <span class="hljs-keyword">catch</span> (err) {
+    <span class="hljs-comment">// do whatever is appropriate if initialization has failed</span>
+  }</code></pre>
+									</dd>
+								</dl>
 							</div>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_launchdarkly_node_server_sdk_.ldclient.html" class="tsd-signature-type">LDClient</a><span class="tsd-signature-symbol">&gt;</span></h4>
 							<p>  A Promise that will be resolved if the client initializes successfully, or rejected if it
@@ -1215,15 +805,19 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/3005386/index.d.ts#L778">index.d.ts:778</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/44228a7/index.d.ts#L773">index.d.ts:773</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
 								<div class="lead">
 									<p>Returns a Promise that tracks the client&#39;s initialization state.</p>
 								</div>
-								<p><strong>Deprecated</strong>: please use <a href="_launchdarkly_node_server_sdk_.ldclient.html#waitforinitialization">waitForInitialization</a> instead. The difference between that method
-								and this one is that <code>waitUntilReady</code> never rejects the Promise, even if initialization fails.</p>
+								<dl class="tsd-comment-tags">
+									<dt>deprecated</dt>
+									<dd><p>Please use <a href="_launchdarkly_node_server_sdk_.ldclient.html#waitforinitialization">waitForInitialization</a> instead. The difference between that method
+										and this one is that <code>waitUntilReady</code> never rejects the Promise, even if initialization fails.</p>
+									</dd>
+								</dl>
 							</div>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4>
 							<p>  A Promise that will be resolved if the client initializes successfully.</p>
@@ -1231,7 +825,7 @@
 					</ul>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface tsd-is-inherited tsd-is-static">
-					<a name="listenercount-1" class="tsd-anchor"></a>
+					<a name="listenercount" class="tsd-anchor"></a>
 					<h3><span class="tsd-flag ts-flagStatic">Static</span> listener<wbr>Count</h3>
 					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface tsd-is-inherited tsd-is-static">
 						<li class="tsd-signature tsd-kind-icon">listener<wbr>Count<span class="tsd-signature-symbol">(</span>emitter<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">EventEmitter</span>, event<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span></li>
@@ -1239,7 +833,7 @@
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
-								<p>Inherited from <a href="_launchdarkly_node_server_sdk_.ldclient.html">LDClient</a>.<a href="_launchdarkly_node_server_sdk_.ldclient.html#listenercount-1">listenerCount</a></p>
+								<p>Inherited from <a href="_launchdarkly_node_server_sdk_.ldclient.html">LDClient</a>.<a href="_launchdarkly_node_server_sdk_.ldclient.html#listenercount">listenerCount</a></p>
 								<ul>
 									<li>Defined in node_modules/@types/node/events.d.ts:44</li>
 								</ul>
@@ -1269,22 +863,19 @@
 		<div class="col-4 col-menu menu-sticky-wrap menu-highlight">
 			<nav class="tsd-navigation primary">
 				<ul>
-					<li class="current tsd-kind-namespace">
+					<li class="current tsd-kind-module">
 						<a href="../index.html">&quot;launchdarkly-<wbr>node-<wbr>server-<wbr>sdk&quot;</a>
-					</li>
-					<li class=" tsd-kind-namespace tsd-parent-kind-namespace">
-						<a href="../modules/_launchdarkly_node_server_sdk_.errors.html">&quot;launchdarkly-<wbr>node-<wbr>server-<wbr>sdk&quot;.errors</a>
 					</li>
 				</ul>
 			</nav>
 			<nav class="tsd-navigation secondary menu-sticky">
 				<ul class="before-current">
-					<li class=" tsd-kind-interface tsd-parent-kind-namespace">
+					<li class=" tsd-kind-interface tsd-parent-kind-module">
 						<a href="_launchdarkly_node_server_sdk_.filedatasourceoptions.html" class="tsd-kind-icon">File<wbr>Data<wbr>Source<wbr>Options</a>
 					</li>
 				</ul>
 				<ul class="current">
-					<li class="current tsd-kind-interface tsd-parent-kind-namespace">
+					<li class="current tsd-kind-interface tsd-parent-kind-module">
 						<a href="_launchdarkly_node_server_sdk_.ldclient.html" class="tsd-kind-icon">LDClient</a>
 						<ul>
 							<li class=" tsd-kind-constructor tsd-parent-kind-interface tsd-is-inherited">
@@ -1292,9 +883,6 @@
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-interface tsd-is-inherited tsd-is-static">
 								<a href="_launchdarkly_node_server_sdk_.ldclient.html#defaultmaxlisteners" class="tsd-kind-icon">default<wbr>Max<wbr>Listeners</a>
-							</li>
-							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-								<a href="_launchdarkly_node_server_sdk_.ldclient.html#addlistener" class="tsd-kind-icon">add<wbr>Listener</a>
 							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-interface">
 								<a href="_launchdarkly_node_server_sdk_.ldclient.html#allflags" class="tsd-kind-icon">all<wbr>Flags</a>
@@ -1305,17 +893,8 @@
 							<li class=" tsd-kind-method tsd-parent-kind-interface">
 								<a href="_launchdarkly_node_server_sdk_.ldclient.html#close" class="tsd-kind-icon">close</a>
 							</li>
-							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-								<a href="_launchdarkly_node_server_sdk_.ldclient.html#emit" class="tsd-kind-icon">emit</a>
-							</li>
-							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-								<a href="_launchdarkly_node_server_sdk_.ldclient.html#eventnames" class="tsd-kind-icon">event<wbr>Names</a>
-							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-interface">
 								<a href="_launchdarkly_node_server_sdk_.ldclient.html#flush" class="tsd-kind-icon">flush</a>
-							</li>
-							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-								<a href="_launchdarkly_node_server_sdk_.ldclient.html#getmaxlisteners" class="tsd-kind-icon">get<wbr>Max<wbr>Listeners</a>
 							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-interface">
 								<a href="_launchdarkly_node_server_sdk_.ldclient.html#identify" class="tsd-kind-icon">identify</a>
@@ -1326,41 +905,11 @@
 							<li class=" tsd-kind-method tsd-parent-kind-interface">
 								<a href="_launchdarkly_node_server_sdk_.ldclient.html#isoffline" class="tsd-kind-icon">is<wbr>Offline</a>
 							</li>
-							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-								<a href="_launchdarkly_node_server_sdk_.ldclient.html#listenercount" class="tsd-kind-icon">listener<wbr>Count</a>
-							</li>
-							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-								<a href="_launchdarkly_node_server_sdk_.ldclient.html#listeners" class="tsd-kind-icon">listeners</a>
-							</li>
-							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-								<a href="_launchdarkly_node_server_sdk_.ldclient.html#off" class="tsd-kind-icon">off</a>
-							</li>
-							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
+							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-is-overwrite">
 								<a href="_launchdarkly_node_server_sdk_.ldclient.html#on" class="tsd-kind-icon">on</a>
-							</li>
-							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-								<a href="_launchdarkly_node_server_sdk_.ldclient.html#once" class="tsd-kind-icon">once</a>
-							</li>
-							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-								<a href="_launchdarkly_node_server_sdk_.ldclient.html#prependlistener" class="tsd-kind-icon">prepend<wbr>Listener</a>
-							</li>
-							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-								<a href="_launchdarkly_node_server_sdk_.ldclient.html#prependoncelistener" class="tsd-kind-icon">prepend<wbr>Once<wbr>Listener</a>
-							</li>
-							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-								<a href="_launchdarkly_node_server_sdk_.ldclient.html#rawlisteners" class="tsd-kind-icon">raw<wbr>Listeners</a>
-							</li>
-							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-								<a href="_launchdarkly_node_server_sdk_.ldclient.html#removealllisteners" class="tsd-kind-icon">remove<wbr>All<wbr>Listeners</a>
-							</li>
-							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-								<a href="_launchdarkly_node_server_sdk_.ldclient.html#removelistener" class="tsd-kind-icon">remove<wbr>Listener</a>
 							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-interface">
 								<a href="_launchdarkly_node_server_sdk_.ldclient.html#securemodehash" class="tsd-kind-icon">secure<wbr>Mode<wbr>Hash</a>
-							</li>
-							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-								<a href="_launchdarkly_node_server_sdk_.ldclient.html#setmaxlisteners" class="tsd-kind-icon">set<wbr>Max<wbr>Listeners</a>
 							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-interface">
 								<a href="_launchdarkly_node_server_sdk_.ldclient.html#toggle" class="tsd-kind-icon">toggle</a>
@@ -1381,52 +930,52 @@
 								<a href="_launchdarkly_node_server_sdk_.ldclient.html#waituntilready" class="tsd-kind-icon">wait<wbr>Until<wbr>Ready</a>
 							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-is-inherited tsd-is-static">
-								<a href="_launchdarkly_node_server_sdk_.ldclient.html#listenercount-1" class="tsd-kind-icon">listener<wbr>Count</a>
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#listenercount" class="tsd-kind-icon">listener<wbr>Count</a>
 							</li>
 						</ul>
 					</li>
 				</ul>
 				<ul class="after-current">
-					<li class=" tsd-kind-interface tsd-parent-kind-namespace">
+					<li class=" tsd-kind-interface tsd-parent-kind-module">
 						<a href="_launchdarkly_node_server_sdk_.ldevaluationdetail.html" class="tsd-kind-icon">LDEvaluation<wbr>Detail</a>
 					</li>
-					<li class=" tsd-kind-interface tsd-parent-kind-namespace">
+					<li class=" tsd-kind-interface tsd-parent-kind-module">
 						<a href="_launchdarkly_node_server_sdk_.ldevaluationreason.html" class="tsd-kind-icon">LDEvaluation<wbr>Reason</a>
 					</li>
-					<li class=" tsd-kind-interface tsd-parent-kind-namespace">
+					<li class=" tsd-kind-interface tsd-parent-kind-module">
 						<a href="_launchdarkly_node_server_sdk_.ldfeaturestore.html" class="tsd-kind-icon">LDFeature<wbr>Store</a>
 					</li>
-					<li class=" tsd-kind-interface tsd-parent-kind-namespace">
+					<li class=" tsd-kind-interface tsd-parent-kind-module">
 						<a href="_launchdarkly_node_server_sdk_.ldflagset.html" class="tsd-kind-icon">LDFlag<wbr>Set</a>
 					</li>
-					<li class=" tsd-kind-interface tsd-parent-kind-namespace">
+					<li class=" tsd-kind-interface tsd-parent-kind-module">
 						<a href="_launchdarkly_node_server_sdk_.ldflagsstate.html" class="tsd-kind-icon">LDFlags<wbr>State</a>
 					</li>
-					<li class=" tsd-kind-interface tsd-parent-kind-namespace">
+					<li class=" tsd-kind-interface tsd-parent-kind-module">
 						<a href="_launchdarkly_node_server_sdk_.ldflagsstateoptions.html" class="tsd-kind-icon">LDFlags<wbr>State<wbr>Options</a>
 					</li>
-					<li class=" tsd-kind-interface tsd-parent-kind-namespace">
+					<li class=" tsd-kind-interface tsd-parent-kind-module">
 						<a href="_launchdarkly_node_server_sdk_.ldlogger.html" class="tsd-kind-icon">LDLogger</a>
 					</li>
-					<li class=" tsd-kind-interface tsd-parent-kind-namespace">
+					<li class=" tsd-kind-interface tsd-parent-kind-module">
 						<a href="_launchdarkly_node_server_sdk_.ldoptions.html" class="tsd-kind-icon">LDOptions</a>
 					</li>
-					<li class=" tsd-kind-interface tsd-parent-kind-namespace">
+					<li class=" tsd-kind-interface tsd-parent-kind-module">
 						<a href="_launchdarkly_node_server_sdk_.ldtlsoptions.html" class="tsd-kind-icon">LDTLSOptions</a>
 					</li>
-					<li class=" tsd-kind-interface tsd-parent-kind-namespace">
+					<li class=" tsd-kind-interface tsd-parent-kind-module">
 						<a href="_launchdarkly_node_server_sdk_.lduser.html" class="tsd-kind-icon">LDUser</a>
 					</li>
-					<li class=" tsd-kind-type-alias tsd-parent-kind-namespace">
+					<li class=" tsd-kind-type-alias tsd-parent-kind-module">
 						<a href="../index.html#ldflagvalue" class="tsd-kind-icon">LDFlag<wbr>Value</a>
 					</li>
-					<li class=" tsd-kind-function tsd-parent-kind-namespace">
+					<li class=" tsd-kind-function tsd-parent-kind-module">
 						<a href="../index.html#filedatasource" class="tsd-kind-icon">File<wbr>Data<wbr>Source</a>
 					</li>
-					<li class=" tsd-kind-function tsd-parent-kind-namespace">
+					<li class=" tsd-kind-function tsd-parent-kind-module">
 						<a href="../index.html#redisfeaturestore" class="tsd-kind-icon">Redis<wbr>Feature<wbr>Store</a>
 					</li>
-					<li class=" tsd-kind-function tsd-parent-kind-namespace">
+					<li class=" tsd-kind-function tsd-parent-kind-module">
 						<a href="../index.html#init" class="tsd-kind-icon">init</a>
 					</li>
 				</ul>
@@ -1439,6 +988,12 @@
 		<h2>Legend</h2>
 		<div class="tsd-legend-group">
 			<ul class="tsd-legend">
+				<li class="tsd-kind-namespace"><span class="tsd-kind-icon">Namespace</span></li>
+				<li class="tsd-kind-function"><span class="tsd-kind-icon">Function</span></li>
+				<li class="tsd-kind-type-alias"><span class="tsd-kind-icon">Type alias</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-interface"><span class="tsd-kind-icon">Interface</span></li>
 				<li class="tsd-kind-method tsd-parent-kind-interface"><span class="tsd-kind-icon">Method</span></li>
 			</ul>
 		</div>
@@ -1449,6 +1004,5 @@
 </div>
 <div class="overlay"></div>
 <script src="../assets/js/main.js"></script>
-<script>if (location.protocol == 'file:') document.write('<script src="../assets/js/search.js"><' + '/script>');</script>
 </body>
 </html>
