@@ -2,6 +2,11 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.13.3] - 2020-06-30
+### Fixed:
+- A bug introduced in 5.13.2 caused the output of the default logger to be formatted incorrectly.
+
+
 ## [5.13.2] - 2020-06-30
 ### Changed:
 - The default implementation of logging now uses Winston 3.x rather than Winston 2.x. This does not change the content of the log output, and if you have specified your own custom logger then the SDK still uses that. The only effect is that the SDK no longer has dependencies on Winston 2.x. (Thanks, [FauxFaux](https://github.com/launchdarkly/node-server-sdk/pull/189)!)
