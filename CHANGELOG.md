@@ -12,6 +12,7 @@ All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be docu
 - The default implementation of logging now uses Winston 3.x rather than Winston 2.x. This does not change the content of the log output, and if you have specified your own custom logger then the SDK still uses that. The only effect is that the SDK no longer has dependencies on Winston 2.x. (Thanks, [FauxFaux](https://github.com/launchdarkly/node-server-sdk/pull/189)!)
 
 ### Fixed:
+- Previously, calling `LDClient.waitForInitialization()` multiple times _before_ the client had finished initializing would create a new Promise, and a new event listener, each time. This could cause unwanted overhead and possibly trigger warnings about too many event listeners. Now, `waitForInitialization()` will always return the same Promise instance and will not create multiple listeners.
 - Fixed a bug that could cause extra delays when receiving a large streaming update. The process will still be blocked for some amount of time as the JSON data is being parsed, which is unavoidable in the current architecture, but this bug made it block for longer than necessary.
 - Improved and clarified Typedoc documentation for several types and methods.
 
