@@ -151,7 +151,7 @@ declare module 'launchdarkly-node-server-sdk' {
      * - `'ERROR'`: The flag could not be evaluated, e.g. because it does not exist or due
      *   to an unexpected error.
      */
-    kind: string;
+    kind: 'OFF' | 'FALLTHROUGH' | 'TARGET_MATCH' | 'RULE_MATCH' | 'PREREQUISITE_FAILED' | 'ERROR'; 
 
     /**
      * A further description of the error condition, if the kind was `'ERROR'`.
