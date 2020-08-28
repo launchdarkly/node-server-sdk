@@ -2,6 +2,10 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.13.4] - 2020-08-27
+### Fixed:
+- When using the Redis integration without trying to connect to LaunchDarkly (such as when using the Relay Proxy with Redis in &#34;daemon mode&#34;), a flag evaluation that was done immediately after initializing the SDK client could fail due to the Redis client not having time to make its connection to Redis. This has been fixed so that it will wait for the connection to be established. This was never an issue when _not_ using daemon mode, because if the SDK did connect to LaunchDarkly then it would proceed to store the flags in Redis and would not finish initializing until it had done so. ([#193](https://github.com/launchdarkly/node-server-sdk/issues/193))
+
 ## [5.13.3] - 2020-06-30
 ### Fixed:
 - A bug introduced in 5.13.2 caused the output of the default logger to be formatted incorrectly.
