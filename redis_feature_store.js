@@ -55,7 +55,7 @@ function redisFeatureStoreInternal(redisOpts, prefix, specifiedLogger, preconfig
   function doGet(kind, key, maybeCallback) {
     const cb = maybeCallback || noop;
 
-    if (!connected) {
+    if (!connected && !initialConnect) {
       logger.warn('Attempted to fetch key ' + key + ' while Redis connection is down');
       cb(null);
       return;
@@ -85,7 +85,7 @@ function redisFeatureStoreInternal(redisOpts, prefix, specifiedLogger, preconfig
 
   store.getAllInternal = (kind, maybeCallback) => {
     const cb = maybeCallback || noop;
-    if (!connected) {
+    if (!connected && !initialConnect) {
       logger.warn('Attempted to fetch all keys while Redis connection is down');
       cb(null);
       return;
