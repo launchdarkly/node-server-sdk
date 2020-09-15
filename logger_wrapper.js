@@ -27,6 +27,9 @@ function LoggerWrapper(logger, fallbackLogger) {
 }
 
 function validateLogger(logger) {
+  if (!logger) {
+    throw new Error('No logger configuration is provided');
+  }
   logLevels.forEach(level => {
     if (!logger[level] || typeof logger[level] !== 'function') {
       throw new Error('Provided logger instance must support logger.' + level + '(...) method');

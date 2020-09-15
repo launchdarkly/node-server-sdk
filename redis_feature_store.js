@@ -1,5 +1,4 @@
 const redis = require('redis'),
-  winston = require('winston'),
   dataKind = require('./versioned_data_kind'),
   CachingStoreWrapper = require('./caching_store_wrapper');
 
@@ -18,13 +17,6 @@ function redisFeatureStoreInternal(redisOpts, prefix, specifiedLogger, preconfig
     store = {},
     itemsPrefix = (prefix || 'launchdarkly') + ':',
     initedKey = itemsPrefix + '$inited';
-
-  const logger =
-    specifiedLogger ||
-    winston.createLogger({
-      level: 'info',
-      transports: [new winston.transports.Console()],
-    });
 
   let connected = !!redisOpts.client;
   let initialConnect = !redisOpts.client;
