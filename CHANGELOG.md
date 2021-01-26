@@ -2,6 +2,10 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.13.5] - 2021-01-25
+### Changed:
+- In streaming mode, the SDK now automatically drops and restarts the stream connection if it has received no data from the server within a 5-minute interval. This ensures that if the connection fails in such a way that the SDK cannot detect the failure as an I/O error, it will not hang forever waiting for updates from the phantom connection. The LaunchDarkly streaming service sends a tiny &#34;heartbeat&#34; message at regular intervals less than this timeout, to ensure that the SDK will not drop the connection if it is still usable. This logic exists in most other LaunchDarkly SDKs but was not previously implemented in the Node server-side SDK.
+
 ## [5.13.4] - 2020-08-27
 ### Fixed:
 - When using the Redis integration without trying to connect to LaunchDarkly (such as when using the Relay Proxy with Redis in &#34;daemon mode&#34;), a flag evaluation that was done immediately after initializing the SDK client could fail due to the Redis client not having time to make its connection to Redis. This has been fixed so that it will wait for the connection to be established. This was never an issue when _not_ using daemon mode, because if the SDK did connect to LaunchDarkly then it would proceed to store the flags in Redis and would not finish initializing until it had done so. ([#193](https://github.com/launchdarkly/node-server-sdk/issues/193))
