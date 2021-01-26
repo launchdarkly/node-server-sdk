@@ -4,6 +4,11 @@ const messages = require('./messages');
 const { EventSource } = require('launchdarkly-eventsource');
 const dataKind = require('./versioned_data_kind');
 
+// The read timeout for the stream is a fixed value that is set to be slightly longer than the expected
+// interval between heartbeats from the LaunchDarkly streaming server. If this amount of time elapses
+// with no new data, the connection will be cycled.
+const streamReadTimeoutMillis = 5 * 60 * 1000; // 5 minutes
+
 // Note that the requestor parameter is unused now that LD no longer uses "indirect" stream
 // events. The parameter is retained here for backward compatibility with any code that uses
 // this constructor directly, since it is documented in index.d.ts.
@@ -64,6 +69,7 @@ function StreamProcessor(sdkKey, config, requestor, diagnosticsManager, specifie
       initialRetryDelayMillis: config.streamInitialReconnectDelayMillis
         ? config.streamInitialReconnectDelayMillis
         : 1000 * config.streamInitialReconnectDelay,
+      readTimeoutMillis: streamReadTimeoutMillis,
       retryResetIntervalMillis: 60000,
       tlsParams: config.tlsParams,
     });
