@@ -41,6 +41,7 @@ var allOptions: ld.LDOptions = {
   wrapperVersion: 'y'
 };
 var userWithKeyOnly: ld.LDUser = { key: 'user' };
+var anonymousUser: ld.LDUser = { key: 'anon-user', anonymous: true };
 var user: ld.LDUser = {
   key: 'user',
   name: 'name',
@@ -68,6 +69,8 @@ client.identify(user);
 client.track('key', user);
 client.track('key', user, { ok: 1 });
 client.track('key', user, null, 1.5);
+
+client.alias(user, anonymousUser);
 
 // evaluation methods with callbacks
 client.variation('key', user, false, (value: ld.LDFlagValue) => { });

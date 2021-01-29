@@ -4,6 +4,7 @@ describe('LDClient - analytics events', () => {
 
   var eventProcessor;
   var defaultUser = { key: 'user' };  
+  var anonymousUser = { key: 'anon-user', anonymous: true };  
   var userWithNoKey = { name: 'Keyless Joe' };
   var userWithEmptyKey = { key: '' };
 
@@ -33,6 +34,35 @@ describe('LDClient - analytics events', () => {
         key: 'flagkey',
         version: 1,
         user: defaultUser,
+        variation: 1,
+        value: 'b',
+        default: 'c',
+        trackEvents: true
+      });
+    });
+
+    it('generates event for existing feature when user is anonymous', async () => {
+      var flag = {
+        key: 'flagkey',
+        version: 1,
+        on: true,
+        targets: [],
+        fallthrough: { variation: 1 },
+        variations: ['a', 'b'],
+        trackEvents: true
+      };
+      var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
+      await client.waitForInitialization();
+      await client.variation(flag.key, anonymousUser, 'c');
+
+      expect(eventProcessor.events).toHaveLength(1);
+      var e = eventProcessor.events[0];
+      expect(e).toMatchObject({
+        kind: 'feature',
+        key: 'flagkey',
+        version: 1,
+        user: anonymousUser,
+        contextKind: 'anonymousUser',
         variation: 1,
         value: 'b',
         default: 'c',
@@ -215,6 +245,23 @@ describe('LDClient - analytics events', () => {
       });
     });
 
+    it('generates event for unknown feature when user is anonymous', async () => {
+      var client = stubs.createClient({ eventProcessor: eventProcessor }, {});
+      await client.waitForInitialization();
+      await client.variation('flagkey', anonymousUser, 'c');
+
+      expect(eventProcessor.events).toHaveLength(1);
+      var e = eventProcessor.events[0];
+      expect(e).toMatchObject({
+        kind: 'feature',
+        key: 'flagkey',
+        user: anonymousUser,
+        contextKind: 'anonymousUser',
+        value: 'c',
+        default: 'c'
+      });
+    });
+
     it('generates event for existing feature when user key is missing', async () => {
       var flag = {
         key: 'flagkey',
@@ -376,6 +423,25 @@ describe('LDClient - analytics events', () => {
       expect(logger.warn).not.toHaveBeenCalled();
     });
 
+    it('generates an event for an anonymous user', async () => {
+      var data = { thing: 'stuff' };
+      var logger = stubs.stubLogger();
+      var client = stubs.createClient({ eventProcessor: eventProcessor, logger: logger }, {});
+      await client.waitForInitialization();
+
+      client.track('eventkey', anonymousUser, data);
+      expect(eventProcessor.events).toHaveLength(1);
+      var e = eventProcessor.events[0];
+      expect(e).toMatchObject({
+        kind: 'custom',
+        key: 'eventkey',
+        user: anonymousUser,
+        contextKind: 'anonymousUser',
+        data: data
+      });
+      expect(logger.warn).not.toHaveBeenCalled();
+    });
+
     it('does not generate an event, and logs a warning, if user is missing', async () => {
       var logger = stubs.stubLogger();
       var client = stubs.createClient({ eventProcessor: eventProcessor, logger: logger }, {});
@@ -404,6 +470,74 @@ describe('LDClient - analytics events', () => {
       client.track('eventkey', userWithEmptyKey);
       expect(eventProcessor.events).toHaveLength(0);
       expect(logger.warn).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('alias', () => {
+    it('generates an event for aliasing anonymous to known', async () => {
+      var client = stubs.createClient({ eventProcessor: eventProcessor }, {});
+      await client.waitForInitialization();
+
+      client.alias(defaultUser, anonymousUser);
+      expect(eventProcessor.events).toHaveLength(1);
+      var e = eventProcessor.events[0];
+      expect(e).toMatchObject({
+        kind: 'alias',
+        key: 'user',
+        previousKey: 'anon-user',
+        contextKind: 'user',
+        previousContextKind: 'anonymousUser'
+      });
+    });
+
+    it('generates an event for aliasing known to known', async () => {
+      var anotherUser = { key: 'another-user' };
+      var client = stubs.createClient({ eventProcessor: eventProcessor }, {});
+      await client.waitForInitialization();
+
+      client.alias(defaultUser, anotherUser);
+      expect(eventProcessor.events).toHaveLength(1);
+      var e = eventProcessor.events[0];
+      expect(e).toMatchObject({
+        kind: 'alias',
+        key: 'user',
+        previousKey: 'another-user',
+        contextKind: 'user',
+        previousContextKind: 'user'
+      });
+    });
+
+    it('generates an event for aliasing anonymous to anonymous', async () => {
+      var anotherAnonymousUser = { key: 'another-anon-user', anonymous: true };
+      var client = stubs.createClient({ eventProcessor: eventProcessor }, {});
+      await client.waitForInitialization();
+
+      client.alias(anonymousUser, anotherAnonymousUser);
+      expect(eventProcessor.events).toHaveLength(1);
+      var e = eventProcessor.events[0];
+      expect(e).toMatchObject({
+        kind: 'alias',
+        key: 'anon-user',
+        previousKey: 'another-anon-user',
+        contextKind: 'anonymousUser',
+        previousContextKind: 'anonymousUser'
+      });
+    });
+
+    it('generates an event for aliasing known to anonymous', async () => {
+      var client = stubs.createClient({ eventProcessor: eventProcessor }, {});
+      await client.waitForInitialization();
+
+      client.alias(anonymousUser, defaultUser);
+      expect(eventProcessor.events).toHaveLength(1);
+      var e = eventProcessor.events[0];
+      expect(e).toMatchObject({
+        kind: 'alias',
+        key: 'anon-user',
+        previousKey: 'user',
+        contextKind: 'anonymousUser',
+        previousContextKind: 'user'
+      });
     });
   });
 });
