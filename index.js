@@ -33,8 +33,6 @@ function createErrorReporter(emitter, logger) {
   };
 }
 
-global.setImmediate = global.setImmediate || process.nextTick.bind(process);
-
 function NullEventProcessor() {
   return {
     sendEvent: () => {},
