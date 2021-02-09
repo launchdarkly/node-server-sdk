@@ -2,6 +2,10 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.14.1] - 2021-02-09
+### Fixed:
+- Removed a line that would have globally monkey-patched `setImmediate` on extremely old Node versions that did not implement that function. On all currently supported Node versions, this line had no effect. ([#206](https://github.com/launchdarkly/node-server-sdk/issues/206))
+
 ## [5.14.0] - 2021-01-29
 ### Added:
 - Added the `alias` method to `LDClient`. This can be used to associate two user objects for analytics purposes with an alias event.
