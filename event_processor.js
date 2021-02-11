@@ -87,6 +87,9 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
         } else {
           out.userKey = getUserKey(event);
         }
+        if (event.user && event.user.anonymous) {
+          out.contextKind = 'anonymousUser';
+        }
         return out;
       }
       case 'identify':
@@ -112,6 +115,9 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
         }
         if (event.metricValue !== null && event.metricValue !== undefined) {
           out.metricValue = event.metricValue;
+        }
+        if (event.user && event.user.anonymous) {
+          out.contextKind = 'anonymousUser';
         }
         return out;
       }

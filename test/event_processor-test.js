@@ -19,6 +19,7 @@ describe('EventProcessor', () => {
     }
   };
   const user = { key: 'userKey', name: 'Red' };
+  const anonUser = { key: 'anon-user', name: 'Anon', anonymous: true };
   const filteredUser = { key: 'userKey', privateAttrs: [ 'name' ] };
   const numericUser = { key: 1, secondary: 2, ip: 3, country: 4, email: 5, firstName: 6, lastName: 7,
     avatar: 8, name: 9, anonymous: false, custom: { age: 99 } };
@@ -65,6 +66,15 @@ describe('EventProcessor', () => {
     expect(e.user).toEqual(user);
   }
 
+  function checkAliasEvent(e, source) {
+    expect(e.kind).toEqual('alias');
+    expect(e.creationDate).toEqual(source.creationDate);
+    expect(e.key).toEqual(source.key);
+    expect(e.previousKey).toEqual(source.previousKey);
+    expect(e.contextKind).toEqual(source.contextKind);
+    expect(e.previousContextKind).toEqual(source.previousContextKind);
+  }
+
   function checkFeatureEvent(e, source, debug, inlineUser) {
     expect(e.kind).toEqual(debug ? 'debug' : 'feature');
     expect(e.creationDate).toEqual(source.creationDate);
@@ -79,6 +89,9 @@ describe('EventProcessor', () => {
     } else {
       expect(e.userKey).toEqual(String(source.user.key));
     }
+    if (source.user.anonymous) {
+      expect(e.contextKind).toEqual('anonymousUser');
+    }
   }
 
   function checkCustomEvent(e, source, inlineUser) {
@@ -91,6 +104,9 @@ describe('EventProcessor', () => {
       expect(e.user).toEqual(inlineUser);
     } else {
       expect(e.userKey).toEqual(source.user.key);
+    }
+    if (source.user.anonymous) {
+      expect(e.contextKind).toEqual('anonymousUser');
     }
   }
 
@@ -161,6 +177,21 @@ describe('EventProcessor', () => {
       const output = await getJsonRequest(s);
       expect(output.length).toEqual(3);
       checkIndexEvent(output[0], e, user);
+      checkFeatureEvent(output[1], e, false);
+      checkSummaryEvent(output[2]);
+    });
+  }));
+
+  it('queues individual feature event with index event for anonymous user', eventsServerTest(async s => {
+    await withEventProcessor(defaultConfig, s, async ep => {
+      const e = { kind: 'feature', creationDate: 1000, user: anonUser, key: 'flagkey',
+        version: 11, variation: 1, value: 'value', contextKind: 'anonymousUser', trackEvents: true };
+      ep.sendEvent(e);
+      await ep.flush();
+
+      const output = await getJsonRequest(s);
+      expect(output.length).toEqual(3);
+      checkIndexEvent(output[0], e, anonUser);
       checkFeatureEvent(output[1], e, false);
       checkSummaryEvent(output[2]);
     });
@@ -410,6 +441,19 @@ describe('EventProcessor', () => {
     });
   }));
 
+  it('queues alias event', eventsServerTest(async s => {
+    await withEventProcessor(defaultConfig, s, async ep => {
+      const e = { kind: 'alias', creationDate: 1000, contextKind: 'user',
+        previousContextKind: 'anonymousUser', key: 'known-user', previousKey: 'anon-user' };
+      ep.sendEvent(e);
+      await ep.flush();
+
+      const output = await getJsonRequest(s);
+      expect(output.length).toEqual(1);
+      checkAliasEvent(output[0], e);
+    });
+  }));
+
   it('queues custom event with user', eventsServerTest(async s => {
     await withEventProcessor(defaultConfig, s, async ep => {
       const e = { kind: 'custom', creationDate: 1000, user: user, key: 'eventkey',
@@ -420,6 +464,20 @@ describe('EventProcessor', () => {
       const output = await getJsonRequest(s);
       expect(output.length).toEqual(2);
       checkIndexEvent(output[0], e, user);
+      checkCustomEvent(output[1], e);
+    });
+  }));
+
+  it('queues custom event with anonymous user', eventsServerTest(async s => {
+    await withEventProcessor(defaultConfig, s, async ep => {
+      const e = { kind: 'custom', creationDate: 1000, user: anonUser, key: 'eventkey',
+      contextKind: 'anonymousUser', data: { thing: 'stuff' } };
+      ep.sendEvent(e);
+      await ep.flush();
+
+      const output = await getJsonRequest(s);
+      expect(output.length).toEqual(2);
+      checkIndexEvent(output[0], e, anonUser);
       checkCustomEvent(output[1], e);
     });
   }));

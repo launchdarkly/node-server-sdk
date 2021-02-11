@@ -19,10 +19,6 @@ function EventFactory(withReasons) {
     return false;
   }
 
-  function userContextKind(user) {
-    return user.anonymous ? 'anonymousUser' : 'user';
-  }
-
   ef.newEvalEvent = (flag, user, detail, defaultVal, prereqOfFlag) => {
     const addExperimentData = isExperiment(flag, detail.reason);
     const e = {
@@ -48,9 +44,6 @@ function EventFactory(withReasons) {
     if (addExperimentData || withReasons) {
       e.reason = detail.reason;
     }
-    if (user && user.anonymous) {
-      e.contextKind = userContextKind(user);
-    }
     return e;
   };
 
@@ -74,9 +67,6 @@ function EventFactory(withReasons) {
     if (withReasons) {
       e.reason = detail.reason;
     }
-    if (user && user.anonymous) {
-      e.contextKind = userContextKind(user);
-    }
     return e;
   };
 
@@ -91,9 +81,6 @@ function EventFactory(withReasons) {
     };
     if (withReasons) {
       e.reason = detail.reason;
-    }
-    if (user && user.anonymous) {
-      e.contextKind = userContextKind(user);
     }
     return e;
   };
@@ -115,23 +102,23 @@ function EventFactory(withReasons) {
     if (data !== null && data !== undefined) {
       e.data = data;
     }
-    if (user && user.anonymous) {
-      e.contextKind = userContextKind(user);
-    }
     if (metricValue !== null && metricValue !== undefined) {
       e.metricValue = metricValue;
     }
     return e;
   };
 
-  ef.newAliasEvent = (user, previousUser) => ({
-    kind: 'alias',
-    key: user.key,
-    contextKind: userContextKind(user),
-    previousKey: previousUser.key,
-    previousContextKind: userContextKind(previousUser),
-    creationDate: new Date().getTime(),
-  });
+  ef.newAliasEvent = (user, previousUser) => {
+    const userContextKind = u => (u.anonymous ? 'anonymousUser' : 'user');
+    return {
+      kind: 'alias',
+      key: user.key,
+      contextKind: userContextKind(user),
+      previousKey: previousUser.key,
+      previousContextKind: userContextKind(previousUser),
+      creationDate: new Date().getTime(),
+    };
+  };
 
   return ef;
 }

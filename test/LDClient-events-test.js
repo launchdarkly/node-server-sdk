@@ -62,7 +62,6 @@ describe('LDClient - analytics events', () => {
         key: 'flagkey',
         version: 1,
         user: anonymousUser,
-        contextKind: 'anonymousUser',
         variation: 1,
         value: 'b',
         default: 'c',
@@ -256,7 +255,6 @@ describe('LDClient - analytics events', () => {
         kind: 'feature',
         key: 'flagkey',
         user: anonymousUser,
-        contextKind: 'anonymousUser',
         value: 'c',
         default: 'c'
       });
@@ -436,7 +434,6 @@ describe('LDClient - analytics events', () => {
         kind: 'custom',
         key: 'eventkey',
         user: anonymousUser,
-        contextKind: 'anonymousUser',
         data: data
       });
       expect(logger.warn).not.toHaveBeenCalled();
