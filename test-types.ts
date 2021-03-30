@@ -23,6 +23,7 @@ var allOptions: ld.LDOptions = {
   sendEvents: true,
   allAttributesPrivate: true,
   privateAttributeNames: [ 'x' ],
+  inlineUsersInEvents: true,
   capacity: 100,
   flushInterval: 1,
   userKeysCapacity: 100,
