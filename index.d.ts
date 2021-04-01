@@ -357,6 +357,14 @@ declare module 'launchdarkly-node-server-sdk' {
     privateAttributeNames?: Array<string>;
 
     /**
+     * Whether to include full user details in every analytics event.
+     *
+     * The default is `false`: events will only include the user key, except for one "index" event
+     * that provides the full details for the user.
+     */
+    inlineUsersInEvents?: boolean;
+
+    /**
      * The number of user keys that the event processor can remember at any one time,
      * so that duplicate user details will not be sent in analytics events.
      *
