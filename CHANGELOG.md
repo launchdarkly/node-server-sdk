@@ -2,6 +2,10 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.14.3] - 2021-04-01
+### Fixed:
+- The property `LDOptions.inlineUsersInEvents` was not included in the TypeScript definitions.
+
 ## [5.14.2] - 2021-02-11
 ### Fixed:
 - Fixed an issue where &#34;feature&#34; and &#34;custom&#34; events were not properly indicated as being triggered by anonymous users. This bug affected customers who were using this functionality, which was introduced in version 5.14.0, when correlating users with LaunchDarkly&#39;s data export add-on.
