@@ -350,7 +350,7 @@ function userValue(user, attr) {
 }
 
 // Compute a percentile for a user
-function bucketUser(user, key, attr, salt) {
+function bucketUser(user, key, attr, salt, seed) {
   let idHash = bucketableStringValue(userValue(user, attr));
 
   if (idHash === null) {
@@ -361,7 +361,13 @@ function bucketUser(user, key, attr, salt) {
     idHash += '.' + user.secondary;
   }
 
-  const hashKey = util.format('%s.%s.%s', key, salt, idHash);
+  let prefix;
+  if (seed) {
+    prefix = util.format('%d.', seed);
+  } else {
+    prefix = util.format('%s.%s.', key, salt);
+  }
+  const hashKey = prefix + idHash;
   const hashVal = parseInt(sha1Hex(hashKey).substring(0, 15), 16);
 
   return hashVal / 0xfffffffffffffff;
