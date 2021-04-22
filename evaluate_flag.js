@@ -288,11 +288,15 @@ function getResultForVariationOrRollout(r, user, flag, reason, cb) {
   if (!r) {
     cb(new Error('Fallthrough variation undefined'), errorResult('MALFORMED_FLAG'));
   } else {
-    const index = variationForUser(r, user, flag);
+    const [index, inExperiment] = variationForUser(r, user, flag);
     if (index === null || index === undefined) {
       cb(new Error('Variation/rollout object with no variation or rollout'), errorResult('MALFORMED_FLAG'));
     } else {
-      getVariation(flag, index, reason, cb);
+      const r = reason;
+      if (inExperiment) {
+        r.inExperiment = true;
+      }
+      getVariation(flag, index, r, cb);
     }
   }
 }
@@ -301,15 +305,17 @@ function errorResult(errorKind) {
   return { value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: errorKind } };
 }
 
-// Given a variation or rollout 'r', select
-// the variation for the given user
+// Given a variation or rollout 'r', select the variation for the given user.
+// Returns an array of the form [variationIndex, inExperiment]. The second
+// element is optionally returned.
 function variationForUser(r, user, flag) {
   if (r.variation !== null && r.variation !== undefined) {
     // This represets a fixed variation; return it
-    return r.variation;
+    return [r.variation];
   }
   const rollout = r.rollout;
   if (rollout) {
+    const isExperiment = rollout.kind === 'experiment';
     const variations = rollout.variations;
     if (variations && variations.length > 0) {
       // This represents a percentage rollout. Assume
@@ -323,7 +329,7 @@ function variationForUser(r, user, flag) {
         const variate = variations[i];
         sum += variate.weight / 100000.0;
         if (bucket < sum) {
-          return variate.variation;
+          return [variate.variation, isExperiment && !variate.untracked];
         }
       }
 
@@ -332,11 +338,12 @@ function variationForUser(r, user, flag) {
       // data could contain buckets that don't actually add up to 100000. Rather than returning an error in
       // this case (or changing the scaling, which would potentially change the results for *all* users), we
       // will simply put the user in the last bucket.
-      return variations[variations.length - 1].variation;
+      const lastVariate = variations[variations.length - 1];
+      return [lastVariate.variation, isExperiment && !lastVariate.untracked];
     }
   }
 
-  return null;
+  return [null];
 }
 
 // Fetch an attribute value from a user object. Automatically
