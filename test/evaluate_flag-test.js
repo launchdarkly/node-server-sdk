@@ -819,7 +819,7 @@ describe('rollout', () => {
       seed,
       variations: [
         { variation: 0, weight: 10000 },
-        { variation: 2, weight: 20000 },
+        { variation: 1, weight: 20000 },
         { variation: 0, weight: 70000, untracked: true },
       ],
     };
@@ -831,7 +831,7 @@ describe('rollout', () => {
       variations: [null, null, null],
     };
 
-    it('uses seed to bucket user into first variant', done => {
+    it('buckets user into first variant of the experiment', done => {
       var user = { key: 'userKeyA' };
       evaluate.evaluate(flag, user, featureStore, eventFactory, (err, detail) => {
         expect(err).toEqual(null);
@@ -841,17 +841,17 @@ describe('rollout', () => {
       });
     });
 
-    it('uses seed to bucket user into second variant', done => {
+    it('uses seed to bucket user into second variant of the experiment', done => {
       var user = { key: 'userKeyB' };
       evaluate.evaluate(flag, user, featureStore, eventFactory, (err, detail) => {
         expect(err).toEqual(null);
-        expect(detail.variationIndex).toEqual(2);
+        expect(detail.variationIndex).toEqual(1);
         expect(detail.reason.inExperiment).toBe(true);
         done();
       });
     });
 
-    it('buckets user without experiment', done => {
+    it('buckets user outside of the experiment', done => {
       var user = { key: 'userKeyC' };
       evaluate.evaluate(flag, user, featureStore, eventFactory, (err, detail) => {
         expect(err).toEqual(null);
