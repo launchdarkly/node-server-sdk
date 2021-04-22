@@ -321,9 +321,7 @@ function variationForUser(r, user, flag) {
       // This represents a percentage rollout. Assume
       // we're rolling out by key
       const bucketBy = rollout.bucketBy || 'key';
-      //TODO @apechimp incorporate rollout.seed into this call when there's
-      //something to test it
-      const bucket = bucketUser(user, flag.key, bucketBy, flag.salt);
+      const bucket = bucketUser(user, flag.key, bucketBy, flag.salt, rollout.seed);
       let sum = 0;
       for (let i = 0; i < variations.length; i++) {
         const variate = variations[i];

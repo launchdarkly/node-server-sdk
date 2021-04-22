@@ -809,6 +809,58 @@ describe('rollout', () => {
       done();
     });
   });
+
+  describe('with seed', () => {
+    const seed = 61;
+    const flagKey = 'flagkey';
+    const salt = 'salt';
+    const rollout = {
+      kind: 'experiment',
+      seed,
+      variations: [
+        { variation: 0, weight: 10000 },
+        { variation: 2, weight: 20000 },
+        { variation: 0, weight: 70000, untracked: true },
+      ],
+    };
+    const flag = {
+      key: flagKey,
+      salt: salt,
+      on: true,
+      fallthrough: { rollout: rollout },
+      variations: [null, null, null],
+    };
+
+    it('uses seed to bucket user into first variant', done => {
+      var user = { key: 'userKeyA' };
+      evaluate.evaluate(flag, user, featureStore, eventFactory, (err, detail) => {
+        expect(err).toEqual(null);
+        expect(detail.variationIndex).toEqual(0);
+        expect(detail.reason.inExperiment).toBe(true);
+        done();
+      });
+    });
+
+    it('uses seed to bucket user into second variant', done => {
+      var user = { key: 'userKeyB' };
+      evaluate.evaluate(flag, user, featureStore, eventFactory, (err, detail) => {
+        expect(err).toEqual(null);
+        expect(detail.variationIndex).toEqual(2);
+        expect(detail.reason.inExperiment).toBe(true);
+        done();
+      });
+    });
+
+    it('buckets user without experiment', done => {
+      var user = { key: 'userKeyC' };
+      evaluate.evaluate(flag, user, featureStore, eventFactory, (err, detail) => {
+        expect(err).toEqual(null);
+        expect(detail.variationIndex).toEqual(0);
+        expect(detail.reason.inExperiment).toBe(undefined);
+        done();
+      });
+    });
+  });
 });
 
 describe('bucketUser', () => {
