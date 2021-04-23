@@ -306,12 +306,11 @@ function errorResult(errorKind) {
 }
 
 // Given a variation or rollout 'r', select the variation for the given user.
-// Returns an array of the form [variationIndex, inExperiment]. The second
-// element is optionally returned.
+// Returns an array of the form [variationIndex, inExperiment].
 function variationForUser(r, user, flag) {
   if (r.variation !== null && r.variation !== undefined) {
     // This represets a fixed variation; return it
-    return [r.variation];
+    return [r.variation, false];
   }
   const rollout = r.rollout;
   if (rollout) {
@@ -341,7 +340,7 @@ function variationForUser(r, user, flag) {
     }
   }
 
-  return [null];
+  return [null, false];
 }
 
 // Fetch an attribute value from a user object. Automatically
