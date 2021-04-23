@@ -292,11 +292,11 @@ function getResultForVariationOrRollout(r, user, flag, reason, cb) {
     if (index === null || index === undefined) {
       cb(new Error('Variation/rollout object with no variation or rollout'), errorResult('MALFORMED_FLAG'));
     } else {
-      const r = reason;
+      const transformedReason = reason;
       if (inExperiment) {
-        r.inExperiment = true;
+        transformedReason.inExperiment = true;
       }
-      getVariation(flag, index, r, cb);
+      getVariation(flag, index, transformedReason, cb);
     }
   }
 }
