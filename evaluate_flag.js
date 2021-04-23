@@ -368,12 +368,7 @@ function bucketUser(user, key, attr, salt, seed) {
     idHash += '.' + user.secondary;
   }
 
-  let prefix;
-  if (seed) {
-    prefix = util.format('%d.', seed);
-  } else {
-    prefix = util.format('%s.%s.', key, salt);
-  }
+  const prefix = seed ? util.format('%d.', seed) : util.format('%s.%s.', key, salt);
   const hashKey = prefix + idHash;
   const hashVal = parseInt(sha1Hex(hashKey).substring(0, 15), 16);
 
