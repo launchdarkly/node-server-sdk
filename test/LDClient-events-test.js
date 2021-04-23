@@ -1,9 +1,10 @@
 var stubs = require('./stubs');
 
 describe('LDClient - analytics events', () => {
+
   var eventProcessor;
-  var defaultUser = { key: 'user' };
-  var anonymousUser = { key: 'anon-user', anonymous: true };
+  var defaultUser = { key: 'user' };  
+  var anonymousUser = { key: 'anon-user', anonymous: true };  
   var userWithNoKey = { name: 'Keyless Joe' };
   var userWithEmptyKey = { key: '' };
 
@@ -20,7 +21,7 @@ describe('LDClient - analytics events', () => {
         targets: [],
         fallthrough: { variation: 1 },
         variations: ['a', 'b'],
-        trackEvents: true,
+        trackEvents: true
       };
       var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
       await client.waitForInitialization();
@@ -36,7 +37,7 @@ describe('LDClient - analytics events', () => {
         variation: 1,
         value: 'b',
         default: 'c',
-        trackEvents: true,
+        trackEvents: true
       });
     });
 
@@ -48,7 +49,7 @@ describe('LDClient - analytics events', () => {
         targets: [],
         fallthrough: { variation: 1 },
         variations: ['a', 'b'],
-        trackEvents: true,
+        trackEvents: true
       };
       var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
       await client.waitForInitialization();
@@ -64,7 +65,7 @@ describe('LDClient - analytics events', () => {
         variation: 1,
         value: 'b',
         default: 'c',
-        trackEvents: true,
+        trackEvents: true
       });
     });
 
@@ -76,7 +77,7 @@ describe('LDClient - analytics events', () => {
         targets: [],
         fallthrough: { variation: 1 },
         variations: ['a', 'b'],
-        trackEvents: true,
+        trackEvents: true
       };
       var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
       await client.waitForInitialization();
@@ -93,7 +94,7 @@ describe('LDClient - analytics events', () => {
         value: 'b',
         default: 'c',
         reason: { kind: 'FALLTHROUGH' },
-        trackEvents: true,
+        trackEvents: true
       });
     });
 
@@ -105,14 +106,14 @@ describe('LDClient - analytics events', () => {
         targets: [],
         rules: [
           {
-            clauses: [{ attribute: 'key', op: 'in', values: [defaultUser.key] }],
+            clauses: [ { attribute: 'key', op: 'in', values: [ defaultUser.key ] } ],
             variation: 0,
             id: 'rule-id',
-            trackEvents: true,
-          },
+            trackEvents: true
+          }
         ],
         fallthrough: { variation: 1 },
-        variations: ['a', 'b'],
+        variations: ['a', 'b']
       };
       var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
       await client.waitForInitialization();
@@ -130,7 +131,7 @@ describe('LDClient - analytics events', () => {
         value: 'a',
         default: 'c',
         trackEvents: true,
-        reason: { kind: 'RULE_MATCH', ruleIndex: 0, ruleId: 'rule-id' },
+        reason: { kind: 'RULE_MATCH', ruleIndex: 0, ruleId: 'rule-id' }
       });
     });
 
@@ -142,13 +143,13 @@ describe('LDClient - analytics events', () => {
         targets: [],
         rules: [
           {
-            clauses: [{ attribute: 'key', op: 'in', values: [defaultUser.key] }],
+            clauses: [ { attribute: 'key', op: 'in', values: [ defaultUser.key ] } ],
             variation: 0,
-            id: 'rule-id',
-          },
+            id: 'rule-id'
+          }
         ],
         fallthrough: { variation: 1 },
-        variations: ['a', 'b'],
+        variations: ['a', 'b']
       };
       var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
       await client.waitForInitialization();
@@ -164,7 +165,7 @@ describe('LDClient - analytics events', () => {
         user: defaultUser,
         variation: 0,
         value: 'a',
-        default: 'c',
+        default: 'c'
       });
     });
 
@@ -177,7 +178,7 @@ describe('LDClient - analytics events', () => {
         rules: [],
         fallthrough: { variation: 1 },
         variations: ['a', 'b'],
-        trackEventsFallthrough: true,
+        trackEventsFallthrough: true
       };
       var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
       await client.waitForInitialization();
@@ -287,7 +288,7 @@ describe('LDClient - analytics events', () => {
         targets: [],
         rules: [],
         fallthrough: { variation: 1 },
-        variations: ['a', 'b'],
+        variations: ['a', 'b']
       };
       var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
       await client.waitForInitialization();
@@ -303,7 +304,7 @@ describe('LDClient - analytics events', () => {
         user: defaultUser,
         variation: 1,
         value: 'b',
-        default: 'c',
+        default: 'c'
       });
     });
 
@@ -319,7 +320,7 @@ describe('LDClient - analytics events', () => {
         key: 'flagkey',
         user: defaultUser,
         value: 'c',
-        default: 'c',
+        default: 'c'
       });
     });
 
@@ -335,7 +336,7 @@ describe('LDClient - analytics events', () => {
         key: 'flagkey',
         user: anonymousUser,
         value: 'c',
-        default: 'c',
+        default: 'c'
       });
     });
 
@@ -347,7 +348,7 @@ describe('LDClient - analytics events', () => {
         targets: [],
         fallthrough: { variation: 1 },
         variations: ['a', 'b'],
-        trackEvents: true,
+        trackEvents: true
       };
       var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
       var badUser = { name: 'Bob' };
@@ -364,7 +365,7 @@ describe('LDClient - analytics events', () => {
         variation: null,
         value: 'c',
         default: 'c',
-        trackEvents: true,
+        trackEvents: true
       });
     });
 
@@ -376,7 +377,7 @@ describe('LDClient - analytics events', () => {
         targets: [],
         fallthrough: { variation: 1 },
         variations: ['a', 'b'],
-        trackEvents: true,
+        trackEvents: true
       };
       var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
       await client.waitForInitialization();
@@ -391,7 +392,7 @@ describe('LDClient - analytics events', () => {
         user: null,
         value: 'c',
         default: 'c',
-        trackEvents: true,
+        trackEvents: true
       });
     });
   });
@@ -401,14 +402,14 @@ describe('LDClient - analytics events', () => {
       var logger = stubs.stubLogger();
       var client = stubs.createClient({ eventProcessor: eventProcessor, logger: logger }, {});
       await client.waitForInitialization();
-
+      
       client.identify(defaultUser);
       expect(eventProcessor.events).toHaveLength(1);
       var e = eventProcessor.events[0];
       expect(e).toMatchObject({
         kind: 'identify',
         key: defaultUser.key,
-        user: defaultUser,
+        user: defaultUser
       });
       expect(logger.warn).not.toHaveBeenCalled();
     });
@@ -417,7 +418,7 @@ describe('LDClient - analytics events', () => {
       var logger = stubs.stubLogger();
       var client = stubs.createClient({ eventProcessor: eventProcessor, logger: logger }, {});
       await client.waitForInitialization();
-
+      
       client.identify();
       expect(eventProcessor.events).toHaveLength(0);
       expect(logger.warn).toHaveBeenCalledTimes(1);
@@ -427,7 +428,7 @@ describe('LDClient - analytics events', () => {
       var logger = stubs.stubLogger();
       var client = stubs.createClient({ eventProcessor: eventProcessor, logger: logger }, {});
       await client.waitForInitialization();
-
+      
       client.identify(userWithNoKey);
       expect(eventProcessor.events).toHaveLength(0);
       expect(logger.warn).toHaveBeenCalledTimes(1);
@@ -437,7 +438,7 @@ describe('LDClient - analytics events', () => {
       var logger = stubs.stubLogger();
       var client = stubs.createClient({ eventProcessor: eventProcessor, logger: logger }, {});
       await client.waitForInitialization();
-
+      
       client.identify(userWithEmptyKey);
       expect(eventProcessor.events).toHaveLength(0);
       expect(logger.warn).toHaveBeenCalledTimes(1);
@@ -458,7 +459,7 @@ describe('LDClient - analytics events', () => {
         kind: 'custom',
         key: 'eventkey',
         user: defaultUser,
-        data: data,
+        data: data
       });
       expect(logger.warn).not.toHaveBeenCalled();
     });
@@ -474,7 +475,7 @@ describe('LDClient - analytics events', () => {
       expect(e).toMatchObject({
         kind: 'custom',
         key: 'eventkey',
-        user: defaultUser,
+        user: defaultUser
       });
       expect(e.metricValue).not.toBe(expect.anything());
       expect(logger.warn).not.toHaveBeenCalled();
@@ -495,7 +496,7 @@ describe('LDClient - analytics events', () => {
         key: 'eventkey',
         user: defaultUser,
         data: data,
-        metricValue: metricValue,
+        metricValue: metricValue
       });
       expect(logger.warn).not.toHaveBeenCalled();
     });
@@ -513,7 +514,7 @@ describe('LDClient - analytics events', () => {
         kind: 'custom',
         key: 'eventkey',
         user: anonymousUser,
-        data: data,
+        data: data
       });
       expect(logger.warn).not.toHaveBeenCalled();
     });
@@ -562,7 +563,7 @@ describe('LDClient - analytics events', () => {
         key: 'user',
         previousKey: 'anon-user',
         contextKind: 'user',
-        previousContextKind: 'anonymousUser',
+        previousContextKind: 'anonymousUser'
       });
     });
 
@@ -579,7 +580,7 @@ describe('LDClient - analytics events', () => {
         key: 'user',
         previousKey: 'another-user',
         contextKind: 'user',
-        previousContextKind: 'user',
+        previousContextKind: 'user'
       });
     });
 
@@ -596,7 +597,7 @@ describe('LDClient - analytics events', () => {
         key: 'anon-user',
         previousKey: 'another-anon-user',
         contextKind: 'anonymousUser',
-        previousContextKind: 'anonymousUser',
+        previousContextKind: 'anonymousUser'
       });
     });
 
@@ -612,7 +613,7 @@ describe('LDClient - analytics events', () => {
         key: 'anon-user',
         previousKey: 'user',
         contextKind: 'anonymousUser',
-        previousContextKind: 'user',
+        previousContextKind: 'user'
       });
     });
   });
