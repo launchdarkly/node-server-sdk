@@ -196,7 +196,87 @@ describe('LDClient - analytics events', () => {
         value: 'b',
         default: 'c',
         trackEvents: true,
-        reason: { kind: 'FALLTHROUGH' }
+        reason: { kind: 'FALLTHROUGH' },
+      });
+    });
+
+    it('forces tracking when an evaluation is in the tracked portion of an experiment rollout', async () => {
+      var flag = {
+        key: 'flagkey',
+        version: 1,
+        on: true,
+        targets: [],
+        rules: [],
+        fallthrough: {
+          rollout: {
+            kind: 'experiment',
+            variations: [
+              {
+                weight: 100000,
+                variation: 1,
+              },
+            ],
+          },
+        },
+        variations: ['a', 'b'],
+      };
+      var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
+      await client.waitForInitialization();
+      await client.variation(flag.key, defaultUser, 'c');
+
+      expect(eventProcessor.events).toHaveLength(1);
+      var e = eventProcessor.events[0];
+      expect(e).toEqual({
+        kind: 'feature',
+        creationDate: e.creationDate,
+        key: 'flagkey',
+        version: 1,
+        user: defaultUser,
+        variation: 1,
+        value: 'b',
+        default: 'c',
+        trackEvents: true,
+        reason: { kind: 'FALLTHROUGH', inExperiment: true },
+      });
+    });
+
+    it('does not force tracking when an evaluation is in the untracked portion of an experiment rollout', async () => {
+      var flag = {
+        key: 'flagkey',
+        version: 1,
+        on: true,
+        targets: [],
+        rules: [],
+        fallthrough: {
+          rollout: {
+            kind: 'experiment',
+            variations: [
+              {
+                weight: 100000,
+                variation: 1,
+                untracked: true,
+              },
+            ],
+          },
+        },
+        variations: ['a', 'b'],
+      };
+      var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
+      await client.waitForInitialization();
+      debugger;
+      await client.variation(flag.key, defaultUser, 'c');
+
+      expect(eventProcessor.events).toHaveLength(1);
+      var e = eventProcessor.events[0];
+      expect(e).toEqual({
+        kind: 'feature',
+        creationDate: e.creationDate,
+        key: 'flagkey',
+        version: 1,
+        user: defaultUser,
+        variation: 1,
+        value: 'b',
+        default: 'c',
       });
     });
 

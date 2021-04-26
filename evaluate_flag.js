@@ -288,11 +288,15 @@ function getResultForVariationOrRollout(r, user, flag, reason, cb) {
   if (!r) {
     cb(new Error('Fallthrough variation undefined'), errorResult('MALFORMED_FLAG'));
   } else {
-    const index = variationForUser(r, user, flag);
+    const [index, inExperiment] = variationForUser(r, user, flag);
     if (index === null || index === undefined) {
       cb(new Error('Variation/rollout object with no variation or rollout'), errorResult('MALFORMED_FLAG'));
     } else {
-      getVariation(flag, index, reason, cb);
+      const transformedReason = reason;
+      if (inExperiment) {
+        transformedReason.inExperiment = true;
+      }
+      getVariation(flag, index, transformedReason, cb);
     }
   }
 }
@@ -301,27 +305,28 @@ function errorResult(errorKind) {
   return { value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: errorKind } };
 }
 
-// Given a variation or rollout 'r', select
-// the variation for the given user
+// Given a variation or rollout 'r', select the variation for the given user.
+// Returns an array of the form [variationIndex, inExperiment].
 function variationForUser(r, user, flag) {
   if (r.variation !== null && r.variation !== undefined) {
     // This represets a fixed variation; return it
-    return r.variation;
+    return [r.variation, false];
   }
   const rollout = r.rollout;
   if (rollout) {
+    const isExperiment = rollout.kind === 'experiment';
     const variations = rollout.variations;
     if (variations && variations.length > 0) {
       // This represents a percentage rollout. Assume
       // we're rolling out by key
       const bucketBy = rollout.bucketBy || 'key';
-      const bucket = bucketUser(user, flag.key, bucketBy, flag.salt);
+      const bucket = bucketUser(user, flag.key, bucketBy, flag.salt, rollout.seed);
       let sum = 0;
       for (let i = 0; i < variations.length; i++) {
         const variate = variations[i];
         sum += variate.weight / 100000.0;
         if (bucket < sum) {
-          return variate.variation;
+          return [variate.variation, isExperiment && !variate.untracked];
         }
       }
 
@@ -330,11 +335,12 @@ function variationForUser(r, user, flag) {
       // data could contain buckets that don't actually add up to 100000. Rather than returning an error in
       // this case (or changing the scaling, which would potentially change the results for *all* users), we
       // will simply put the user in the last bucket.
-      return variations[variations.length - 1].variation;
+      const lastVariate = variations[variations.length - 1];
+      return [lastVariate.variation, isExperiment && !lastVariate.untracked];
     }
   }
 
-  return null;
+  return [null, false];
 }
 
 // Fetch an attribute value from a user object. Automatically
@@ -350,7 +356,7 @@ function userValue(user, attr) {
 }
 
 // Compute a percentile for a user
-function bucketUser(user, key, attr, salt) {
+function bucketUser(user, key, attr, salt, seed) {
   let idHash = bucketableStringValue(userValue(user, attr));
 
   if (idHash === null) {
@@ -361,7 +367,8 @@ function bucketUser(user, key, attr, salt) {
     idHash += '.' + user.secondary;
   }
 
-  const hashKey = util.format('%s.%s.%s', key, salt, idHash);
+  const prefix = seed ? util.format('%d.', seed) : util.format('%s.%s.', key, salt);
+  const hashKey = prefix + idHash;
   const hashVal = parseInt(sha1Hex(hashKey).substring(0, 15), 16);
 
   return hashVal / 0xfffffffffffffff;
