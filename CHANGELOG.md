@@ -2,6 +2,10 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.14.4] - 2021-04-29
+### Fixed:
+- Updated the minimum compatible version of the `redis` package dependency to `3.1.1` to ensure the resolution of [CVE-2021-29469](https://github.com/advisories/GHSA-35q2-47q7-3pc3) in customers&#39; environments.
+
 ## [5.14.3] - 2021-04-01
 ### Fixed:
 - The property `LDOptions.inlineUsersInEvents` was not included in the TypeScript definitions.
