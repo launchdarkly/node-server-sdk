@@ -2,6 +2,10 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.14.5] - 2021-06-10
+### Fixed:
+- Updated transitive dependency on the package `url-parse` due to a [vulnerability warning](https://github.com/advisories/GHSA-9m6j-fcg5-2442).
+
 ## [5.14.4] - 2021-04-29
 ### Fixed:
 - Updated the minimum compatible version of the `redis` package dependency to `3.1.1` to ensure the resolution of [CVE-2021-29469](https://github.com/advisories/GHSA-35q2-47q7-3pc3) in customers&#39; environments.
