@@ -6,11 +6,13 @@ orbs:
 workflows:
   build-and-test-all:
     jobs:
-      # CircleCI's current generation of Node containers, cimg/node, allow you to leave
-      # the patch version unpinned, but require you to specify the minor version. The one
+      # CircleCI's current generation of Node images, cimg/node, allow you to leave the
+      # patch version unpinned, but require you to specify the minor version. The one
       # exception is cimg/node:current, which will always give us the latest release in
       # the latest major version-- and the latest major version is where it's most likely
       # that there would be a new minor version, anyway.
+      # The cimg/ images do not include major versions that were never LTS and are no
+      # longer supported, like 9 and 11, or extremely old ones like 6 and 7.
       - build-test-linux:
           name: latest Node version
           docker-image: cimg/node:current
@@ -37,7 +39,7 @@ workflows:
           run-lint: false
       - build-test-linux:
           name: Node 11.15
-          docker-image: cimg/node:11.15
+          docker-image: circleci/node:11
           run-lint: false
       - build-test-linux:
           name: Node 10.24
@@ -45,16 +47,18 @@ workflows:
           run-lint: false
       - build-test-linux:
           name: Node 9
-          # There is no new-style cimg/ image for Node 9
-          docker-image: circle/node:9
+          docker-image: circleci/node:9
           run-lint: false
       - build-test-linux:
           name: Node 8.17
           docker-image: cimg/node:8.17
           run-lint: false
       - build-test-linux:
+          name: Node 7
+          docker-image: circleci/node:7
+          run-lint: false
+      - build-test-linux:
           name: Node 6
-          # There is no new-style cimg/ image for Node 6
           docker-image: circleci/node:6
           run-lint: false
       - build-test-windows:
