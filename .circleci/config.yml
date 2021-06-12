@@ -1,17 +1,53 @@
 version: 2.1
 
 orbs:
-   win: circleci/windows@1.0.0
+   win: circleci/windows@2.4.0
 
 workflows:
   build-and-test-all:
     jobs:
       - build-test-linux:
           name: latest Node version
-          docker-image: circleci/node:latest
+          docker-image: cimg/node:current
           run-lint: true
       - build-test-linux:
-          name: oldest supported Node version
+          name: Node 16
+          docker-image: cimg/node:16
+          run-lint: false
+      - build-test-linux:
+          name: Node 15
+          docker-image: cimg/node:15
+          run-lint: false
+      - build-test-linux:
+          name: Node 14
+          docker-image: cimg/node:14
+          run-lint: false
+      - build-test-linux:
+          name: Node 13
+          docker-image: cimg/node:13
+          run-lint: false
+      - build-test-linux:
+          name: Node 12
+          docker-image: cimg/node:12
+          run-lint: false
+      - build-test-linux:
+          name: Node 11
+          docker-image: cimg/node:11
+          run-lint: false
+      - build-test-linux:
+          name: Node 10
+          docker-image: cimg/node:10
+          run-lint: false
+      - build-test-linux:
+          name: Node 9
+          docker-image: cimg/node:9
+          run-lint: false
+      - build-test-linux:
+          name: Node 8
+          docker-image: cimg/node:8
+          run-lint: false
+      - build-test-linux:
+          name: Node 6
           docker-image: circleci/node:6
           run-lint: false
       - build-test-windows:
@@ -50,7 +86,7 @@ jobs:
 
   build-test-windows:
     executor:
-      name: win/vs2019
+      name: win/default
       shell: powershell.exe
     steps:
       - checkout
