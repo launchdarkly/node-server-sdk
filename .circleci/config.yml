@@ -6,48 +6,55 @@ orbs:
 workflows:
   build-and-test-all:
     jobs:
+      # CircleCI's current generation of Node containers, cimg/node, allow you to leave
+      # the patch version unpinned, but require you to specify the minor version. The one
+      # exception is cimg/node:current, which will always give us the latest release in
+      # the latest major version-- and the latest major version is where it's most likely
+      # that there would be a new minor version, anyway.
       - build-test-linux:
           name: latest Node version
           docker-image: cimg/node:current
           run-lint: true
       - build-test-linux:
-          name: Node 16
-          docker-image: cimg/node:16
+          name: Node 16.3
+          docker-image: cimg/node:16.3
           run-lint: false
       - build-test-linux:
-          name: Node 15
-          docker-image: cimg/node:15
+          name: Node 15.14
+          docker-image: cimg/node:15.14
           run-lint: false
       - build-test-linux:
-          name: Node 14
-          docker-image: cimg/node:14
+          name: Node 14.17
+          docker-image: cimg/node:14.17
           run-lint: false
       - build-test-linux:
-          name: Node 13
-          docker-image: cimg/node:13
+          name: Node 13.14
+          docker-image: cimg/node:13.14
           run-lint: false
       - build-test-linux:
-          name: Node 12
-          docker-image: cimg/node:12
+          name: Node 12.22
+          docker-image: cimg/node:12.22
           run-lint: false
       - build-test-linux:
-          name: Node 11
-          docker-image: cimg/node:11
+          name: Node 11.15
+          docker-image: cimg/node:11.15
           run-lint: false
       - build-test-linux:
-          name: Node 10
-          docker-image: cimg/node:10
+          name: Node 10.24
+          docker-image: cimg/node:10.24
           run-lint: false
       - build-test-linux:
           name: Node 9
-          docker-image: cimg/node:9
+          # There is no new-style cimg/ image for Node 9
+          docker-image: circle/node:9
           run-lint: false
       - build-test-linux:
-          name: Node 8
-          docker-image: cimg/node:8
+          name: Node 8.17
+          docker-image: cimg/node:8.17
           run-lint: false
       - build-test-linux:
           name: Node 6
+          # There is no new-style cimg/ image for Node 6
           docker-image: circleci/node:6
           run-lint: false
       - build-test-windows:
