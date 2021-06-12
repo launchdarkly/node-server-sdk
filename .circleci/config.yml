@@ -12,7 +12,8 @@ workflows:
       # the latest major version-- and the latest major version is where it's most likely
       # that there would be a new minor version, anyway.
       # The cimg/ images do not include major versions that were never LTS and are no
-      # longer supported, like 9 and 11, or extremely old ones like 6 and 7.
+      # longer supported, like 9 and 11, or extremely old ones like 6 and 7. For these,
+      # we fall back to the old circleci/ images, pinned only to the major version.
       - build-test-linux:
           name: latest Node version
           docker-image: cimg/node:current
