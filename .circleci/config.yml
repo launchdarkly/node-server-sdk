@@ -21,47 +21,36 @@ workflows:
       - build-test-linux:
           name: Node 16.3
           docker-image: cimg/node:16.3
-          run-lint: false
       - build-test-linux:
           name: Node 15.14
           docker-image: cimg/node:15.14
-          run-lint: false
       - build-test-linux:
           name: Node 14.17
           docker-image: cimg/node:14.17
-          run-lint: false
       - build-test-linux:
           name: Node 13.14
           docker-image: cimg/node:13.14
-          run-lint: false
       - build-test-linux:
           name: Node 12.22
           docker-image: cimg/node:12.22
-          run-lint: false
       - build-test-linux:
           name: Node 11.15
           docker-image: circleci/node:11
-          run-lint: false
       - build-test-linux:
           name: Node 10.24
           docker-image: cimg/node:10.24
-          run-lint: false
       - build-test-linux:
           name: Node 9
           docker-image: circleci/node:9
-          run-lint: false
       - build-test-linux:
           name: Node 8.17
           docker-image: cimg/node:8.17
-          run-lint: false
       - build-test-linux:
           name: Node 7
           docker-image: circleci/node:7
-          run-lint: false
       - build-test-linux:
           name: Node 6
           docker-image: circleci/node:6
-          run-lint: false
       - build-test-windows:
           name: Windows
 
@@ -70,6 +59,7 @@ jobs:
     parameters:
       run-lint:
         type: boolean
+        default: false
       docker-image:
         type: string
     docker:
