@@ -221,8 +221,12 @@ declare module 'launchdarkly-node-server-sdk' {
      * By default, this is an in-memory data structure. Database integrations are also
      * available, as described in the
      * [SDK features guide](https://docs.launchdarkly.com/sdk/features/database-integrations).
+     * 
+     * Some implementations provide the store implementation object itself, while others
+     * provide a factory function that creates the store implementation based on the SDK
+     * configuration; this property accepts either.
      */
-    featureStore?: LDFeatureStore;
+    featureStore?: LDFeatureStore | ((options: LDOptions) => LDFeatureStore);
 
     /**
      * A component that obtains feature flag data and puts it in the feature store.
