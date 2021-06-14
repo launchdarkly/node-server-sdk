@@ -11,9 +11,6 @@ workflows:
       # exception is cimg/node:current, which will always give us the latest release in
       # the latest major version-- and the latest major version is where it's most likely
       # that there would be a new minor version, anyway.
-      # The cimg/ images do not include major versions that were never LTS and are no
-      # longer supported, like 9 and 11, or extremely old ones like 6 and 7. For these,
-      # we fall back to the old circleci/ images, pinned only to the major version.
       - build-test-linux:
           name: latest Node version
           docker-image: cimg/node:current
@@ -33,24 +30,6 @@ workflows:
       - build-test-linux:
           name: Node 12.22
           docker-image: cimg/node:12.22
-      - build-test-linux:
-          name: Node 11.15
-          docker-image: circleci/node:11
-      - build-test-linux:
-          name: Node 10.24
-          docker-image: cimg/node:10.24
-      - build-test-linux:
-          name: Node 9
-          docker-image: circleci/node:9
-      - build-test-linux:
-          name: Node 8.17
-          docker-image: cimg/node:8.17
-      - build-test-linux:
-          name: Node 7
-          docker-image: circleci/node:7
-      - build-test-linux:
-          name: Node 6
-          docker-image: circleci/node:6
       - build-test-windows:
           name: Windows
 

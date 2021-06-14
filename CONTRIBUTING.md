@@ -14,7 +14,7 @@ We encourage pull requests and other contributions from the community. Before su
 
 ### Prerequisites
 
-The project uses `npm`, which is bundled in all supported versions of Node.
+The project should be built and tested against the lowest compatible version, Node 12. It uses `npm`, which is bundled in all supported versions of Node.
 
 ### Setup
 
