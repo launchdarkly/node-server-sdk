@@ -43,7 +43,6 @@ jobs:
         type: string
     docker:
       - image: <<parameters.docker-image>>
-      - image: redis
     steps:
       - checkout
       - run: echo "Node version:" `node --version`
@@ -71,21 +70,6 @@ jobs:
       shell: powershell.exe
     steps:
       - checkout
-      - run:
-          name: set up Redis
-          command: |
-            $ProgressPreference = "SilentlyContinue"  # prevents console errors from CircleCI host
-            iwr -outf redis.zip https://github.com/MicrosoftArchive/redis/releases/download/win-3.0.504/Redis-x64-3.0.504.zip
-            mkdir redis
-            Expand-Archive -Path redis.zip -DestinationPath redis
-      - run:
-          name: start Redis
-          command: |
-            cd redis
-            ./redis-server --service-install
-            ./redis-server --service-start
-            Start-Sleep -s 5
-            ./redis-cli ping
       - run: node --version
       - run: npm install
       - run: npm test

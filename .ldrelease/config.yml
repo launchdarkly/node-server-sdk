@@ -8,8 +8,6 @@ publications:
 
 template:
   name: npm
-  env:
-    LD_SKIP_DATABASE_TESTS: 1  # Don't run Redis tests in release; they are run in CI
 
 documentation:
   githubPages: true

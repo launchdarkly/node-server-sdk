@@ -11,7 +11,6 @@
 
 declare module 'launchdarkly-node-server-sdk' {
   import { EventEmitter } from 'events';
-  import { ClientOpts, RedisClient } from 'redis';
 
   namespace errors {
     export const LDPollingError: ErrorConstructor;
@@ -40,36 +39,6 @@ declare module 'launchdarkly-node-server-sdk' {
    *   The new client instance.
    */
   export function init(key: string, options?: LDOptions): LDClient;
-
-  /**
-   * Creates a feature store backed by a Redis instance.
-   *
-   * For more details about how and why you can use a persistent feature store, see
-   * the [SDK Reference Guide](https://docs.launchdarkly.com/v2.0/docs/using-a-persistent-feature-store).
-   *
-   * @param redisOpts
-   *   Optional configuration parameters to be passed to the `redis` package.
-   * @param cacheTTL
-   *   The amount of time, in seconds, that recently read or updated items should remain in an
-   *   in-memory cache. If it is zero, there will be no in-memory caching. The default value is DefaultCacheTTL.
-   * @param prefix
-   *   A string that should be prepended to all Redis keys used by the feature store.
-   * @param logger
-   *   A custom logger for warnings and errors, if you are not using the default logger.
-   * @param client
-   *   Pass this parameter if you already have a Redis client instance that you wish to reuse. In this case,
-   *   `redisOpts` will be ignored.
-   *
-   * @returns
-   *   An object to put in the `featureStore` property for [[LDOptions]].
-   */
-  export function RedisFeatureStore(
-    redisOpts?: ClientOpts,
-    cacheTTL?: number,
-    prefix?: string,
-    logger?: LDLogger | object,
-    client?: RedisClient
-  ): LDFeatureStore;
 
   /**
    * The types of values a feature flag can have.
@@ -249,9 +218,9 @@ declare module 'launchdarkly-node-server-sdk' {
     /**
      * A component that stores feature flags and related data received from LaunchDarkly.
      *
-     * By default, this is an in-memory data structure. The SDK also provides a Redis
-     * implementation ([[RedisFeatureStore]]); other options are described in the
-     * [SDK reference guide](https://docs.launchdarkly.com/v2.0/docs/using-a-persistent-feature-store).
+     * By default, this is an in-memory data structure. Database integrations are also
+     * available, as described in the
+     * [SDK features guide](https://docs.launchdarkly.com/sdk/features/database-integrations).
      */
     featureStore?: LDFeatureStore;
 
@@ -574,8 +543,8 @@ declare module 'launchdarkly-node-server-sdk' {
    * Interface for a feature store component.
    *
    * The feature store is what the client uses to store feature flag data that has been received
-   * from LaunchDarkly. By default, it uses an in-memory implementation; there are also adapters
-   * for Redis and other databases (see the [SDK Reference Guide](https://docs.launchdarkly.com/v2.0/docs/using-a-persistent-feature-store)).
+   * from LaunchDarkly. By default, it uses an in-memory implementation; database integrations are
+   * also available (see the [SDK features guide](https://docs.launchdarkly.com/sdk/features/database-integrations).
    * You will not need to use this interface unless you are writing your own implementation.
    * 
    * Feature store methods can and should call their callbacks directly whenever possible, rather

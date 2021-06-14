@@ -1,5 +1,4 @@
 const FeatureStoreEventWrapper = require('./feature_store_event_wrapper');
-const RedisFeatureStore = require('./redis_feature_store');
 const FileDataSource = require('./file_data_source');
 const Requestor = require('./requestor');
 const EventEmitter = require('events').EventEmitter;
@@ -416,7 +415,6 @@ const newClient = function(sdkKey, originalConfig) {
 
 module.exports = {
   init: newClient,
-  RedisFeatureStore: RedisFeatureStore,
   FileDataSource: FileDataSource,
   errors: errors,
 };

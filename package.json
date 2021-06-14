@@ -24,12 +24,10 @@
   },
   "homepage": "https://github.com/launchdarkly/node-server-sdk",
   "dependencies": {
-    "@types/redis": "^2.8.18",
     "async": "^3.1.0",
     "launchdarkly-eventsource": "1.4.1",
     "lrucache": "^1.0.3",
     "node-cache": "^4.2.0",
-    "redis": "^3.1.1",
     "semver": "^6.3.0",
     "tunnel": "0.0.6",
     "uuid": "^3.3.3",
