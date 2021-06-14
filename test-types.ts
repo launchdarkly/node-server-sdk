@@ -91,3 +91,8 @@ client.variation('key', user, 2).then((value: ld.LDFlagValue) => { });
 client.variation('key', user, 'default').then((value: ld.LDFlagValue) => { });
 client.variationDetail('key', user, 'default').then((detail: ld.LDEvaluationDetail) => { });
 client.allFlags(user).then((flagSet: ld.LDFlagSet) => { });
+
+// basicLogger
+var logger1: ld.LDLogger = ld.basicLogger();
+var logger2: ld.LDLogger = ld.basicLogger({ level: 'info' });
+var logger3: ld.LDLogger = ld.basicLogger({ destination: console.log });

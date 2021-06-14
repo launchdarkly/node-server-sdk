@@ -1,7 +1,6 @@
-const winston = require('winston');
 const InMemoryFeatureStore = require('./feature_store');
+const loggers = require('./loggers');
 const messages = require('./messages');
-const LoggerWrapper = require('./logger_wrapper');
 
 module.exports = (function() {
   const defaults = function() {
@@ -36,7 +35,7 @@ module.exports = (function() {
     // 'factory' (the last one means it can be either a function or an object).
     eventProcessor: 'object',
     featureStore: 'object',
-    logger: 'object', // winston.Logger
+    logger: 'object', // LDLogger
     proxyAgent: 'object',
     proxyAuth: 'string',
     proxyHost: 'string',
@@ -148,27 +147,11 @@ module.exports = (function() {
     }
   }
 
-  function fallbackLogger() {
-    const prefixFormat = winston.format(info => {
-      // eslint-disable-next-line no-param-reassign
-      info.message = `[LaunchDarkly] ${info.message ? info.message : ''}`;
-      return info;
-    });
-
-    return winston.createLogger({
-      level: 'info',
-      transports: [
-        new winston.transports.Console({
-          format: winston.format.combine(prefixFormat(), winston.format.simple()),
-        }),
-      ],
-    });
-  }
-
   function validate(options) {
     let config = Object.assign({}, options || {});
 
-    config.logger = config.logger ? LoggerWrapper(config.logger, fallbackLogger()) : fallbackLogger();
+    const fallbackLogger = loggers.basicLogger({ level: 'info' });
+    config.logger = config.logger ? loggers.safeLogger(config.logger, fallbackLogger) : fallbackLogger;
 
     checkDeprecatedOptions(config);
 

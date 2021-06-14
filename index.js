@@ -1,3 +1,4 @@
+const { basicLogger } = require('./loggers');
 const FeatureStoreEventWrapper = require('./feature_store_event_wrapper');
 const FileDataSource = require('./file_data_source');
 const Requestor = require('./requestor');
@@ -415,6 +416,7 @@ const newClient = function(sdkKey, originalConfig) {
 
 module.exports = {
   init: newClient,
+  basicLogger: basicLogger,
   FileDataSource: FileDataSource,
   errors: errors,
 };

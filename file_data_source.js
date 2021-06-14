@@ -1,7 +1,7 @@
 const fs = require('fs'),
-  winston = require('winston'),
   yaml = require('yaml'),
-  dataKind = require('./versioned_data_kind');
+  dataKind = require('./versioned_data_kind'),
+  loggers = require('./loggers');
 
 /*
   FileDataSource provides a way to use local files as a source of feature flag state, instead of
@@ -14,19 +14,12 @@ function FileDataSource(options) {
   const autoUpdate = !!options.autoUpdate;
 
   return config => {
-    const logger = options.logger || config.logger || defaultLogger();
+    const logger = options.logger || config.logger || loggers.nullLogger();
     const featureStore = config.featureStore;
     const timestamps = {};
     let watchers = [];
     let pendingUpdate = false;
     let inited = false;
-
-    function defaultLogger() {
-      return winston.createLogger({
-        level: 'info',
-        transports: [new winston.transports.Console()],
-      });
-    }
 
     function getFileTimestampPromise(path) {
       return new Promise((resolve, reject) => {
