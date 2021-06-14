@@ -66,7 +66,9 @@ const newClient = function(sdkKey, originalConfig) {
     config.proxyAgent = createProxyAgent(config);
   }
 
-  config.featureStore = FeatureStoreEventWrapper(config.featureStore, client);
+  const featureStoreImpl =
+    typeof config.featureStore === 'function' ? config.featureStore(config) : config.featureStore;
+  config.featureStore = FeatureStoreEventWrapper(featureStoreImpl, client);
 
   const maybeReportError = createErrorReporter(client, config.logger);
 
