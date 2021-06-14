@@ -81,16 +81,14 @@ client.variationDetail('key', user, 'default', (detail: ld.LDEvaluationDetail) =
   var detailIndex: number | undefined = detail.variationIndex;
   var detailReason: ld.LDEvaluationReason = detail.reason;  
 });
-client.allFlags(user, (flagSet: ld.LDFlagSet) =>  {
-  var flagSetValue: ld.LDFlagValue = flagSet['key'];
-});
+client.allFlagsState(user, {}, (err: Error, flagSet: ld.LDFlagsState) => { });
 
 // evaluation methods with promises
 client.variation('key', user, false).then((value: ld.LDFlagValue) => { });
 client.variation('key', user, 2).then((value: ld.LDFlagValue) => { });
 client.variation('key', user, 'default').then((value: ld.LDFlagValue) => { });
 client.variationDetail('key', user, 'default').then((detail: ld.LDEvaluationDetail) => { });
-client.allFlags(user).then((flagSet: ld.LDFlagSet) => { });
+client.allFlagsState(user).then((flagSet: ld.LDFlagsState) => { });
 
 // basicLogger
 var logger1: ld.LDLogger = ld.basicLogger();

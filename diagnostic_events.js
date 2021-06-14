@@ -102,8 +102,7 @@ function makeConfigData(config) {
     pollingIntervalMillis: secondsToMillis(config.pollInterval),
     // startWaitMillis: n/a (Node SDK does not have this feature)
     // samplingInterval: n/a (Node SDK does not have this feature)
-    reconnectTimeMillis:
-      config.streamInitialReconnectDelayMillis || secondsToMillis(config.streamInitialReconnectDelay),
+    reconnectTimeMillis: secondsToMillis(config.streamInitialReconnectDelay),
     streamingDisabled: !config.stream,
     usingRelayDaemon: !!config.useLdd,
     offline: !!config.offline,

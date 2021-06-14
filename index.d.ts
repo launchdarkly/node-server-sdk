@@ -296,14 +296,6 @@ declare module 'launchdarkly-node-server-sdk' {
     streamInitialReconnectDelay?: number;
 
     /**
-     * Deprecated alternative to `streamInitialReconnectDelay`.
-     *
-     * @deprecated Use `streamInitialReconnectDelay` instead, which is measured in seconds like the other
-     *   time interval properties.
-     */
-    streamInitialReconnectDelayMillis?: number;
-
-    /**
      * Whether you are using the LaunchDarkly relay proxy in daemon mode.
      *
      * In this configuration, the client will not connect to LaunchDarkly to get feature flags,
@@ -756,17 +748,6 @@ declare module 'launchdarkly-node-server-sdk' {
     /**
      * Returns a Promise that tracks the client's initialization state.
      *
-     * @deprecated Please use [[waitForInitialization]] instead. The difference between that method
-     * and this one is that `waitUntilReady` never rejects the Promise, even if initialization fails.
-     *
-     * @returns
-     *   A Promise that will be resolved if the client initializes successfully.
-     */
-    waitUntilReady(): Promise<void>;
-
-    /**
-     * Returns a Promise that tracks the client's initialization state.
-     *
      * The Promise will be resolved if the client successfully initializes, or rejected if client
      * initialization has failed unrecoverably (for instance, if it detects that the SDK key is invalid).
      * Keep in mind that unhandled Promise rejections can be fatal in Node, so if you call this method,
@@ -861,38 +842,6 @@ declare module 'launchdarkly-node-server-sdk' {
       defaultValue: LDFlagValue,
       callback?: (err: any, res: LDEvaluationDetail) => void
     ): Promise<LDEvaluationDetail>;
-
-    /**
-     * Synonym for [[variation]].
-     *
-     * @deprecated Please use [[variation]] instead.
-     */
-    toggle(
-      key: string,
-      user: LDUser,
-      defaultValue: LDFlagValue,
-      callback?: (err: any, res: LDFlagValue) => void
-    ): Promise<LDFlagValue>;
-
-    /**
-     * Retrieves the set of all flag values for a user.
-     *
-     * @deprecated Use [[allFlagsState]] instead. Current versions of the client-side SDK will
-     * not generate analytics events correctly if you pass the result of `allFlags()`.
-     *
-     * @param user
-     *   The end user requesting the feature flags.
-     * @param callback
-     *   A Node-style callback to receive the result (as an [[LDFlagSet]]). If omitted, you
-     *   will receive a Promise instead.
-     * @returns
-     *   If you provided a callback, then nothing. Otherwise, a Promise which will be resolved
-     *   with the result as an [[LDFlagSet]].
-     */
-    allFlags(
-      user: LDUser,
-      callback?: (err: Error, res: LDFlagSet) => void
-    ): Promise<LDFlagSet>;
 
     /**
      * Builds an object that encapsulates the state of all feature flags for a given user.

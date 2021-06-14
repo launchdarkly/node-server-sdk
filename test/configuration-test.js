@@ -20,6 +20,9 @@ describe('configuration', function() {
     expect(configIn.logger.warn).not.toHaveBeenCalled();
   }
 
+  // Even if checkDeprecated is not currently used in this file, please do not
+  // remove it, since we may deprecate an option in the future and should use this
+  // logic if we do.
   function checkDeprecated(oldName, newName, value) {
     it(`allows "${oldName}" as a deprecated equivalent to "${newName}"`, function() {
       const configIn = emptyConfigWithMockLogger();
@@ -30,20 +33,6 @@ describe('configuration', function() {
       expect(configIn.logger.warn).toHaveBeenCalledTimes(1);
     });
   }
-
-  checkDeprecated('base_uri', 'baseUri', 'http://test.com');
-  checkDeprecated('stream_uri', 'streamUri', 'http://test.com');
-  checkDeprecated('events_uri', 'eventsUri', 'http://test.com');
-  checkDeprecated('send_events', 'sendEvents', true);
-  checkDeprecated('flush_interval', 'flushInterval', 10);
-  checkDeprecated('poll_interval', 'pollInterval', 60);
-  checkDeprecated('use_ldd', 'useLdd', true);
-  checkDeprecated('all_attributes_private', 'allAttributesPrivate', true);
-  checkDeprecated('private_attribute_names', 'privateAttributeNames', ['foo']);
-  checkDeprecated('proxy_host', 'proxyHost', 'test.com');
-  checkDeprecated('proxy_port', 'proxyPort', 8888);
-  checkDeprecated('proxy_auth', 'proxyAuth', 'basic');
-  checkDeprecated('feature_store', 'featureStore', {});
 
   function checkBooleanProperty(name) {
     it(`enforces boolean type and default for "${name}"`, () => {

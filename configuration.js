@@ -42,28 +42,13 @@ module.exports = (function() {
     proxyPort: 'number',
     proxyScheme: 'string',
     tlsParams: 'object', // LDTLSOptions
-    streamInitialReconnectDelayMillis: 'number', // deprecated - overridden by streamInitialReconnectDelay
     updateProcessor: 'factory', // gets special handling in validation
     wrapperName: 'string',
     wrapperVersion: 'string',
   };
 
   /* eslint-disable camelcase */
-  const deprecatedOptions = {
-    base_uri: 'baseUri',
-    stream_uri: 'streamUri',
-    events_uri: 'eventsUri',
-    send_events: 'sendEvents',
-    flush_interval: 'flushInterval',
-    poll_interval: 'pollInterval',
-    proxy_host: 'proxyHost',
-    proxy_port: 'proxyPort',
-    proxy_auth: 'proxyAuth',
-    feature_store: 'featureStore',
-    use_ldd: 'useLdd',
-    all_attributes_private: 'allAttributesPrivate',
-    private_attribute_names: 'privateAttributeNames',
-  };
+  const deprecatedOptions = {};
   /* eslint-enable camelcase */
 
   function checkDeprecatedOptions(configIn) {

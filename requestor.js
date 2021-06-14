@@ -2,11 +2,11 @@ const httpUtils = require('./utils/httpUtils');
 
 /**
  * Creates a new Requestor object, which handles remote requests to fetch feature flags or segments for LaunchDarkly.
- * This is never called synchronously when requesting a feature flag for a user (e.g. via the toggle) call.
+ * This is never called synchronously when requesting a feature flag for a user (e.g. via the variation method).
  *
- * It will be called once per second in polling mode (i.e. when streaming is disabled), or for extremely large
- * feature flag representations if streaming is enabled (the stream may contain a pointer to a large representation,
- * which will be polled by the requestor)
+ * It will be called at the configured polling interval in polling mode. Older versions of the SDK also
+ * could use the Requestor to make a polling request even in streaming mode, for very large data sets,
+ * but the LD infrastructure no longer uses that behavior.
  *
  * @param {String} the SDK key
  * @param {Object} the LaunchDarkly client configuration object

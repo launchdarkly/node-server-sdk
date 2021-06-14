@@ -34,16 +34,6 @@ describe('LDClient', () => {
         done();
       });
     });
-
-    it('allows deprecated method is_offline', done => {
-      var logger = stubs.stubLogger();
-      var client = LDClient.init('sdk_key', {offline: true, logger: logger});
-      client.on('ready', () => {
-        expect(client.is_offline()).toEqual(true);
-        expect(logger.warn).toHaveBeenCalledWith(messages.deprecated('is_offline', 'isOffline'));
-        done();
-      });
-    });
   });
 
   describe('secureModeHash()', () => {
@@ -51,27 +41,6 @@ describe('LDClient', () => {
       var client = LDClient.init('secret', {offline: true});
       var hash = client.secureModeHash({"key": "Message"});
       expect(hash).toEqual("aa747c502a898200f9e4fa21bac68136f886a0e27aec70ba06daf2e2a5cb5597");
-    });
-
-    it('allows deprecated method secure_mode_hash', () => {
-      var logger = stubs.stubLogger();
-      var client = LDClient.init('secret', {offline: true, logger: logger});
-      var hash = client.secure_mode_hash({"key": "Message"});
-      expect(hash).toEqual("aa747c502a898200f9e4fa21bac68136f886a0e27aec70ba06daf2e2a5cb5597");
-      expect(logger.warn).toHaveBeenCalledWith(messages.deprecated('secure_mode_hash', 'secureModeHash'));
-    });
-  });
-
-  describe('waitUntilReady()', () => {
-    it('resolves when ready', async () => {
-      var client = stubs.createClient({}, {});
-      await client.waitUntilReady();
-    });
-
-    it('resolves immediately if the client is already ready', async () => {
-      var client = stubs.createClient({}, {});
-      await client.waitUntilReady();
-      await client.waitUntilReady();
     });
   });
 
