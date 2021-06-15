@@ -1,5 +1,5 @@
 const os = require('os');
-const uuidv4 = require('uuid/v4');
+const { v4: uuidv4 } = require('uuid');
 const configuration = require('./configuration');
 const packageJson = require('./package.json');
 

@@ -42,7 +42,7 @@ function StreamProcessor(sdkKey, config, requestor, diagnosticsManager, specifie
   }
 
   processor.start = fn => {
-    const cb = fn || function() {};
+    const cb = fn || function () {};
 
     logConnectionStarted();
 
