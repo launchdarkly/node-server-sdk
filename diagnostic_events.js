@@ -1,5 +1,5 @@
 const os = require('os');
-const uuidv4 = require('uuid/v4');
+const { v4: uuidv4 } = require('uuid');
 const configuration = require('./configuration');
 const packageJson = require('./package.json');
 
@@ -102,8 +102,7 @@ function makeConfigData(config) {
     pollingIntervalMillis: secondsToMillis(config.pollInterval),
     // startWaitMillis: n/a (Node SDK does not have this feature)
     // samplingInterval: n/a (Node SDK does not have this feature)
-    reconnectTimeMillis:
-      config.streamInitialReconnectDelayMillis || secondsToMillis(config.streamInitialReconnectDelay),
+    reconnectTimeMillis: secondsToMillis(config.streamInitialReconnectDelay),
     streamingDisabled: !config.stream,
     usingRelayDaemon: !!config.useLdd,
     offline: !!config.offline,

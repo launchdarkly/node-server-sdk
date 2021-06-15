@@ -1,19 +1,35 @@
 version: 2.1
 
 orbs:
-   win: circleci/windows@1.0.0
+   win: circleci/windows@2.4.0
 
 workflows:
   build-and-test-all:
     jobs:
+      # CircleCI's current generation of Node images, cimg/node, allow you to leave the
+      # patch version unpinned, but require you to specify the minor version. The one
+      # exception is cimg/node:current, which will always give us the latest release in
+      # the latest major version-- and the latest major version is where it's most likely
+      # that there would be a new minor version, anyway.
       - build-test-linux:
           name: latest Node version
-          docker-image: circleci/node:latest
+          docker-image: cimg/node:current
           run-lint: true
       - build-test-linux:
-          name: oldest supported Node version
-          docker-image: circleci/node:6
-          run-lint: false
+          name: Node 16.3
+          docker-image: cimg/node:16.3
+      - build-test-linux:
+          name: Node 15.14
+          docker-image: cimg/node:15.14
+      - build-test-linux:
+          name: Node 14.17
+          docker-image: cimg/node:14.17
+      - build-test-linux:
+          name: Node 13.14
+          docker-image: cimg/node:13.14
+      - build-test-linux:
+          name: Node 12.22
+          docker-image: cimg/node:12.22
       - build-test-windows:
           name: Windows
 
@@ -22,11 +38,11 @@ jobs:
     parameters:
       run-lint:
         type: boolean
+        default: false
       docker-image:
         type: string
     docker:
       - image: <<parameters.docker-image>>
-      - image: redis
     steps:
       - checkout
       - run: echo "Node version:" `node --version`
@@ -50,25 +66,10 @@ jobs:
 
   build-test-windows:
     executor:
-      name: win/vs2019
+      name: win/default
       shell: powershell.exe
     steps:
       - checkout
-      - run:
-          name: set up Redis
-          command: |
-            $ProgressPreference = "SilentlyContinue"  # prevents console errors from CircleCI host
-            iwr -outf redis.zip https://github.com/MicrosoftArchive/redis/releases/download/win-3.0.504/Redis-x64-3.0.504.zip
-            mkdir redis
-            Expand-Archive -Path redis.zip -DestinationPath redis
-      - run:
-          name: start Redis
-          command: |
-            cd redis
-            ./redis-server --service-install
-            ./redis-server --service-start
-            Start-Sleep -s 5
-            ./redis-cli ping
       - run: node --version
       - run: npm install
       - run: npm test

@@ -1,5 +1,5 @@
-const LRUCache = require('lrucache');
-const uuidv4 = require('uuid/v4');
+const LRUCache = require('lru-cache');
+const { v4: uuidv4 } = require('uuid');
 
 const EventSummarizer = require('./event_summarizer');
 const UserFilter = require('./user_filter');
@@ -26,7 +26,7 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
 
   const userFilter = UserFilter(config),
     summarizer = EventSummarizer(config),
-    userKeysCache = LRUCache(config.userKeysCapacity),
+    userKeysCache = new LRUCache({ max: config.userKeysCapacity }),
     mainEventsUri = config.eventsUri + '/bulk',
     diagnosticEventsUri = config.eventsUri + '/diagnostic';
 
@@ -190,7 +190,7 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
     }
   };
 
-  ep.flush = function(callback) {
+  ep.flush = function (callback) {
     return wrapPromiseCallback(
       new Promise((resolve, reject) => {
         if (shutdown) {
@@ -289,7 +289,7 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
   }, config.flushInterval * 1000);
 
   const flushUsersTimer = setInterval(() => {
-    userKeysCache.removeAll();
+    userKeysCache.reset();
   }, config.userKeysFlushInterval * 1000);
 
   ep.close = () => {

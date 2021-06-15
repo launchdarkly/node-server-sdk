@@ -8,7 +8,7 @@ function PollingProcessor(config, requestor) {
   let stopped = false;
 
   function poll(maybeCallback) {
-    const cb = maybeCallback || function() {};
+    const cb = maybeCallback || function () {};
 
     if (stopped) {
       return;

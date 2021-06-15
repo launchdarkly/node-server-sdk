@@ -1,10 +1,9 @@
-const winston = require('winston');
 const InMemoryFeatureStore = require('./feature_store');
+const loggers = require('./loggers');
 const messages = require('./messages');
-const LoggerWrapper = require('./logger_wrapper');
 
-module.exports = (function() {
-  const defaults = function() {
+module.exports = (function () {
+  const defaults = function () {
     return {
       baseUri: 'https://app.launchdarkly.com',
       streamUri: 'https://stream.launchdarkly.com',
@@ -36,35 +35,20 @@ module.exports = (function() {
     // 'factory' (the last one means it can be either a function or an object).
     eventProcessor: 'object',
     featureStore: 'object',
-    logger: 'object', // winston.Logger
+    logger: 'object', // LDLogger
     proxyAgent: 'object',
     proxyAuth: 'string',
     proxyHost: 'string',
     proxyPort: 'number',
     proxyScheme: 'string',
     tlsParams: 'object', // LDTLSOptions
-    streamInitialReconnectDelayMillis: 'number', // deprecated - overridden by streamInitialReconnectDelay
     updateProcessor: 'factory', // gets special handling in validation
     wrapperName: 'string',
     wrapperVersion: 'string',
   };
 
   /* eslint-disable camelcase */
-  const deprecatedOptions = {
-    base_uri: 'baseUri',
-    stream_uri: 'streamUri',
-    events_uri: 'eventsUri',
-    send_events: 'sendEvents',
-    flush_interval: 'flushInterval',
-    poll_interval: 'pollInterval',
-    proxy_host: 'proxyHost',
-    proxy_port: 'proxyPort',
-    proxy_auth: 'proxyAuth',
-    feature_store: 'featureStore',
-    use_ldd: 'useLdd',
-    all_attributes_private: 'allAttributesPrivate',
-    private_attribute_names: 'privateAttributeNames',
-  };
+  const deprecatedOptions = {};
   /* eslint-enable camelcase */
 
   function checkDeprecatedOptions(configIn) {
@@ -148,27 +132,11 @@ module.exports = (function() {
     }
   }
 
-  function fallbackLogger() {
-    const prefixFormat = winston.format(info => {
-      // eslint-disable-next-line no-param-reassign
-      info.message = `[LaunchDarkly] ${info.message ? info.message : ''}`;
-      return info;
-    });
-
-    return winston.createLogger({
-      level: 'info',
-      transports: [
-        new winston.transports.Console({
-          format: winston.format.combine(prefixFormat(), winston.format.simple()),
-        }),
-      ],
-    });
-  }
-
   function validate(options) {
     let config = Object.assign({}, options || {});
 
-    config.logger = config.logger ? LoggerWrapper(config.logger, fallbackLogger()) : fallbackLogger();
+    const fallbackLogger = loggers.basicLogger({ level: 'info' });
+    config.logger = config.logger ? loggers.safeLogger(config.logger, fallbackLogger) : fallbackLogger;
 
     checkDeprecatedOptions(config);
 

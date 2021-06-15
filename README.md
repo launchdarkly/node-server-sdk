@@ -1,6 +1,8 @@
 # LaunchDarkly Server-Side SDK for Node.js
 
-[![Circle CI](https://circleci.com/gh/launchdarkly/node-server-sdk/tree/master.svg?style=svg)](https://circleci.com/gh/launchdarkly/node-server-sdk/tree/master)
+[![NPM](https://img.shields.io/npm/v/launchdarkly-node-server-sdk.svg?style=flat-square)](https://www.npmjs.com/package/launchdarkly-node-server-sdk)
+[![CircleCI](https://circleci.com/gh/launchdarkly/node-server-sdk.svg?style=svg)](https://circleci.com/gh/launchdarkly/node-server-sdk)
+[![Documentation](https://img.shields.io/static/v1?label=GitHub+Pages&message=API+reference&color=00add8)](https://launchdarkly.github.io/node-server-sdk)
 
 The LaunchDarkly Server-Side SDK for Node.js is designed primarily for use in multi-user systems such as web servers and applications. It follows the server-side LaunchDarkly model for multi-user contexts. It is not intended for use in desktop and embedded systems applications.
 
@@ -14,15 +16,15 @@ For using LaunchDarkly in *client-side* Node.js applications, refer to our [Clie
 
 ## Supported Node versions
 
-This version of the LaunchDarkly SDK has been tested with Node versions 6.14 and up.
+This version of the LaunchDarkly SDK is compatible with Node.js versions 12 and above.
 
 ## Getting started
 
-Refer to the [SDK reference guide](https://docs.launchdarkly.com/docs/node-sdk-reference) for instructions on getting started with using the SDK.
+Refer to the [SDK reference guide](https://docs.launchdarkly.com/sdk/server-side/node-js) for instructions on getting started with using the SDK.
 
 ## Learn more
 
-Check out our [documentation](http://docs.launchdarkly.com) for in-depth instructions on configuring and using LaunchDarkly. You can also head straight to the [complete reference guide for this SDK](http://docs.launchdarkly.com/docs/node-sdk-reference).
+Check out our [documentation](http://docs.launchdarkly.com) for in-depth instructions on configuring and using LaunchDarkly. You can also head straight to the [complete reference guide for this SDK](https://docs.launchdarkly.com/sdk/server-side/node-js).
 
 The authoritative description of all properties and methods is in the [TypeScript documentation](https://launchdarkly.github.io/node-server-sdk/).
 

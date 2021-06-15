@@ -1,5 +1,6 @@
+/docs/build/
+/local/
+/node_modules/
 junit.xml
-node_modules/
 npm-debug.log
-docs/build/
 test-types.js

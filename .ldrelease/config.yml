@@ -2,14 +2,17 @@ repo:
   public: node-server-sdk
   private: node-server-sdk-private
 
+releasableBranches:
+  - name: master
+    description: 6.x
+  - name: 5.x
+
 publications:
   - url: https://www.npmjs.com/package/launchdarkly-node-server-sdk
     description: npm
 
 template:
   name: npm
-  env:
-    LD_SKIP_DATABASE_TESTS: 1  # Don't run Redis tests in release; they are run in CI
 
 documentation:
   githubPages: true

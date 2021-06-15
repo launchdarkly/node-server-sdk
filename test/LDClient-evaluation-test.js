@@ -105,25 +105,6 @@ describe('LDClient', () => {
       expect(result).toEqual('default');
     });
 
-    it('allows deprecated method toggle()', done => {
-      var flag = {
-        key: 'flagkey',
-        on: false,
-        offVariation: 0,
-        variations: [true]
-      };
-      var logger = stubs.stubLogger();
-      var client = stubs.createClient({ logger: logger }, { flagkey: flag });
-      client.on('ready', () => {
-        client.toggle(flag.key, defaultUser, false, (err, result) => {
-          expect(err).toBeNull();
-          expect(result).toEqual(true);
-          expect(logger.warn).toHaveBeenCalled();
-          done();
-        });
-      });
-    });
-
     it('can use a callback instead of a Promise', done => {
       var client = stubs.createClient({}, {});
       client.on('ready', () => {
@@ -236,77 +217,6 @@ describe('LDClient', () => {
           expect(err).toBeNull();
           expect(result).toMatchObject({ value: 'default', variationIndex: null,
             reason: { kind: 'ERROR', errorKind: 'FLAG_NOT_FOUND' } });
-          done();
-        });
-      });
-    });
-  });
-
-  describe('allFlags()', () => {
-    it('evaluates flags', async () => {
-      var flag = {
-        key: 'feature',
-        version: 1,
-        offVariation: 1,
-        variations: ['a', 'b']
-      };
-      var logger = stubs.stubLogger();
-      var client = stubs.createClient({ logger: logger }, { feature: flag });
-      await client.waitForInitialization();
-      var result = await client.allFlags(defaultUser);
-      expect(result).toEqual({feature: 'b'});
-      expect(logger.warn).toHaveBeenCalledTimes(1); // deprecation warning
-    });
-
-    it('returns empty map in offline mode and logs a message', async () => {
-      var flag = {
-        key: 'flagkey',
-        on: false,
-        offVariation: null
-      };
-      var logger = stubs.stubLogger();
-      var client = stubs.createClient({ offline: true, logger: logger }, { flagkey: flag });
-      await client.waitForInitialization();
-      var result = await client.allFlags(defaultUser);
-      expect(result).toEqual({});
-      expect(logger.info).toHaveBeenCalledTimes(1);
-    });
-
-    it('allows deprecated method all_flags', done => {
-      var logger = stubs.stubLogger();
-      var client = stubs.createClient({ logger: logger }, {});
-      client.on('ready', () => {
-        client.all_flags(defaultUser, (err, result) => {
-          expect(result).toEqual({});
-          expect(logger.warn).toHaveBeenCalledWith(messages.deprecated('all_flags', 'allFlags'));
-          done();
-        });
-      });
-    });
-
-    it('does not overflow the call stack when evaluating a huge number of flags', async () => {
-      var flagCount = 5000;
-      var flags = {};
-      for (var i = 0; i < flagCount; i++) {
-        var key = 'feature' + i;
-        var flag = {
-          key: key,
-          version: 1,
-          on: false
-        };
-        flags[key] = flag;
-      }
-      var client = stubs.createClient({}, flags);
-      await client.waitForInitialization();
-      var result = await client.allFlags(defaultUser);
-      expect(Object.keys(result).length).toEqual(flagCount);
-    });
-
-    it('can use a callback instead of a Promise', done => {
-      var client = stubs.createClient({ offline: true }, { });
-      client.on('ready', () => {
-        client.allFlags(defaultUser, (err, result) => {
-          expect(result).toEqual({});
           done();
         });
       });
@@ -453,6 +363,24 @@ describe('LDClient', () => {
       expect(state.valid).toEqual(false);
       expect(state.allValues()).toEqual({});
       expect(logger.info).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not overflow the call stack when evaluating a huge number of flags', async () => {
+      var flagCount = 5000;
+      var flags = {};
+      for (var i = 0; i < flagCount; i++) {
+        var key = 'feature' + i;
+        var flag = {
+          key: key,
+          version: 1,
+          on: false
+        };
+        flags[key] = flag;
+      }
+      var client = stubs.createClient({}, flags);
+      await client.waitForInitialization();
+      var state = await client.allFlagsState(defaultUser);
+      expect(Object.keys(state.allValues()).length).toEqual(flagCount);
     });
 
     it('can use a callback instead of a Promise', done => {
