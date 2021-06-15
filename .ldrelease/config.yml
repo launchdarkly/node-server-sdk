@@ -2,6 +2,11 @@ repo:
   public: node-server-sdk
   private: node-server-sdk-private
 
+releasableBranches:
+  - name: master
+    description: 6.x
+  - name: 5.x
+
 publications:
   - url: https://www.npmjs.com/package/launchdarkly-node-server-sdk
     description: npm
