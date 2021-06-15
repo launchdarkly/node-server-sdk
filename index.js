@@ -1,5 +1,5 @@
+const { basicLogger } = require('./loggers');
 const FeatureStoreEventWrapper = require('./feature_store_event_wrapper');
-const RedisFeatureStore = require('./redis_feature_store');
 const FileDataSource = require('./file_data_source');
 const Requestor = require('./requestor');
 const EventEmitter = require('events').EventEmitter;
@@ -50,7 +50,7 @@ function NullUpdateProcessor() {
   };
 }
 
-const newClient = function(sdkKey, originalConfig) {
+const newClient = function (sdkKey, originalConfig) {
   const client = new EventEmitter();
   let initComplete = false,
     failure,
@@ -66,7 +66,9 @@ const newClient = function(sdkKey, originalConfig) {
     config.proxyAgent = createProxyAgent(config);
   }
 
-  config.featureStore = FeatureStoreEventWrapper(config.featureStore, client);
+  const featureStoreImpl =
+    typeof config.featureStore === 'function' ? config.featureStore(config) : config.featureStore;
+  config.featureStore = FeatureStoreEventWrapper(featureStoreImpl, client);
 
   const maybeReportError = createErrorReporter(client, config.logger);
 
@@ -137,18 +139,6 @@ const newClient = function(sdkKey, originalConfig) {
   });
 
   client.initialized = () => initComplete;
-
-  client.waitUntilReady = () => {
-    config.logger.warn(messages.deprecated('waitUntilReady', 'waitForInitialization'));
-
-    if (initComplete) {
-      return Promise.resolve();
-    }
-
-    return new Promise(resolve => {
-      client.once('ready', resolve);
-    });
-  };
 
   client.waitForInitialization = () => {
     if (waitForInitializationPromise) {
@@ -283,14 +273,6 @@ const newClient = function(sdkKey, originalConfig) {
     });
   }
 
-  client.allFlags = (user, callback) => {
-    config.logger.warn('allFlags() is deprecated. Call allFlagsState() instead and call toJSON() on the result');
-    return wrapPromiseCallback(
-      client.allFlagsState(user).then(state => state.allValues()),
-      callback
-    );
-  };
-
   client.allFlagsState = (user, specifiedOptions, specifiedCallback) => {
     let callback = specifiedCallback,
       options = specifiedOptions;
@@ -399,24 +381,23 @@ const newClient = function(sdkKey, originalConfig) {
     return false;
   }
 
+  /* eslint-disable no-unused-vars */
+  // We may not currently have any deprecated methods, but if we do, we should
+  // use this logic.
   function deprecatedMethod(oldName, newName) {
     client[oldName] = (...args) => {
       config.logger.warn(messages.deprecated(oldName, newName));
       return client[newName].apply(client, args);
     };
   }
-
-  deprecatedMethod('all_flags', 'allFlags');
-  deprecatedMethod('is_offline', 'isOffline');
-  deprecatedMethod('secure_mode_hash', 'secureModeHash');
-  deprecatedMethod('toggle', 'variation');
+  /* eslint-enable no-unused-vars */
 
   return client;
 };
 
 module.exports = {
   init: newClient,
-  RedisFeatureStore: RedisFeatureStore,
+  basicLogger: basicLogger,
   FileDataSource: FileDataSource,
   errors: errors,
 };

@@ -14,7 +14,7 @@ We encourage pull requests and other contributions from the community. Before su
 
 ### Prerequisites
 
-The project uses `npm`, which is bundled in all supported versions of Node.
+The project should be built and tested against the lowest compatible version, Node 12. It uses `npm`, which is bundled in all supported versions of Node.
 
 ### Setup
 
@@ -31,8 +31,6 @@ To run all unit tests:
 ```
 npm test
 ```
-
-By default, the full unit test suite includes live tests of the Redis integration. Those tests expect you to have a Redis instance running locally. To skip them, set the environment variable `LD_SKIP_DATABASE_TESTS=1` before running the tests.
 
 To verify that the TypeScript declarations compile correctly (this involves compiling the file `test-types.ts`, so if you have changed any types or interfaces, you will want to update that code):
 

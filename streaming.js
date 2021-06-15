@@ -42,7 +42,7 @@ function StreamProcessor(sdkKey, config, requestor, diagnosticsManager, specifie
   }
 
   processor.start = fn => {
-    const cb = fn || function() {};
+    const cb = fn || function () {};
 
     logConnectionStarted();
 
@@ -66,9 +66,7 @@ function StreamProcessor(sdkKey, config, requestor, diagnosticsManager, specifie
       agent: config.proxyAgent,
       errorFilter: handleError,
       headers,
-      initialRetryDelayMillis: config.streamInitialReconnectDelayMillis
-        ? config.streamInitialReconnectDelayMillis
-        : 1000 * config.streamInitialReconnectDelay,
+      initialRetryDelayMillis: 1000 * config.streamInitialReconnectDelay,
       readTimeoutMillis: streamReadTimeoutMillis,
       retryResetIntervalMillis: 60000,
       tlsParams: config.tlsParams,
