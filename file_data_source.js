@@ -1,7 +1,9 @@
 const fs = require('fs'),
-  yaml = require('yaml'),
   dataKind = require('./versioned_data_kind'),
   loggers = require('./loggers');
+
+let yamlAvailable;
+let yamlParser;
 
 /*
   FileDataSource provides a way to use local files as a source of feature flag state, instead of
@@ -10,6 +12,19 @@ const fs = require('fs'),
   See documentation in index.d.ts.
 */
 function FileDataSource(options) {
+  if (yamlAvailable === undefined) {
+    try {
+      const yaml = require('yaml');
+      yamlAvailable = true;
+      yamlParser = yaml.parse;
+    } catch (err) {
+      yamlAvailable = false;
+    }
+  }
+  // If the yaml package is available, we can use its parser for all files because
+  // every valid JSON document is also a valid YAML document.
+  const parseData = yamlAvailable ? yamlParser : JSON.parse;
+
   const paths = (options && options.paths) || [];
   const autoUpdate = !!options.autoUpdate;
 
@@ -90,12 +105,6 @@ function FileDataSource(options) {
           resolve();
         })
       );
-    }
-
-    function parseData(data) {
-      // Every valid JSON document is also a valid YAML document (for parsers that comply
-      // with the spec, which this one does) so we can parse both with the same parser.
-      return yaml.parse(data);
     }
 
     function makeFlagWithValue(key, value) {

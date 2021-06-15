@@ -1125,19 +1125,32 @@ declare module 'launchdarkly-node-server-sdk' {
    * Creates an object that allows you to use local files as a source of feature flag state,
    * instead of connecting to LaunchDarkly. This would typically be used in a test environment.
    * 
+   * For more information about this feature, see the
+   * [SDK features guide](https://docs.launchdarkly.com/sdk/features/flags-from-files).
+   * 
    * To use this component, call `FileDataSource(options)` and store the result in the `updateProcessor`
    * property of your LaunchDarkly client configuration:
    * 
    *     var dataSource = LaunchDarkly.FileDataSource({ paths: [ myFilePath ] });
    *     var config = { updateProcessor: dataSource };
    *
-   * This will cause the client not to connect to LaunchDarkly to get feature flags. The
-   * client may still make network connections to send analytics events, unless you have disabled
-   * this in your configuration with `send_events` or `offline`.
+   * This will cause the client not to connect to LaunchDarkly to get feature flags, and use
+   * the file data instead.
    * 
-   * The format of the data files is described in the SDK Reference Guide on
-   * [Reading flags from a file](https://docs.launchdarkly.com/v2.0/docs/reading-flags-from-a-file).
-   *
+   * The client may still make network connections to send analytics events, unless you have
+   * disabled this in your configuration by setting [[LDOptions.sendEvents]] to `false`.
+   * 
+   * The supported file formats are as follows:
+   * 
+   * - JSON files in the format described in the
+   *   [SDK features guide](https://docs.launchdarkly.com/sdk/features/flags-from-files)
+   *   are always supported.
+   * - The SDK can also read YAML files with an equivalent schema, if you explicitly install
+   *   the [`yaml`](https://www.npmjs.com/package/yaml) package in your application. This
+   *   package is not installed by default, to avoid adding to the size of the SDK bundle
+   *   for this rarely-used feature. The SDK is compatible with any version of the package
+   *   that supports calling `yaml.parse(string)` with no custom options.
+   * 
    * @param options
    *   Configuration for the data source. You should at least set the `paths` property.
    * @returns

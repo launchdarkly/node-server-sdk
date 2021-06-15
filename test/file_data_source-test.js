@@ -123,9 +123,9 @@ describe('FileDataSource', function() {
     expect(await promisifySingle(store.all)(dataKind.segments)).toEqual({});
   });
 
-  async function testLoadAllProperties(content) {
+  async function testLoadAllProperties(content, extraOptions) {
     var path = await makeTempFile(content);
-    var fds = setupDataSource({ paths: [path] });
+    var fds = setupDataSource({ paths: [path], ...extraOptions });
     await promisifySingle(fds.start)();
 
     expect(fds.initialized()).toBe(true);
