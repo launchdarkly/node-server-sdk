@@ -28,7 +28,7 @@
     "launchdarkly-eventsource": "1.4.1",
     "lrucache": "^1.0.3",
     "node-cache": "^5.1.0",
-    "semver": "^6.3.0",
+    "semver": "^7.3.0",
     "tunnel": "0.0.6",
     "uuid": "^3.3.3",
     "yaml": "^1.0.1"
