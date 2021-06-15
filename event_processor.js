@@ -1,5 +1,5 @@
 const LRUCache = require('lrucache');
-const uuidv4 = require('uuid/v4');
+const { v4: uuidv4 } = require('uuid');
 
 const EventSummarizer = require('./event_summarizer');
 const UserFilter = require('./user_filter');
