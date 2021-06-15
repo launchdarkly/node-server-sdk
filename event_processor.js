@@ -190,7 +190,7 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
     }
   };
 
-  ep.flush = function(callback) {
+  ep.flush = function (callback) {
     return wrapPromiseCallback(
       new Promise((resolve, reject) => {
         if (shutdown) {

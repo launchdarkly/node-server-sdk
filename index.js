@@ -50,7 +50,7 @@ function NullUpdateProcessor() {
   };
 }
 
-const newClient = function(sdkKey, originalConfig) {
+const newClient = function (sdkKey, originalConfig) {
   const client = new EventEmitter();
   let initComplete = false,
     failure,

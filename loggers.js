@@ -43,7 +43,7 @@ function basicLogger(options) {
         logger[levelName] = () => {};
       } else {
         const prefix = levelName + ': [LaunchDarkly] ';
-        logger[levelName] = function() {
+        logger[levelName] = function () {
           // can't use arrow function with "arguments"
           write(prefix, arguments);
         };

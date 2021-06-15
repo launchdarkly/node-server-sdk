@@ -2,8 +2,8 @@ const InMemoryFeatureStore = require('./feature_store');
 const loggers = require('./loggers');
 const messages = require('./messages');
 
-module.exports = (function() {
-  const defaults = function() {
+module.exports = (function () {
+  const defaults = function () {
     return {
       baseUri: 'https://app.launchdarkly.com',
       streamUri: 'https://stream.launchdarkly.com',
