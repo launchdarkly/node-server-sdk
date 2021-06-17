@@ -1,6 +1,6 @@
 {
   "name": "launchdarkly-node-server-sdk",
-  "version": "6.0.0-rc.1",
+  "version": "6.0.0-alpha.2",
   "description": "LaunchDarkly Server-Side SDK for Node.js",
   "main": "index.js",
   "scripts": {
