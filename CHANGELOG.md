@@ -2,24 +2,6 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
-## [6.0.0-rc.1] - 2021-06-15
-_This is a release candidate version corresponding to the current projected state of the 6.0.0 release. The final 6.0.0 release may include additional functionality or fixes._
-
-The 6.0.0 major version release is for Node.js compatibility updates and simplifying the SDK's dependencies. Dropping support for obsolete Node.js versions makes it easier to maintain the SDK and keep its dependencies up to date. Simplifying dependencies reduces the size of the SDK bundle, and reduces potential compatibility problems in environments like AWS Lambda.
-
-### Added:
-- Added `ld.basicLogger`, allowing customization of the SDK's simple logging behavior without having to provide a full `LDLogger` implementation.
-
-### Changed:
-- The minimum Node.js version is now 12.0.
-- Updated many dependencies to newer versions and/or more actively maintained packages.
-
-### Removed:
-- All types and methods that were deprecated in previous releases have been removed.
-- Removed the bundled Redis integration. This is now provided as a separate package, like the other database integrations; see [node-server-sdk-redis](https://github.com/launchdarkly/node-server-sdk-redis). The main SDK package no longer has a dependency on the [`redis`](https://www.npmjs.com/package/redis) package.
-- Removed the dependency on [Winston](https://www.npmjs.com/package/winston). An application can still tell the SDK to use a Winston logger instance that the application has created, just as before, but the SDK no longer uses Winston to create a default logger if the application does not specify a logger. Instead, it uses the `ld.basicLogger` implementation, which has the same behavior as the previous default Winston configuration. **Note:** If you are using the `launchdarkly-node-server-sdk-dynamodb` or `launchdarkly-node-server-consul` database integration packages, you should update them to the latest versions which have also had the Winston dependency removed.
-- Removed the dependency on [`yaml`](https://www.npmjs.package/yaml). This package was only used for the optional [file data source](https://launchdarkly.github.io/node-server-sdk/index.html#filedatasource) functionality. You can still use YAML data files with the file data source if you explicitly install the `yaml` package in your project; the SDK will automatically detect its presence.
-
 ## [5.14.5] - 2021-06-10
 ### Fixed:
 - Updated transitive dependency on the package `url-parse` due to a [vulnerability warning](https://github.com/advisories/GHSA-9m6j-fcg5-2442).
