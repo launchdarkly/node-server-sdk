@@ -3,6 +3,11 @@ function EventFactory(withReasons) {
 
   function isExperiment(flag, reason) {
     if (reason) {
+      // If the reason says we're in an experiment, we are. Otherwise, apply
+      // the legacy rule exclusion logic.
+      if (reason.inExperiment) {
+        return true;
+      }
       switch (reason.kind) {
         case 'RULE_MATCH': {
           const index = reason.ruleIndex;
