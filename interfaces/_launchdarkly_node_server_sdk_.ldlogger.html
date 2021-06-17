@@ -3,8 +3,8 @@
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<title>LDLogger | LaunchDarkly Server-Side Node SDK (5.14.5)</title>
-	<meta name="description" content="Documentation for LaunchDarkly Server-Side Node SDK (5.14.5)">
+	<title>LDLogger | LaunchDarkly Server-Side Node SDK (6.0.0)</title>
+	<meta name="description" content="Documentation for LaunchDarkly Server-Side Node SDK (6.0.0)">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="../assets/css/main.css">
 </head>
@@ -22,7 +22,7 @@
 						<li class="state loading">Preparing search index...</li>
 						<li class="state failure">The search index is not available</li>
 					</ul>
-					<a href="../index.html" class="title">LaunchDarkly Server-Side Node SDK (5.14.5)</a>
+					<a href="../index.html" class="title">LaunchDarkly Server-Side Node SDK (6.0.0)</a>
 				</div>
 				<div class="table-cell" id="tsd-widgets">
 					<div id="tsd-filter">
@@ -71,9 +71,16 @@
 					<div class="lead">
 						<p>The LaunchDarkly client logger interface.</p>
 					</div>
-					<p>The client will output informational debugging messages to the logger.
-						Internally, this logger defaults to an instance of <a href="https://github.com/winstonjs/winston"><code>winston</code></a>&#39;s
-					<code>Logger</code> class.</p>
+					<p>The <a href="_launchdarkly_node_server_sdk_.ldoptions.html#logger">LDOptions.logger</a> property accepts any object that conforms to this
+						interface. The SDK only uses four logging levels: <code>error</code>, <code>warn</code>, <code>info</code>, and
+						<code>debug</code>. It will call the corresponding method of the <code>LDLogger</code> either with a
+						single string argument, or with a format string and variable arguments in the
+					format used by Node&#39;s <code>util.format()</code>.</p>
+					<p>The <a href="https://github.com/winstonjs/winston">Winston</a> logging package provides a
+						logger that conforms to this interface, so if you have created a logger with
+					Winston, you can simply put it into the <a href="_launchdarkly_node_server_sdk_.ldoptions.html#logger">LDOptions.logger</a> property.</p>
+					<p>If you do not provide a logger object, the SDK uses the <a href="../index.html#basiclogger">basicLogger</a>
+					implementation with a minimum level of <code>info</code>.</p>
 				</div>
 			</section>
 			<section class="tsd-panel tsd-hierarchy">
@@ -112,7 +119,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/16706f3/index.d.ts#L570">index.d.ts:570</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/8e29ad3/index.d.ts#L550">index.d.ts:550</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -143,7 +150,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/16706f3/index.d.ts#L546">index.d.ts:546</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/8e29ad3/index.d.ts#L526">index.d.ts:526</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -174,7 +181,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/16706f3/index.d.ts#L562">index.d.ts:562</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/8e29ad3/index.d.ts#L542">index.d.ts:542</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -205,7 +212,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/16706f3/index.d.ts#L554">index.d.ts:554</a></li>
+									<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/8e29ad3/index.d.ts#L534">index.d.ts:534</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -238,6 +245,9 @@
 			</nav>
 			<nav class="tsd-navigation secondary menu-sticky">
 				<ul class="before-current">
+					<li class=" tsd-kind-interface tsd-parent-kind-module">
+						<a href="_launchdarkly_node_server_sdk_.basicloggeroptions.html" class="tsd-kind-icon">Basic<wbr>Logger<wbr>Options</a>
+					</li>
 					<li class=" tsd-kind-interface tsd-parent-kind-module">
 						<a href="_launchdarkly_node_server_sdk_.filedatasourceoptions.html" class="tsd-kind-icon">File<wbr>Data<wbr>Source<wbr>Options</a>
 					</li>
@@ -295,11 +305,14 @@
 					<li class=" tsd-kind-type-alias tsd-parent-kind-module">
 						<a href="../index.html#ldflagvalue" class="tsd-kind-icon">LDFlag<wbr>Value</a>
 					</li>
+					<li class=" tsd-kind-type-alias tsd-parent-kind-module">
+						<a href="../index.html#ldloglevel" class="tsd-kind-icon">LDLog<wbr>Level</a>
+					</li>
 					<li class=" tsd-kind-function tsd-parent-kind-module">
 						<a href="../index.html#filedatasource" class="tsd-kind-icon">File<wbr>Data<wbr>Source</a>
 					</li>
 					<li class=" tsd-kind-function tsd-parent-kind-module">
-						<a href="../index.html#redisfeaturestore" class="tsd-kind-icon">Redis<wbr>Feature<wbr>Store</a>
+						<a href="../index.html#basiclogger" class="tsd-kind-icon">basic<wbr>Logger</a>
 					</li>
 					<li class=" tsd-kind-function tsd-parent-kind-module">
 						<a href="../index.html#init" class="tsd-kind-icon">init</a>

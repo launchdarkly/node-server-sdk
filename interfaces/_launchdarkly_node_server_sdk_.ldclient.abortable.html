@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<title>FileDataSourceOptions | LaunchDarkly Server-Side Node SDK (6.0.0)</title>
+	<title>Abortable | LaunchDarkly Server-Side Node SDK (6.0.0)</title>
 	<meta name="description" content="Documentation for LaunchDarkly Server-Side Node SDK (6.0.0)">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="../assets/css/main.css">
@@ -56,28 +56,24 @@
 					<a href="../index.html">&quot;launchdarkly-node-server-sdk&quot;</a>
 				</li>
 				<li>
-					<a href="_launchdarkly_node_server_sdk_.filedatasourceoptions.html">FileDataSourceOptions</a>
+					<a href="_launchdarkly_node_server_sdk_.ldclient.html">LDClient</a>
+				</li>
+				<li>
+					<a href="_launchdarkly_node_server_sdk_.ldclient.abortable.html">Abortable</a>
 				</li>
 			</ul>
-			<h1>Interface FileDataSourceOptions</h1>
+			<h1>Interface Abortable</h1>
 		</div>
 	</div>
 </header>
 <div class="container container-main">
 	<div class="row">
 		<div class="col-8 col-content">
-			<section class="tsd-panel tsd-comment">
-				<div class="tsd-comment tsd-typography">
-					<div class="lead">
-						<p>Configuration for <a href="../index.html#filedatasource">FileDataSource</a>.</p>
-					</div>
-				</div>
-			</section>
 			<section class="tsd-panel tsd-hierarchy">
 				<h3>Hierarchy</h3>
 				<ul class="tsd-hierarchy">
 					<li>
-						<span class="target">FileDataSourceOptions</span>
+						<span class="target">Abortable</span>
 					</li>
 				</ul>
 			</section>
@@ -88,9 +84,7 @@
 						<section class="tsd-index-section ">
 							<h3>Properties</h3>
 							<ul class="tsd-index-list">
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.filedatasourceoptions.html#autoupdate" class="tsd-kind-icon">auto<wbr>Update</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.filedatasourceoptions.html#logger" class="tsd-kind-icon">logger</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.filedatasourceoptions.html#paths" class="tsd-kind-icon">paths</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldclient.abortable.html#signal" class="tsd-kind-icon">signal</a></li>
 							</ul>
 						</section>
 					</div>
@@ -99,50 +93,17 @@
 			<section class="tsd-panel-group tsd-member-group ">
 				<h2>Properties</h2>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="autoupdate" class="tsd-anchor"></a>
-					<h3><span class="tsd-flag ts-flagOptional">Optional</span> auto<wbr>Update</h3>
-					<div class="tsd-signature tsd-kind-icon">auto<wbr>Update<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">false</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">true</span></div>
+					<a name="signal" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagOptional">Optional</span> signal</h3>
+					<div class="tsd-signature tsd-kind-icon">signal<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">AbortSignal</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/8e29ad3/index.d.ts#L1115">index.d.ts:1115</a></li>
+							<li>Defined in node_modules/@types/node/events.d.ts:65</li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
 						<div class="lead">
-							<p>True if FileDataSource should reload flags whenever one of the data files is modified.
-								This feature uses Node&#39;s <code>fs.watch()</code> API, so it is subject to
-							the limitations described <a href="https://nodejs.org/docs/latest/api/fs.html#fs_fs_watch_filename_options_listener">here</a>.</p>
-						</div>
-					</div>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="logger" class="tsd-anchor"></a>
-					<h3><span class="tsd-flag ts-flagOptional">Optional</span> logger</h3>
-					<div class="tsd-signature tsd-kind-icon">logger<span class="tsd-signature-symbol">:</span> <a href="_launchdarkly_node_server_sdk_.ldlogger.html" class="tsd-signature-type">LDLogger</a><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">object</span></div>
-					<aside class="tsd-sources">
-						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/8e29ad3/index.d.ts#L1121">index.d.ts:1121</a></li>
-						</ul>
-					</aside>
-					<div class="tsd-comment tsd-typography">
-						<div class="lead">
-							<p>Configures a logger for warnings and errors. This can be a custom logger or an instance of
-							<code>winston.Logger</code>. By default, it uses the same logger as the rest of the SDK.</p>
-						</div>
-					</div>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="paths" class="tsd-anchor"></a>
-					<h3>paths</h3>
-					<div class="tsd-signature tsd-kind-icon">paths<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Array</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></div>
-					<aside class="tsd-sources">
-						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/8e29ad3/index.d.ts#L1108">index.d.ts:1108</a></li>
-						</ul>
-					</aside>
-					<div class="tsd-comment tsd-typography">
-						<div class="lead">
-							<p>The path(s) of the file(s) that FileDataSource will read.</p>
+							<p>When provided the corresponding <code>AbortController</code> can be used to cancel an asynchronous action.</p>
 						</div>
 					</div>
 				</section>
@@ -161,27 +122,95 @@
 					<li class=" tsd-kind-interface tsd-parent-kind-module">
 						<a href="_launchdarkly_node_server_sdk_.basicloggeroptions.html" class="tsd-kind-icon">Basic<wbr>Logger<wbr>Options</a>
 					</li>
+					<li class=" tsd-kind-interface tsd-parent-kind-module">
+						<a href="_launchdarkly_node_server_sdk_.filedatasourceoptions.html" class="tsd-kind-icon">File<wbr>Data<wbr>Source<wbr>Options</a>
+					</li>
 				</ul>
 				<ul class="current">
 					<li class="current tsd-kind-interface tsd-parent-kind-module">
-						<a href="_launchdarkly_node_server_sdk_.filedatasourceoptions.html" class="tsd-kind-icon">File<wbr>Data<wbr>Source<wbr>Options</a>
+						<a href="_launchdarkly_node_server_sdk_.ldclient.html" class="tsd-kind-icon">LDClient</a>
 						<ul>
-							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_launchdarkly_node_server_sdk_.filedatasourceoptions.html#autoupdate" class="tsd-kind-icon">auto<wbr>Update</a>
+							<li class=" tsd-kind-reference tsd-parent-kind-interface">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#eventemitter" class="tsd-kind-icon">Event<wbr>Emitter</a>
 							</li>
-							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_launchdarkly_node_server_sdk_.filedatasourceoptions.html#logger" class="tsd-kind-icon">logger</a>
+							<li class="current tsd-kind-interface tsd-parent-kind-interface">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.abortable.html" class="tsd-kind-icon">Abortable</a>
+								<ul>
+									<li class=" tsd-kind-property tsd-parent-kind-interface">
+										<a href="_launchdarkly_node_server_sdk_.ldclient.abortable.html#signal" class="tsd-kind-icon">signal</a>
+									</li>
+								</ul>
 							</li>
-							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_launchdarkly_node_server_sdk_.filedatasourceoptions.html#paths" class="tsd-kind-icon">paths</a>
+							<li class=" tsd-kind-constructor tsd-parent-kind-interface tsd-is-inherited">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#constructor" class="tsd-kind-icon">constructor</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-interface tsd-is-inherited tsd-is-static">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#capturerejectionsymbol" class="tsd-kind-icon">capture<wbr>Rejection<wbr>Symbol</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-interface tsd-is-inherited tsd-is-static">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#capturerejections" class="tsd-kind-icon">capture<wbr>Rejections</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-interface tsd-is-inherited tsd-is-static">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#defaultmaxlisteners" class="tsd-kind-icon">default<wbr>Max<wbr>Listeners</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-interface tsd-is-inherited tsd-is-static">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#errormonitor" class="tsd-kind-icon">error<wbr>Monitor</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-interface">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#alias" class="tsd-kind-icon">alias</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-interface">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#allflagsstate" class="tsd-kind-icon">all<wbr>Flags<wbr>State</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-interface">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#close" class="tsd-kind-icon">close</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-interface">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#flush" class="tsd-kind-icon">flush</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-interface">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#identify" class="tsd-kind-icon">identify</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-interface">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#initialized" class="tsd-kind-icon">initialized</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-interface">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#isoffline" class="tsd-kind-icon">is<wbr>Offline</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-is-overwrite">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#on" class="tsd-kind-icon">on</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-interface">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#securemodehash" class="tsd-kind-icon">secure<wbr>Mode<wbr>Hash</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-interface">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#track" class="tsd-kind-icon">track</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-interface">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#variation" class="tsd-kind-icon">variation</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-interface">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#variationdetail" class="tsd-kind-icon">variation<wbr>Detail</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-interface">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#waitforinitialization" class="tsd-kind-icon">wait<wbr>For<wbr>Initialization</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-is-inherited tsd-is-static">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#geteventlistener" class="tsd-kind-icon">get<wbr>Event<wbr>Listener</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-is-inherited tsd-is-static">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#listenercount" class="tsd-kind-icon">listener<wbr>Count</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-is-inherited tsd-is-static">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#on-1" class="tsd-kind-icon">on</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-is-overwrite tsd-is-inherited tsd-is-static">
+								<a href="_launchdarkly_node_server_sdk_.ldclient.html#once" class="tsd-kind-icon">once</a>
 							</li>
 						</ul>
 					</li>
 				</ul>
 				<ul class="after-current">
-					<li class=" tsd-kind-interface tsd-parent-kind-module">
-						<a href="_launchdarkly_node_server_sdk_.ldclient.html" class="tsd-kind-icon">LDClient</a>
-					</li>
 					<li class=" tsd-kind-interface tsd-parent-kind-module">
 						<a href="_launchdarkly_node_server_sdk_.ldevaluationdetail.html" class="tsd-kind-icon">LDEvaluation<wbr>Detail</a>
 					</li>

@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<title>FileDataSourceOptions | LaunchDarkly Server-Side Node SDK (6.0.0)</title>
+	<title>BasicLoggerOptions | LaunchDarkly Server-Side Node SDK (6.0.0)</title>
 	<meta name="description" content="Documentation for LaunchDarkly Server-Side Node SDK (6.0.0)">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="../assets/css/main.css">
@@ -56,10 +56,10 @@
 					<a href="../index.html">&quot;launchdarkly-node-server-sdk&quot;</a>
 				</li>
 				<li>
-					<a href="_launchdarkly_node_server_sdk_.filedatasourceoptions.html">FileDataSourceOptions</a>
+					<a href="_launchdarkly_node_server_sdk_.basicloggeroptions.html">BasicLoggerOptions</a>
 				</li>
 			</ul>
-			<h1>Interface FileDataSourceOptions</h1>
+			<h1>Interface BasicLoggerOptions</h1>
 		</div>
 	</div>
 </header>
@@ -69,7 +69,7 @@
 			<section class="tsd-panel tsd-comment">
 				<div class="tsd-comment tsd-typography">
 					<div class="lead">
-						<p>Configuration for <a href="../index.html#filedatasource">FileDataSource</a>.</p>
+						<p>Configuration for <a href="../index.html#basiclogger">basicLogger</a>.</p>
 					</div>
 				</div>
 			</section>
@@ -77,7 +77,7 @@
 				<h3>Hierarchy</h3>
 				<ul class="tsd-hierarchy">
 					<li>
-						<span class="target">FileDataSourceOptions</span>
+						<span class="target">BasicLoggerOptions</span>
 					</li>
 				</ul>
 			</section>
@@ -88,9 +88,8 @@
 						<section class="tsd-index-section ">
 							<h3>Properties</h3>
 							<ul class="tsd-index-list">
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.filedatasourceoptions.html#autoupdate" class="tsd-kind-icon">auto<wbr>Update</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.filedatasourceoptions.html#logger" class="tsd-kind-icon">logger</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.filedatasourceoptions.html#paths" class="tsd-kind-icon">paths</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.basicloggeroptions.html#destination" class="tsd-kind-icon">destination</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.basicloggeroptions.html#level" class="tsd-kind-icon">level</a></li>
 							</ul>
 						</section>
 					</div>
@@ -99,51 +98,43 @@
 			<section class="tsd-panel-group tsd-member-group ">
 				<h2>Properties</h2>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="autoupdate" class="tsd-anchor"></a>
-					<h3><span class="tsd-flag ts-flagOptional">Optional</span> auto<wbr>Update</h3>
-					<div class="tsd-signature tsd-kind-icon">auto<wbr>Update<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">false</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">true</span></div>
+					<a name="destination" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagOptional">Optional</span> destination</h3>
+					<div class="tsd-signature tsd-kind-icon">destination<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">(</span>line<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">)</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/8e29ad3/index.d.ts#L1115">index.d.ts:1115</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/8e29ad3/index.d.ts#L1088">index.d.ts:1088</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
 						<div class="lead">
-							<p>True if FileDataSource should reload flags whenever one of the data files is modified.
-								This feature uses Node&#39;s <code>fs.watch()</code> API, so it is subject to
-							the limitations described <a href="https://nodejs.org/docs/latest/api/fs.html#fs_fs_watch_filename_options_listener">here</a>.</p>
+							<p>An optional function to use to print each log line.</p>
 						</div>
+						<p>If this is specified, <code>basicLogger</code> calls it to write each line of output. The
+							argument is a fully formatted log line, not including a linefeed. The function
+						is only called for log levels that are enabled.</p>
+						<p>If not specified, the default is <code>console.error</code>.</p>
+						<p>Setting this property to anything other than a function will cause SDK
+						initialization to fail.</p>
 					</div>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="logger" class="tsd-anchor"></a>
-					<h3><span class="tsd-flag ts-flagOptional">Optional</span> logger</h3>
-					<div class="tsd-signature tsd-kind-icon">logger<span class="tsd-signature-symbol">:</span> <a href="_launchdarkly_node_server_sdk_.ldlogger.html" class="tsd-signature-type">LDLogger</a><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">object</span></div>
+					<a name="level" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagOptional">Optional</span> level</h3>
+					<div class="tsd-signature tsd-kind-icon">level<span class="tsd-signature-symbol">:</span> <a href="../index.html#ldloglevel" class="tsd-signature-type">LDLogLevel</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/8e29ad3/index.d.ts#L1121">index.d.ts:1121</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/8e29ad3/index.d.ts#L1074">index.d.ts:1074</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
 						<div class="lead">
-							<p>Configures a logger for warnings and errors. This can be a custom logger or an instance of
-							<code>winston.Logger</code>. By default, it uses the same logger as the rest of the SDK.</p>
+							<p>The lowest level of log message to enable.</p>
 						</div>
-					</div>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="paths" class="tsd-anchor"></a>
-					<h3>paths</h3>
-					<div class="tsd-signature tsd-kind-icon">paths<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Array</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></div>
-					<aside class="tsd-sources">
-						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/8e29ad3/index.d.ts#L1108">index.d.ts:1108</a></li>
-						</ul>
-					</aside>
-					<div class="tsd-comment tsd-typography">
-						<div class="lead">
-							<p>The path(s) of the file(s) that FileDataSource will read.</p>
-						</div>
+						<p>See <a href="../index.html#ldloglevel">LDLogLevel</a> for a list of possible levels. Setting a level here causes
+							all lower-importance levels to be disabled: for instance, if you specify
+						<code>&#39;warn&#39;</code>, then <code>&#39;debug&#39;</code> and <code>&#39;info&#39;</code> are disabled.</p>
+						<p>If not specified, the default is <code>&#39;info&#39;</code> (meaning that <code>&#39;debug&#39;</code> is disabled).</p>
 					</div>
 				</section>
 			</section>
@@ -158,27 +149,24 @@
 			</nav>
 			<nav class="tsd-navigation secondary menu-sticky">
 				<ul class="before-current">
-					<li class=" tsd-kind-interface tsd-parent-kind-module">
-						<a href="_launchdarkly_node_server_sdk_.basicloggeroptions.html" class="tsd-kind-icon">Basic<wbr>Logger<wbr>Options</a>
-					</li>
 				</ul>
 				<ul class="current">
 					<li class="current tsd-kind-interface tsd-parent-kind-module">
-						<a href="_launchdarkly_node_server_sdk_.filedatasourceoptions.html" class="tsd-kind-icon">File<wbr>Data<wbr>Source<wbr>Options</a>
+						<a href="_launchdarkly_node_server_sdk_.basicloggeroptions.html" class="tsd-kind-icon">Basic<wbr>Logger<wbr>Options</a>
 						<ul>
 							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_launchdarkly_node_server_sdk_.filedatasourceoptions.html#autoupdate" class="tsd-kind-icon">auto<wbr>Update</a>
+								<a href="_launchdarkly_node_server_sdk_.basicloggeroptions.html#destination" class="tsd-kind-icon">destination</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_launchdarkly_node_server_sdk_.filedatasourceoptions.html#logger" class="tsd-kind-icon">logger</a>
-							</li>
-							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_launchdarkly_node_server_sdk_.filedatasourceoptions.html#paths" class="tsd-kind-icon">paths</a>
+								<a href="_launchdarkly_node_server_sdk_.basicloggeroptions.html#level" class="tsd-kind-icon">level</a>
 							</li>
 						</ul>
 					</li>
 				</ul>
 				<ul class="after-current">
+					<li class=" tsd-kind-interface tsd-parent-kind-module">
+						<a href="_launchdarkly_node_server_sdk_.filedatasourceoptions.html" class="tsd-kind-icon">File<wbr>Data<wbr>Source<wbr>Options</a>
+					</li>
 					<li class=" tsd-kind-interface tsd-parent-kind-module">
 						<a href="_launchdarkly_node_server_sdk_.ldclient.html" class="tsd-kind-icon">LDClient</a>
 					</li>
