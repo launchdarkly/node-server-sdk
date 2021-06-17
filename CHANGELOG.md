@@ -2,6 +2,28 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [6.0.0] - 2021-06-17
+This major version release is for updating Node.js compatibility, simplifying the SDK&#39;s dependencies, and removing deprecated names.
+
+Except for the dependency changes described below which may require minor changes in your build, and a minor new logging feature, usage of the SDK has not changed in this release. For more details about changes that may be necessary, see the [5.x to 6.0 migration guide](https://docs.launchdarkly.com/sdk/server-side/node-js/migration-5-to-6).
+
+Dropping support for obsolete Node.js versions makes it easier to maintain the SDK and keep its dependencies up to date. See LaunchDarkly&#39;s [End of Life Policy](https://launchdarkly.com/policies/end-of-life-policy/) regarding platform version support.
+
+Simplifying dependencies reduces the size of the SDK bundle, as well as reducing potential compatibility problems and vulnerabilities. The total size of the SDK code plus its dependency tree, not including any of the optional database integrations, has been reduced by nearly 75%.
+
+### Added:
+- Added `ld.basicLogger`, allowing customization of the SDK&#39;s default logging behavior without having to provide a full `LDLogger` implementation.
+
+### Changed:
+- The minimum Node.js version is now 12.0.
+- Updated many dependencies to newer versions and/or more actively maintained packages.
+
+### Removed:
+- Removed the bundled Redis integration. This is now provided as a separate package, like the other database integrations; see [node-server-sdk-redis](https://github.com/launchdarkly/node-server-sdk-redis). The main SDK package no longer has a dependency on the [`redis`](https://www.npmjs.com/package/redis) package.
+- Removed the dependency on [Winston](https://www.npmjs.com/package/winston). You can still tell the SDK to use a Winston logger instance that you have created, just as before, so this change should not affect any applications that are using Winston. But the SDK no longer uses Winston to create a default logger if the application does not specify a logger; instead, it uses the `ld.basicLogger` implementation, which uses the same format as the previous default Winston configuration, so again there should be no visible difference. **Note:** If you are using the `launchdarkly-node-server-sdk-dynamodb` or `launchdarkly-node-server-consul` database integration packages, you should update them to the latest versions which have also had the Winston dependency removed.
+- Removed the dependency on [`yaml`](https://www.npmjs.package/yaml). This package was only used for the optional [file data source](https://launchdarkly.github.io/node-server-sdk/index.html#filedatasource) functionality. You can still use YAML data files with the file data source if you explicitly install the `yaml` package in your project; the SDK will automatically detect its presence.
+- The `package-lock.json` file is no longer in source control. As this is a library project, the lockfile never affected application code that used the SDK, but only affected the SDK&#39;s CI build. It is preferable for the CI build to refer only to `package.json` so that it resolves dependencies the same way an application using the SDK would, rather than using pinned dependencies that an application would not use.
+
 ## [5.14.5] - 2021-06-10
 ### Fixed:
 - Updated transitive dependency on the package `url-parse` due to a [vulnerability warning](https://github.com/advisories/GHSA-9m6j-fcg5-2442).
