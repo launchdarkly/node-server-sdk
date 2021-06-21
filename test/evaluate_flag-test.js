@@ -754,6 +754,58 @@ describe('rollout', () => {
       done();
     });
   });
+
+  describe('with seed', () => {
+    const seed = 61;
+    const flagKey = 'flagkey';
+    const salt = 'salt';
+    const rollout = {
+      kind: 'experiment',
+      seed,
+      variations: [
+        { variation: 0, weight: 10000 },
+        { variation: 1, weight: 20000 },
+        { variation: 0, weight: 70000, untracked: true },
+      ],
+    };
+    const flag = {
+      key: flagKey,
+      salt: salt,
+      on: true,
+      fallthrough: { rollout: rollout },
+      variations: [null, null, null],
+    };
+
+    it('buckets user into first variant of the experiment', done => {
+      var user = { key: 'userKeyA' };
+      evaluate.evaluate(flag, user, featureStore, eventFactory, (err, detail) => {
+        expect(err).toEqual(null);
+        expect(detail.variationIndex).toEqual(0);
+        expect(detail.reason.inExperiment).toBe(true);
+        done();
+      });
+    });
+
+    it('uses seed to bucket user into second variant of the experiment', done => {
+      var user = { key: 'userKeyB' };
+      evaluate.evaluate(flag, user, featureStore, eventFactory, (err, detail) => {
+        expect(err).toEqual(null);
+        expect(detail.variationIndex).toEqual(1);
+        expect(detail.reason.inExperiment).toBe(true);
+        done();
+      });
+    });
+
+    it('buckets user outside of the experiment', done => {
+      var user = { key: 'userKeyC' };
+      evaluate.evaluate(flag, user, featureStore, eventFactory, (err, detail) => {
+        expect(err).toEqual(null);
+        expect(detail.variationIndex).toEqual(0);
+        expect(detail.reason.inExperiment).toBe(undefined);
+        done();
+      });
+    });
+  });
 });
 
 describe('bucketUser', () => {
@@ -794,5 +846,39 @@ describe('bucketUser', () => {
     };
     var bucket = evaluate.bucketUser(user, 'hashKey', 'floatAttr', 'saltyA');
     expect(bucket).toBe(0);
+  });
+
+  describe('when seed is present', () => {
+    const seed = 61;
+    it('gets expected bucket values for specific keys', () => {
+      var user = { key: 'userKeyA' };
+      var bucket = evaluate.bucketUser(user, 'hashKey', 'key', 'saltyA', seed);
+      expect(bucket).toBeCloseTo(0.09801207, 7);
+
+      user = { key: 'userKeyB' };
+      bucket = evaluate.bucketUser(user, 'hashKey', 'key', 'saltyA', seed);
+      expect(bucket).toBeCloseTo(0.14483777, 7);
+
+      user = { key: 'userKeyC' };
+      bucket = evaluate.bucketUser(user, 'hashKey', 'key', 'saltyA', seed);
+      expect(bucket).toBeCloseTo(0.9242641, 7);
+    });
+
+    it('should not generate a different bucket when hashKey or salt are changed', () => {
+      let user = { key: 'userKeyA' };
+      let bucket = evaluate.bucketUser(user, 'hashKey', 'key', 'saltyA', seed);
+      let bucketDifferentHashKey = evaluate.bucketUser(user, 'otherHashKey', 'key', 'saltyA', seed);
+      let bucketDifferentSalt = evaluate.bucketUser(user, 'hashKey', 'key', 'otherSaltyA', seed);
+
+      expect(bucketDifferentHashKey).toBeCloseTo(bucket, 7);
+      expect(bucketDifferentSalt).toBeCloseTo(bucket, 7);
+    });
+
+    it('should generate a new bucket if the seed changes', () => {
+      const otherSeed = 60;
+      var user = { key: 'userKeyA' };
+      var bucket = evaluate.bucketUser(user, 'hashKey', 'key', 'saltyA', otherSeed);
+      expect(bucket).toBeCloseTo(0.7008816, 7);
+    });
   });
 });
