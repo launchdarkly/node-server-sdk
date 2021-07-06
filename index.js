@@ -120,6 +120,10 @@ const newClient = function (sdkKey, originalConfig) {
     updateProcessor = updateProcessorFactory(config);
   }
 
+  // Define bigSegmentStoreStatusProvider as a read-only property
+  const bigSegmentStoreStatusProvider = null; // TODO
+  Object.defineProperty(client, 'bigSegmentStoreStatusProvider', { value: bigSegmentStoreStatusProvider });
+
   updateProcessor.start(err => {
     if (err) {
       let error;
