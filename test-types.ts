@@ -97,4 +97,5 @@ var logger3: ld.LDLogger = ld.basicLogger({ destination: console.log });
 
 // BigSegmentStoreStatusProvider
 var bsssp: ld.interfaces.BigSegmentStoreStatusProvider = client.bigSegmentStoreStatusProvider
+var bssStatus: ld.interfaces.BigSegmentStoreStatus | undefined = bsssp.getStatus();
 bsssp.requireStatus().then((value: ld.interfaces.BigSegmentStoreStatus) => { });

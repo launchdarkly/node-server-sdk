@@ -1,4 +1,5 @@
 const { basicLogger } = require('./loggers');
+const { BigSegmentStoreManager } = require('./big_segments');
 const FeatureStoreEventWrapper = require('./feature_store_event_wrapper');
 const FileDataSource = require('./file_data_source');
 const Requestor = require('./requestor');
@@ -121,8 +122,11 @@ const newClient = function (sdkKey, originalConfig) {
   }
 
   // Define bigSegmentStoreStatusProvider as a read-only property
-  const bigSegmentStoreStatusProvider = null; // TODO
-  Object.defineProperty(client, 'bigSegmentStoreStatusProvider', { value: bigSegmentStoreStatusProvider });
+  const bigSegmentStoreManager =
+    config.bigSegments && config.bigSegments.store
+      ? BigSegmentStoreManager(config.bigSegments.store(config), config.bigSegments, config.logger)
+      : BigSegmentStoreManager(null, {}, config.logger);
+  Object.defineProperty(client, 'bigSegmentStoreStatusProvider', { value: bigSegmentStoreManager.statusProvider });
 
   updateProcessor.start(err => {
     if (err) {
@@ -343,10 +347,11 @@ const newClient = function (sdkKey, originalConfig) {
 
   client.close = () => {
     eventProcessor.close();
-    if (updateProcessor) {
+    if (updateProcessor && updateProcessor.close) {
       updateProcessor.close();
     }
     config.featureStore.close();
+    bigSegmentStoreManager.close();
   };
 
   client.isOffline = () => config.offline;
