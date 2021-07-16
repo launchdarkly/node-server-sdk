@@ -1289,7 +1289,7 @@ declare module 'launchdarkly-node-server-sdk' {
    * Most applications will not need to refer to these types. You will use them if you are creating a
    * plug-in component, such as a database integration, or if you use advanced SDK features.
    */
-  namespace interfaces {
+  export namespace interfaces {
     /**
      * A read-only data store that allows querying of user membership in big segments.
      * 
@@ -1468,4 +1468,76 @@ declare module 'launchdarkly-node-server-sdk/feature_store' {
 
   function InMemoryFeatureStore(): LDFeatureStore;
   export = InMemoryFeatureStore;
+}
+
+declare module 'launchdarkly-node-server-sdk/sharedtest/store_tests' {
+  import * as ld from 'launchdarkly-node-server-sdk';
+
+  /**
+   * A standard test suite that should be run on every persistent feature store implementation.
+   *
+   * This test suite uses `jest` and should be run inside a `describe` block.
+   *
+   * Store implementations must meet the following requirements to be testable with this suite:
+   *
+   * - They must support setting a key prefix. The tests will always pass a non-empty prefix.
+   *
+   * - They must support caching with a positive cache TTL in seconds, or a zero cache TTL to
+   * disable caching.
+   *
+   * - All instances created during the tests must share the same database, so that the tests
+   * can verify that they can read pre-existing data and will not interfere with any keys
+   * that use a different prefix.
+   *
+   * Do not call `runPersistentFeatureStoreTests` and `runBigSegmentStoreTests` from tests
+   * in separate files, if `jest` parallelization is enabled; they can interfere with each
+   * other's database state if they are interleaved.
+   *
+   * @param createStore A function that creates a feature store instance with the specified
+   *   key prefix and cache TTL.
+   * @param clearExistingData An asynchronous function that removes any existing data from
+   *   the database for the specified key prefix only.
+   * @param setConcurrentModificationHook If provided, this enables additional tests in which
+   *   another store instance is used to make a competing update to the same data while an
+   *   update is already in progress. The function should create a store instance which,
+   *   during any upsert operation, will call "hook" and await the result at a point when a
+   *   race condition is possible (for instance, after reading the old version of an item but
+   *   before writing the new version, if those are not atomic). Caching should be disabled.
+   */
+  export function runPersistentFeatureStoreTests(
+    createStore: (prefix: string, cacheTTL: number, logger: ld.LDLogger) => ld.LDFeatureStore,
+    clearExistingData: (prefix: string) => Promise<void>,
+    createStoreWithConcurrentUpdateHook?: (prefix: string, logger: ld.LDLogger, hook: () => Promise<void>) => void,
+  ): void;
+
+  /**
+   * A standard test suite that should be run on every big segment store implementation.
+   *
+   * This test suite uses `jest` and should be run inside a `describe` block.
+   *
+   * Store implementations must meet the following requirements to be testable with this suite:
+   *
+   * - They must support setting a key prefix. The tests will always pass a non-empty prefix.
+   *
+   * - All instances created during the tests must share the same database, so that the tests
+   * can verify that they can read pre-existing data and will not interfere with any keys
+   * that use a different prefix.
+   *
+   * Do not call `runPersistentFeatureStoreTests` and `runBigSegmentStoreTests` from tests
+   * in separate files, if `jest` parallelization is enabled; they can interfere with each
+   * other's database state if they are interleaved.
+   *
+   * @param createStore A function that creates a big segment store instance with the
+   *   specified key prefix.
+   * @param clearExistingData An asynchronous function that removes any existing data from
+   *   the database for the specified key prefix only.
+   * @param setMetadata An asynchronous function that updates the store metadata.
+   * @param setSegments An asynchronous function that sets a user's big segment state.
+   */
+  export function runBigSegmentStoreTests(
+    createStore: (prefix: string, logger: ld.LDLogger) => ld.interfaces.BigSegmentStore,
+    clearExistingData: (prefix: string) => Promise<void>,
+    setMetadata: (prefix: string, metadata: ld.interfaces.BigSegmentStoreMetadata) => Promise<void>,
+    setSegments: (prefix: string, userHashKey: string, included: string[], excluded: string[]) => Promise<void>
+  ): void;
 }

@@ -1,17 +1,16 @@
 const InMemoryFeatureStore = require('../feature_store');
-const LDClient = require('../index.js');
 const dataKind = require('../versioned_data_kind');
-const testBase = require('./feature_store_test_base');
+const { runFeatureStoreTests } = require('../sharedtest/feature_store_tests');
 const stubs = require('./stubs');
-const { promisifySingle, withCloseable } = require('launchdarkly-js-test-helpers');
+const { promisifySingle } = require('launchdarkly-js-test-helpers');
 
 describe('InMemoryFeatureStore', () => {
-  testBase.baseFeatureStoreTests(() => {
-    return new InMemoryFeatureStore();
-  });
+  runFeatureStoreTests(
+    () => new InMemoryFeatureStore(),
+  );
 });
 
-describe('custom feature store', () => {
+describe('custom feature store in configuration', () => {
   const defaultUser = { key: 'user' };
 
   async function makeStoreWithFlag() {
