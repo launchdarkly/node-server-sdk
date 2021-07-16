@@ -11,7 +11,7 @@ const StreamingProcessor = require('./streaming');
 const FlagsStateBuilder = require('./flags_state');
 const configuration = require('./configuration');
 const diagnostics = require('./diagnostic_events');
-const evaluate = require('./evaluate_flag');
+const { Evaluator } = require('./evaluator');
 const messages = require('./messages');
 const tunnel = require('tunnel');
 const crypto = require('crypto');
@@ -69,7 +69,8 @@ const newClient = function (sdkKey, originalConfig) {
 
   const featureStoreImpl =
     typeof config.featureStore === 'function' ? config.featureStore(config) : config.featureStore;
-  config.featureStore = FeatureStoreEventWrapper(featureStoreImpl, client);
+  const featureStore = FeatureStoreEventWrapper(featureStoreImpl, client);
+  config.featureStore = featureStore;
 
   const maybeReportError = createErrorReporter(client, config.logger);
 
@@ -127,6 +128,12 @@ const newClient = function (sdkKey, originalConfig) {
       ? BigSegmentStoreManager(config.bigSegments.store(config), config.bigSegments, config.logger)
       : BigSegmentStoreManager(null, {}, config.logger);
   Object.defineProperty(client, 'bigSegmentStoreStatusProvider', { value: bigSegmentStoreManager.statusProvider });
+
+  const evaluator = Evaluator({
+    getFlag: (key, cb) => featureStore.get(dataKind.features, key, cb),
+    getSegment: (key, cb) => featureStore.get(dataKind.segments, key, cb),
+    getBigSegmentsMembership: (key, cb) => bigSegmentStoreManager.getUserMembership(key).then(cb),
+  });
 
   updateProcessor.start(err => {
     if (err) {
@@ -253,7 +260,7 @@ const newClient = function (sdkKey, originalConfig) {
         return resolve(result);
       }
 
-      evaluate.evaluate(flag, user, config.featureStore, eventFactory, (err, detailIn, events) => {
+      evaluator.evaluate(flag, user, eventFactory, (err, detailIn, events) => {
         const detail = detailIn;
         if (err) {
           maybeReportError(
@@ -314,7 +321,7 @@ const newClient = function (sdkKey, originalConfig) {
                 iterateeCb();
               } else {
                 // At the moment, we don't send any events here
-                evaluate.evaluate(flag, user, config.featureStore, eventFactoryDefault, (err, detail) => {
+                evaluator.evaluate(flag, user, eventFactoryDefault, (err, detail) => {
                   if (err !== null) {
                     maybeReportError(
                       new Error('Error for feature flag "' + flag.key + '" while evaluating all flags: ' + err)

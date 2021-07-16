@@ -1,7 +1,6 @@
 const crypto = require('crypto');
 
 const operators = require('./operators');
-const dataKind = require('./versioned_data_kind');
 const util = require('util');
 const stringifyAttrs = require('./utils/stringifyAttrs');
 const { safeAsyncEachSeries } = require('./utils/asyncUtils');
@@ -13,9 +12,26 @@ const userAttrsToStringifyForEvaluation = ['key', 'secondary'];
 
 const noop = () => {};
 
+// This internal object encapsulates SDK state that's used for every flag evaluation. Each
+// LDClient maintains a single instance of it.
+//
+// The "queries" object provides read-only async data access on demand. Its methods are:
+//   getFlag(key: string, callback: (flag) => void): void
+//   getSegment(key: string, callback: (segment) => void): void
+//   getBigSegmentsMembership(userKey: string, callback: ([ BigSegmentStoreMembership, status ]) => void): void
+function Evaluator(queries) {
+  const ret = {};
+
+  ret.evaluate = (flag, user, eventFactory, maybeCallback) => {
+    evaluate(flag, user, queries, eventFactory, maybeCallback);
+  };
+
+  return ret;
+}
+
 // Callback receives (err, detail, events) where detail has the properties "value", "variationIndex", and "reason";
-// detail will never be null even if there's an error.
-function evaluate(flag, user, featureStore, eventFactory, maybeCallback) {
+// detail will never be null even if there's an error; events is either an array or undefined.
+function evaluate(flag, user, queries, eventFactory, maybeCallback) {
   const cb = maybeCallback || noop;
   if (!user || user.key === null || user.key === undefined) {
     cb(null, errorResult('USER_NOT_SPECIFIED'), []);
@@ -28,35 +44,39 @@ function evaluate(flag, user, featureStore, eventFactory, maybeCallback) {
   }
 
   const sanitizedUser = stringifyAttrs(user, userAttrsToStringifyForEvaluation);
-  const events = [];
-  evalInternal(flag, sanitizedUser, featureStore, events, eventFactory, (err, detail) => {
-    cb(err, detail, events);
+  const stateOut = {};
+  evalInternal(flag, sanitizedUser, queries, stateOut, eventFactory, (err, detail) => {
+    const result = detail;
+    if (stateOut.bigSegmentsStatus) {
+      result.reason.bigSegmentsStatus = stateOut.bigSegmentsStatus;
+    }
+    cb(err, result, stateOut.events);
   });
 }
 
-function evalInternal(flag, user, featureStore, events, eventFactory, cb) {
+function evalInternal(flag, user, queries, stateOut, eventFactory, cb) {
   // If flag is off, return the off variation
   if (!flag.on) {
     getOffResult(flag, { kind: 'OFF' }, cb);
     return;
   }
 
-  checkPrerequisites(flag, user, featureStore, events, eventFactory, (err, failureReason) => {
+  checkPrerequisites(flag, user, queries, stateOut, eventFactory, (err, failureReason) => {
     if (err || failureReason) {
       getOffResult(flag, failureReason, cb);
     } else {
-      evalRules(flag, user, featureStore, cb);
+      evalRules(flag, user, queries, stateOut, cb);
     }
   });
 }
 
 // Callback receives (err, reason) where reason is null if successful, or a "prerequisite failed" reason
-function checkPrerequisites(flag, user, featureStore, events, eventFactory, cb) {
+function checkPrerequisites(flag, user, queries, stateOut, eventFactory, cb) {
   if (flag.prerequisites && flag.prerequisites.length) {
     safeAsyncEachSeries(
       flag.prerequisites,
       (prereq, callback) => {
-        featureStore.get(dataKind.features, prereq.key, prereqFlag => {
+        queries.getFlag(prereq.key, prereqFlag => {
           // If the flag does not exist in the store or is not on, the prerequisite
           // is not satisfied
           if (!prereqFlag) {
@@ -66,10 +86,11 @@ function checkPrerequisites(flag, user, featureStore, events, eventFactory, cb) 
             });
             return;
           }
-          evalInternal(prereqFlag, user, featureStore, events, eventFactory, (err, detail) => {
+          evalInternal(prereqFlag, user, queries, stateOut, eventFactory, (err, detail) => {
             // If there was an error, the value is null, the variation index is out of range,
             // or the value does not match the indexed variation the prerequisite is not satisfied
-            events.push(eventFactory.newEvalEvent(prereqFlag, user, detail, null, flag));
+            stateOut.events = stateOut.events || []; // eslint-disable-line no-param-reassign
+            stateOut.events.push(eventFactory.newEvalEvent(prereqFlag, user, detail, null, flag));
             if (err) {
               callback({ key: prereq.key, err: err });
             } else if (!prereqFlag.on || detail.variationIndex !== prereq.variation) {
@@ -100,7 +121,7 @@ function checkPrerequisites(flag, user, featureStore, events, eventFactory, cb) 
 }
 
 // Callback receives (err, detail)
-function evalRules(flag, user, featureStore, cb) {
+function evalRules(flag, user, queries, stateOut, cb) {
   // Check target matches
   for (let i = 0; i < (flag.targets || []).length; i++) {
     const target = flag.targets[i];
@@ -120,7 +141,7 @@ function evalRules(flag, user, featureStore, cb) {
   safeAsyncEachSeries(
     flag.rules,
     (rule, callback) => {
-      ruleMatchUser(rule, user, featureStore, matched => {
+      ruleMatchUser(rule, user, queries, stateOut, matched => {
         // We raise an "error" on the first rule that *does* match, to stop evaluating more rules
         callback(matched ? rule : null);
       });
@@ -147,7 +168,7 @@ function evalRules(flag, user, featureStore, cb) {
   );
 }
 
-function ruleMatchUser(r, user, featureStore, cb) {
+function ruleMatchUser(r, user, queries, stateOut, cb) {
   if (!r.clauses) {
     cb(false);
     return;
@@ -157,7 +178,7 @@ function ruleMatchUser(r, user, featureStore, cb) {
   safeAsyncEachSeries(
     r.clauses,
     (clause, callback) => {
-      clauseMatchUser(clause, user, featureStore, matched => {
+      clauseMatchUser(clause, user, queries, stateOut, matched => {
         // on the first clause that does *not* match, we raise an "error" to stop the loop
         callback(matched ? null : clause);
       });
@@ -168,17 +189,21 @@ function ruleMatchUser(r, user, featureStore, cb) {
   );
 }
 
-function clauseMatchUser(c, user, featureStore, cb) {
+function clauseMatchUser(c, user, queries, stateOut, cb) {
   if (c.op === 'segmentMatch') {
     safeAsyncEachSeries(
       c.values,
-      (value, callback) => {
-        featureStore.get(dataKind.segments, value, segment => {
-          if (segment && segmentMatchUser(segment, user)) {
-            // on the first segment that matches, we raise an "error" to stop the loop
-            callback(segment);
+      (value, seriesCallback) => {
+        queries.getSegment(value, segment => {
+          if (segment) {
+            segmentMatchUser(segment, user, queries, stateOut, result => {
+              // On the first segment that matches, we call seriesCallback with an
+              // arbitrary non-null value, which safeAsyncEachSeries interprets as an
+              // "error", causing it to skip the rest of the series.
+              seriesCallback(result ? segment : null);
+            });
           } else {
-            callback(null);
+            seriesCallback(null);
           }
         });
       },
@@ -215,21 +240,66 @@ function clauseMatchUserNoSegments(c, user) {
   return maybeNegate(c, matchAny(matchFn, uValue, c.values));
 }
 
-function segmentMatchUser(segment, user) {
-  if (user.key) {
+function segmentMatchUser(segment, user, queries, stateOut, cb) {
+  if (!user.key) {
+    return cb(false);
+  }
+
+  if (!segment.unbounded) {
+    return cb(simpleSegmentMatchUser(segment, user, true));
+  }
+
+  if (!segment.generation) {
+    // Big segment queries can only be done if the generation is known. If it's unset,
+    // that probably means the data store was populated by an older SDK that doesn't know
+    // about the generation property and therefore dropped it from the JSON data. We'll treat
+    // that as a "not configured" condition.
+    stateOut.bigSegmentsStatus = 'NOT_CONFIGURED'; // eslint-disable-line no-param-reassign
+    return cb(false);
+  }
+
+  if (stateOut.bigSegmentsStatus) {
+    // We've already done the query at some point during the flag evaluation and stored
+    // the result (if any) in stateOut.bigSegmentsMembership, so we don't need to do it
+    // again. Even if multiple big segments are being referenced, the membership includes
+    // *all* of the user's segment memberships.
+    return cb(bigSegmentMatchUser(stateOut.bigSegmentsMembership, segment, user));
+  }
+
+  queries.getBigSegmentsMembership(user.key, result => {
+    if (result) {
+      stateOut.bigSegmentsMembership = result[0]; // eslint-disable-line no-param-reassign
+      stateOut.bigSegmentsStatus = result[1]; // eslint-disable-line no-param-reassign
+    } else {
+      stateOut.bigSegmentsStatus = 'NOT_CONFIGURED'; // eslint-disable-line no-param-reassign
+    }
+    return cb(bigSegmentMatchUser(stateOut.bigSegmentsMembership, segment, user));
+  });
+}
+
+function bigSegmentMatchUser(membership, segment, user) {
+  const segmentRef = makeBigSegmentRef(segment);
+  const included = membership && membership[segmentRef];
+  if (included !== undefined) {
+    return included;
+  }
+  return simpleSegmentMatchUser(segment, user, false);
+}
+
+function simpleSegmentMatchUser(segment, user, useIncludesAndExcludes) {
+  if (useIncludesAndExcludes) {
     if ((segment.included || []).indexOf(user.key) >= 0) {
       return true;
     }
     if ((segment.excluded || []).indexOf(user.key) >= 0) {
       return false;
     }
-    for (let i = 0; i < (segment.rules || []).length; i++) {
-      if (segmentRuleMatchUser(segment.rules[i], user, segment.key, segment.salt)) {
-        return true;
-      }
+  }
+  for (let i = 0; i < (segment.rules || []).length; i++) {
+    if (segmentRuleMatchUser(segment.rules[i], user, segment.key, segment.salt)) {
+      return true;
     }
   }
-  return false;
 }
 
 function segmentRuleMatchUser(rule, user, segmentKey, salt) {
@@ -390,4 +460,15 @@ function sha1Hex(input) {
   return hash.digest('hex');
 }
 
-module.exports = { evaluate: evaluate, bucketUser: bucketUser };
+function makeBigSegmentRef(segment) {
+  // The format of big segment references is independent of what store implementation is being
+  // used; the store implementation receives only this string and does not know the details of
+  // the data model. The Relay Proxy will use the same format when writing to the store.
+  return segment.key + '.g' + segment.generation;
+}
+
+module.exports = {
+  Evaluator,
+  bucketUser,
+  makeBigSegmentRef,
+};

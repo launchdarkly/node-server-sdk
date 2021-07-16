@@ -33,6 +33,7 @@ module.exports = (function () {
     // in baseDefaults (for instance, the default is null but if the value isn't null it should be a
     // string). The allowable values are 'boolean', 'string', 'number', 'object', 'function', or
     // 'factory' (the last one means it can be either a function or an object).
+    bigSegments: 'object',
     eventProcessor: 'object',
     featureStore: 'object',
     logger: 'object', // LDLogger

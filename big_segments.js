@@ -45,7 +45,7 @@ function BigSegmentStoreManager(store, config, logger) {
   //
   // The return value is a two-element array where the first element is the membership object,
   // and the second element is a status value ("HEALTHY", "STALE", or "STORE_ERROR"). An undefined
-  // return value is equivalent to [ null, "STORE_NOT_CONFIGURED" ];
+  // return value is equivalent to [ null, "NOT_CONFIGURED" ];
   ret.getUserMembership = async userKey => {
     if (!store) {
       return undefined;
@@ -59,9 +59,10 @@ function BigSegmentStoreManager(store, config, logger) {
         }
         cache.set(userKey, membership);
       } catch (e) {
-        logger.error('Big segment store status query returned error');
+        logger.error('Big segment store membership query returned error: ' + e);
         return [null, 'STORE_ERROR'];
       }
+      cache.set(userKey, membership);
     }
     if (!lastStatus) {
       await pollStoreAndUpdateStatus();
@@ -83,7 +84,7 @@ function BigSegmentStoreManager(store, config, logger) {
       const metadata = await store.getMetadata();
       newStatus = { available: true, stale: !metadata || !metadata.lastUpToDate || isStale(metadata.lastUpToDate) };
     } catch (e) {
-      logger.error('Big segment store status query returned error');
+      logger.error('Big segment store status query returned error: ' + e);
       newStatus = { available: false, stale: false };
     }
     if (!lastStatus || lastStatus.available !== newStatus.available || lastStatus.stale !== newStatus.stale) {
