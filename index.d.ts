@@ -11,6 +11,7 @@
 
 declare module 'launchdarkly-node-server-sdk' {
   import { EventEmitter } from 'events';
+  import * as interfaces from 'launchdarkly-node-server-sdk/interfaces';
 
   namespace errors {
     export const LDPollingError: ErrorConstructor;
@@ -684,15 +685,16 @@ declare module 'launchdarkly-node-server-sdk' {
      * The store should treat any entity with the property `deleted: true` as "not found".
      *
      * @param kind
-     *   The type of data to be accessed. The `namespace` property of this object indicates which
-     *   collection of entities to use, e.g. `"features"` or `"segments"`. The store should not
-     *   make any assumptions about the format of the data, but just return a JSON object.
+     *   The type of data to be accessed. The store should not make any assumptions about the format
+     *   of the data, but just return a JSON object. The actual type of this parameter is
+     *   [[interfaces.DataKind]].
      *
      * @param key
      *   The unique key of the entity within the specified collection.
      *
      * @param callback
-     *   Will be called with the retrieved entity, or null if not found.
+     *   Will be called with the retrieved entity, or null if not found. The actual type of the result
+     *   value is [[interfaces.VersionedData]].
      */
     get(kind: object, key: string, callback: (res: object) => void): void;
 
@@ -702,13 +704,13 @@ declare module 'launchdarkly-node-server-sdk' {
      * The store should filter out any entities with the property `deleted: true`.
      *
      * @param kind
-     *   The type of data to be accessed. The `namespace` property of this object indicates which
-     *   collection of entities to use, e.g. `"features"` or `"segments"`. The store should not
-     *   make any assumptions about the format of the data, but just return an object in which
-     *   each key is the `key` property of an entity and the value is the entity.
+     *   The type of data to be accessed. The store should not make any assumptions about the format
+     *   of the data, but just return an object in which each key is the `key` property of an entity
+     *   and the value is the entity. The actual type of this parameter is [[interfaces.DataKind]].
      *
      * @param callback
-     *   Will be called with the resulting map.
+     *   Will be called with the resulting map. The actual type of the result value is
+     *   `interfaces.KeyedItems<VersionedData>`.
      */
     all(kind: object, callback: (res: object) => void): void;
 
@@ -717,7 +719,8 @@ declare module 'launchdarkly-node-server-sdk' {
      *
      * @param allData
      *   An object in which each key is the "namespace" of a collection (e.g. `"features"`) and
-     *   the value is an object that maps keys to entities.
+     *   the value is an object that maps keys to entities. The actual type of this parameter is
+     *   `interfaces.FullDataSet<VersionedData>`.
      *
      * @param callback
      *   Will be called when the store has been initialized.
@@ -732,8 +735,8 @@ declare module 'launchdarkly-node-server-sdk' {
      * it should be exactly the same as calling `upsert` with such an object.
      *
      * @param kind
-     *   The type of data to be accessed. The `namespace` property of this object indicates which
-     *   collection of entities to use, e.g. `"features"` or `"segments"`.
+     *   The type of data to be accessed. The actual type of this parameter is
+     *   [[interfaces.DataKind]].
      *
      * @param key
      *   The unique key of the entity within the specified collection.
@@ -752,14 +755,14 @@ declare module 'launchdarkly-node-server-sdk' {
      * Add an entity or update an existing entity.
      *
      * @param kind
-     *   The type of data to be accessed. The `namespace` property of this object indicates which
-     *   collection of entities to use, e.g. `"features"` or `"segments"`. The store should not
-     *   make any assumptions about the format of the data, but just return a JSON object.
+     *   The type of data to be accessed. The actual type of this parameter is
+     *   [[interfaces.DataKind]].
      *
      * @param data
      *   The contents of the entity, as an object that can be converted to JSON. The store
      *   should check the `version` property of this object, and should *not* overwrite any
      *   existing data if the existing `version` is greater than or equal to that value.
+     *   The actual type of this parameter is [[interfaces.VersionedData]].
      *
      * @param callback
      *   Will be called after the upsert operation is complete.
@@ -1281,157 +1284,344 @@ declare module 'launchdarkly-node-server-sdk' {
   export function FileDataSource(
     options: FileDataSourceOptions
   ): object;
+}
+
+/**
+ * This module contains types that allow customization of LaunchDarkly components, and
+ * interfaces to other advanced SDK features.
+ * 
+ * Most applications will not need to refer to these types. You will use them if you are creating a
+ * plug-in component, such as a database integration, or if you use advanced SDK features.
+ * 
+ * Currently this module contains no implementation code, but only TypeScript interfaces.
+ */
+declare module 'launchdarkly-node-server-sdk/interfaces' {
+  import { EventEmitter } from 'events';
 
   /**
-   * This namespace contains interfaces that allow customization of LaunchDarkly components, and
-   * interfaces to other advanced SDK features.
+   * A read-only data store that allows querying of user membership in big segments.
    * 
-   * Most applications will not need to refer to these types. You will use them if you are creating a
-   * plug-in component, such as a database integration, or if you use advanced SDK features.
+   * "Big segments" are a specific type of user segments. For more information, read the LaunchDarkly
+   * documentation about user segments: https://docs.launchdarkly.com/home/users
    */
-  export namespace interfaces {
+  export interface BigSegmentStore {
     /**
-     * A read-only data store that allows querying of user membership in big segments.
+     * Queries information about the overall state of the store.
      * 
-     * "Big segments" are a specific type of user segments. For more information, read the LaunchDarkly
-     * documentation about user segments: https://docs.launchdarkly.com/home/users
-     */
-    export interface BigSegmentStore {
-      /**
-       * Queries information about the overall state of the store.
-       * 
-       * The resolved value of the Promise should always be a [[BigSegmentStoreMetadata]] object. If
-       * the store is accessible but contains no metadata, the object's `lastUpToDate` property can be 
-       * undefined. If the store is not accessible due to a database error, the method can throw an
-       * exception/reject the promise.
-       * 
-       * This method will be called only when the SDK needs the latest state, so it should not be cached.
-       * 
-       * @returns a Promise for the result of the query
-       */
-      getMetadata(): Promise<BigSegmentStoreMetadata>;
-  
-      /**
-       * Queries the store for a snapshot of the current segment state for a specific user.
-       * 
-       * The userHash is a base64-encoded string produced by hashing the user key as defined by
-       * the big segments specification; the store implementation does not need to know the details
-       * of how this is done, because it deals only with already-hashed keys, but the string can be
-       * assumed to only contain characters that are valid in base64.
-       * 
-       * The resolved value of the Promise should be either a [[BigSegmentStoreMembership]], or
-       * undefined if the user is not referenced in any big segments (this is equivalent to a
-       * [[BigSegmentStoreMembership]] that has no properties).
-       * 
-       * @param userHash identifies the user
-       * @returns a Promise for the result of the query.
-       */
-      getUserMembership(userHash: string): Promise<BigSegmentStoreMembership | undefined>;
-
-      /**
-       * Releases any resources being used by the store.
-       */
-      close(): void;
-    }
-  
-    /**
-     * Values returned by BigSegmentStore.getMetadata().
-     */
-    export interface BigSegmentStoreMetadata {
-      /**
-       * The Unix epoch millisecond timestamp of the last update to the BigSegmentStore. It is
-       * undefined if the store has never been updated.
-       */
-      lastUpToDate?: number
-    }
-  
-    /**
-     * The return type of [[BigSegmentStore.getUserMembership]], describing which big segments a
-     * specific user is included in or excluded from.
+     * The resolved value of the Promise should always be a [[BigSegmentStoreMetadata]] object. If
+     * the store is accessible but contains no metadata, the object's `lastUpToDate` property can be 
+     * undefined. If the store is not accessible due to a database error, the method can throw an
+     * exception/reject the promise.
      * 
-     * This object may be cached by the SDK, so it should not be modified after it is created. It
-     * is a snapshot of the segment membership state at one point in time.
+     * This method will be called only when the SDK needs the latest state, so it should not be cached.
+     * 
+     * @returns a Promise for the result of the query
      */
-    export interface BigSegmentStoreMembership {
-      /**
-       * Each property key in this object is a "segment reference", which is how segments are
-       * identified in big segment data. This string is not identical to the segment key-- the SDK
-       * will add other information. The store implementation should not be concerned with the
-       * format of the string.
-       * 
-       * A true value means that the user is explicitly included in the segment. A false value
-       * means that the user is explicitly excluded from the segment-- and is not also explicitly
-       * included (that is, if both an include and an exclude existed in the data, the include would
-       * take precedence). If the user's status in a particular segment is undefined, there should
-       * be no key or value for that segment.
-       */
-      [segmentRef: string]: boolean;
-    }
+    getMetadata(): Promise<BigSegmentStoreMetadata>;
 
     /**
-     * An interface for querying the status of a big segment store.
+     * Queries the store for a snapshot of the current segment state for a specific user.
      * 
-     * The big segment store is the component that receives information about big segments, normally
-     * from a database populated by the LaunchDarkly Relay Proxy. "Big segments" are a specific type
-     * of user segments. For more information, read the LaunchDarkly documentation about user
-     * segments: https://docs.launchdarkly.com/home/users
+     * The userHash is a base64-encoded string produced by hashing the user key as defined by
+     * the big segments specification; the store implementation does not need to know the details
+     * of how this is done, because it deals only with already-hashed keys, but the string can be
+     * assumed to only contain characters that are valid in base64.
      * 
-     * An implementation of this interface is returned by {@link LDClient.bigSegmentStoreStatusProvider}.
-     * Application code never needs to implement this interface.
+     * The resolved value of the Promise should be either a [[BigSegmentStoreMembership]], or
+     * undefined if the user is not referenced in any big segments (this is equivalent to a
+     * [[BigSegmentStoreMembership]] that has no properties).
      * 
-     * Note that this type inherits from `EventEmitter`, so you can use the standard `on()`, `once()`,
-     * and `off()` methods to receive status change events. The standard `EventEmitter` methods are
-     * not documented here; see the {@link https://nodejs.org/api/events.html#events_class_eventemitter|Node API documentation}.
-     * The type of the status change event is `"change"`, and its value is the same value that would
-     * be returned by {@link getStatus}.
+     * @param userHash identifies the user
+     * @returns a Promise for the result of the query.
      */
-    export interface BigSegmentStoreStatusProvider extends EventEmitter {
-      /**
-       * Gets the current status of the store, if known.
-       * 
-       * @returns a {@link BigSegmentStoreStatus}, or `undefined` if the SDK has not yet queried the
-       *   big segment store status
-       */
-      getStatus(): BigSegmentStoreStatus | undefined;
-
-      /**
-       * Gets the current status of the store, querying it if the status has not already been queried.
-       * 
-       * @returns a Promise for the status of the store
-       */
-      requireStatus(): Promise<BigSegmentStoreStatus>;
-    }
+    getUserMembership(userHash: string): Promise<BigSegmentStoreMembership | undefined>;
 
     /**
-     * Information about the status of a big segment store, provided by {@link BigSegmentStoreStatusProvider}.
-     * 
-     * "Big segments" are a specific type of user segments. For more information, read the LaunchDarkly
-     * documentation about user segments: https://docs.launchdarkly.com/home/users
+     * Releases any resources being used by the store.
      */
-    export interface BigSegmentStoreStatus {
-      /**
-       * True if the big segment store is able to respond to queries, so that the SDK can
-       * evaluate whether a user is in a segment or not.
-       * 
-       * If this property is false, the store is not able to make queries (for instance, it may not have
-       * a valid database connection). In this case, the SDK will treat any reference to a big segment
-       * as if no users are included in that segment. Also, the {@link LDEvaluationReason} associated
-       * with any flag evaluation that references a big segment when the store is not available will
-       * have a `bigSegmentsStatus` of `"STORE_ERROR"`.
-       */
-      available: boolean;
+    close(): void;
+  }
 
-      /**
-       * True if the big segment store is available, but has not been updated within the amount of time
-       * specified by {@link LDBigSegmentsOptions.staleAfter}.
-       * 
-       * This may indicate that the LaunchDarkly Relay Proxy, which populates the store, has stopped
-       * running or has become unable to receive fresh data from LaunchDarkly. Any feature flag
-       * evaluations that reference a big segment will be using the last known data, which may be out
-       * of date.
-       */
-      stale: boolean;
-    }
+  /**
+   * Values returned by BigSegmentStore.getMetadata().
+   */
+  export interface BigSegmentStoreMetadata {
+    /**
+     * The Unix epoch millisecond timestamp of the last update to the BigSegmentStore. It is
+     * undefined if the store has never been updated.
+     */
+    lastUpToDate?: number
+  }
+
+  /**
+   * The return type of [[BigSegmentStore.getUserMembership]], describing which big segments a
+   * specific user is included in or excluded from.
+   * 
+   * This object may be cached by the SDK, so it should not be modified after it is created. It
+   * is a snapshot of the segment membership state at one point in time.
+   */
+  export interface BigSegmentStoreMembership {
+    /**
+     * Each property key in this object is a "segment reference", which is how segments are
+     * identified in big segment data. This string is not identical to the segment key-- the SDK
+     * will add other information. The store implementation should not be concerned with the
+     * format of the string.
+     * 
+     * A true value means that the user is explicitly included in the segment. A false value
+     * means that the user is explicitly excluded from the segment-- and is not also explicitly
+     * included (that is, if both an include and an exclude existed in the data, the include would
+     * take precedence). If the user's status in a particular segment is undefined, there should
+     * be no key or value for that segment.
+     */
+    [segmentRef: string]: boolean;
+  }
+
+  /**
+   * An interface for querying the status of a big segment store.
+   * 
+   * The big segment store is the component that receives information about big segments, normally
+   * from a database populated by the LaunchDarkly Relay Proxy. "Big segments" are a specific type
+   * of user segments. For more information, read the LaunchDarkly documentation about user
+   * segments: https://docs.launchdarkly.com/home/users
+   * 
+   * An implementation of this interface is returned by {@link LDClient.bigSegmentStoreStatusProvider}.
+   * Application code never needs to implement this interface.
+   * 
+   * Note that this type inherits from `EventEmitter`, so you can use the standard `on()`, `once()`,
+   * and `off()` methods to receive status change events. The standard `EventEmitter` methods are
+   * not documented here; see the {@link https://nodejs.org/api/events.html#events_class_eventemitter|Node API documentation}.
+   * The type of the status change event is `"change"`, and its value is the same value that would
+   * be returned by {@link getStatus}.
+   */
+  export interface BigSegmentStoreStatusProvider extends EventEmitter {
+    /**
+     * Gets the current status of the store, if known.
+     * 
+     * @returns a {@link BigSegmentStoreStatus}, or `undefined` if the SDK has not yet queried the
+     *   big segment store status
+     */
+    getStatus(): BigSegmentStoreStatus | undefined;
+
+    /**
+     * Gets the current status of the store, querying it if the status has not already been queried.
+     * 
+     * @returns a Promise for the status of the store
+     */
+    requireStatus(): Promise<BigSegmentStoreStatus>;
+  }
+
+  /**
+   * Information about the status of a big segment store, provided by {@link BigSegmentStoreStatusProvider}.
+   * 
+   * "Big segments" are a specific type of user segments. For more information, read the LaunchDarkly
+   * documentation about user segments: https://docs.launchdarkly.com/home/users
+   */
+  export interface BigSegmentStoreStatus {
+    /**
+     * True if the big segment store is able to respond to queries, so that the SDK can
+     * evaluate whether a user is in a segment or not.
+     * 
+     * If this property is false, the store is not able to make queries (for instance, it may not have
+     * a valid database connection). In this case, the SDK will treat any reference to a big segment
+     * as if no users are included in that segment. Also, the {@link LDEvaluationReason} associated
+     * with any flag evaluation that references a big segment when the store is not available will
+     * have a `bigSegmentsStatus` of `"STORE_ERROR"`.
+     */
+    available: boolean;
+
+    /**
+     * True if the big segment store is available, but has not been updated within the amount of time
+     * specified by {@link LDBigSegmentsOptions.staleAfter}.
+     * 
+     * This may indicate that the LaunchDarkly Relay Proxy, which populates the store, has stopped
+     * running or has become unable to receive fresh data from LaunchDarkly. Any feature flag
+     * evaluations that reference a big segment will be using the last known data, which may be out
+     * of date.
+     */
+    stale: boolean;
+  }
+
+  /**
+   * Used internally to describe the type of data being queried or updated, such as feature flags or
+   * user segments.
+   * 
+   * This is the actual type of the `kind` parameter in `LDFeatureStore` methods. Those methods are
+   * still declared as taking `any` for backward compatibility, but in the future they will reference
+   * this type.
+   */
+  export interface DataKind {
+    /**
+     * A string such as `"features"` or `"segments"` which can be used in keys to distinguish this
+     * kind of data from other kinds.
+     */
+    namespace: string;
+  }
+
+  /**
+   * Used internally to describe the basic properties of stored data such as feature flags or user
+   * segments.
+   * 
+   * This is the actual type of parameters and return values in `LDFeatureStore` methods that refer
+   * to a flag or segment item. Those methods still use the `object` type for backward compatibility.
+   */
+  export interface VersionedData {
+    /**
+     * The item's unique key, such as a feature flag key.
+     */
+    key: string;
+
+    /**
+     * A version number that LaunchDarkly will increment each time this item is changed.
+     */
+    version: number;
+
+    /**
+     * True if this is a deleted item placeholder (tombstone).
+     */
+    deleted?: boolean;
+  }
+
+  /**
+   * Used internally to describe a set of stored data items of the same kind, such as feature flags
+   * or user segments. The string key for each item is the same as the item's `key` property.
+   */
+  export type KeyedItems<T> = Record<string, T>;
+
+  /**
+   * Used internally for data store implementations that require items in an ordered list rather
+   * than as object properties.
+   */
+  export interface DataCollection<T> {
+    /**
+     * Describes the kind of items, such as feature flags or user segments.
+     */
+    kind: DataKind;
+
+    /**
+     * An ordered list of items of this kind.
+     */
+    items: Array<T>;
+  }
+
+  /**
+   * Used internally to describe a full set of environment data, which can include both feature
+   * flags and user segments. The string key for each item is the `namespace` property of a
+   * [[DataKind]].
+   */
+  export type FullDataSet<T> = Record<string, KeyedItems<T>>;
+
+  /**
+   * Base interface for a simplified subset of the functionality of `LDFeatureStore`, to be used in
+   * conjunction with `CachingStoreWrapper`.
+   * 
+   * @see [[PersistentDataStore]]
+   * @see [[PersistentDataStoreNonAtomic]]
+   */
+   export interface PersistentDataStoreBase {
+    /**
+     * Get an entity from the store.
+     *
+     * @param kind
+     *   The type of data to be accessed. The store should not make any assumptions about the format
+     *   of the data, but just return a JSON object.
+     *
+     * @param key
+     *   The unique key of the entity within the specified collection.
+     *
+     * @param callback
+     *   Will be called with the retrieved entity, or null if not found.
+     */
+    getInternal(kind: DataKind, key: string, callback: (res: VersionedData) => void): void;
+
+    /**
+     * Get all entities from a collection.
+     *
+     * The store should filter out any entities with the property `deleted: true`.
+     *
+     * @param kind
+     *   The type of data to be accessed. The store should not make any assumptions about the format
+     *   of the data, but just return an object in which each key is the `key` property of an entity
+     *   and the value is the entity. The actual type of this parameter is [[interfaces.DataKind]].
+     *
+     * @param callback
+     *   Will be called with the resulting map.
+     */
+    getAllInternal(kind: DataKind, callback: (res: KeyedItems<VersionedData>) => void): void;
+
+    /**
+     * Add an entity or update an existing entity.
+     *
+     * @param kind
+     *   The type of data to be accessed.
+     *
+     * @param item
+     *   The contents of the entity, as an object that can be converted to JSON. The store
+     *   should check the `version` property of this object, and should *not* overwrite any
+     *   existing data if the existing `version` is greater than or equal to that value.
+     *
+     * @param callback
+     *   Will be called after the upsert operation is complete.
+     */
+    upsertInternal(kind: DataKind, item: VersionedData, callback: (err: Error, finalItem: VersionedData) => void): void;
+
+    /**
+     * Tests whether the store is initialized.
+     *
+     * "Initialized" means that the store has been populated with data, either by the client
+     * having called `init()` within this process, or by another process (if this is a shared
+     * database).
+     *
+     * @param callback
+     *   Will be called back with the boolean result.
+     */
+    initializedInternal(callback: (isInitialized: boolean) => void): void;
+
+    /**
+     * Releases any resources being used by the feature store.
+     */
+    close(): void;
+  }
+
+  /**
+   * Interface for a simplified subset of the functionality of `LDFeatureStore`, to be used in
+   * conjunction with `CachingStoreWrapper`.
+   * 
+   * @see [[PersistentDataStoreNonAtomic]]
+   */
+  export interface PersistentDataStore extends PersistentDataStoreBase {
+    /**
+     * Initialize the store, overwriting any existing data.
+     *
+     * @param allData
+     *   An object in which each key is the "namespace" of a collection (e.g. `"features"`) and
+     *   the value is an object that maps keys to entities.
+     *
+     * @param callback
+     *   Will be called when the store has been initialized.
+     */
+    initInternal(allData: FullDataSet<VersionedData>, callback: () => void): void;
+  }
+
+  /**
+   * Interface for a simplified subset of the functionality of `LDFeatureStore`, to be used in
+   * conjunction with `CachingStoreWrapper`.
+   * 
+   * This is a variant of [[PersistentDataStore]] for databases that require somewhat different
+   * initialization semantics, where we must specify a consistent ordering of writes.
+   * 
+   * @see [[PersistentDataStore]]
+   */
+   export interface PersistentDataStoreNonAtomic {
+    /**
+     * Initialize the store, overwriting any existing data.
+     *
+     * @param allData
+     *   A list of data item collections in the order they should be written.
+     *
+     * @param callback
+     *   Will be called when the store has been initialized.
+     */
+    initOrderedInternal(allData: Array<DataCollection<VersionedData>>, callback: () => void): void;
   }
 }
 
@@ -1463,15 +1653,44 @@ declare module 'launchdarkly-node-server-sdk/requestor' {
   export = Requestor;
 }
 
-declare module 'launchdarkly-node-server-sdk/feature_store' {
+/**
+ * @ignore
+ */
+ declare module 'launchdarkly-node-server-sdk/feature_store' {
   import { LDFeatureStore } from 'launchdarkly-node-server-sdk';
 
   function InMemoryFeatureStore(): LDFeatureStore;
   export = InMemoryFeatureStore;
 }
 
-declare module 'launchdarkly-node-server-sdk/sharedtest/store_tests' {
+/**
+ * @ignore
+ */
+ declare module 'launchdarkly-node-server-sdk/caching_store_wrapper' {
+  import { LDFeatureStore } from 'launchdarkly-node-server-sdk';
+  import { PersistentDataStore, PersistentDataStoreNonAtomic } from 'launchdarkly-node-server-sdk/interfaces';
+
+  /**
+   * Creates a feature store implementation with standard caching behavior for a persistent store.
+   * 
+   * @param storeImplementation internal implementation object for a specific database type
+   * @param ttl cache TTL in seconds, or 0 for no caching
+   * @param description name of the database
+   * @returns the decorated store implementation
+   */
+  export default function CachingStoreWrapper(
+    storeImplementation: PersistentDataStore | PersistentDataStoreNonAtomic,
+    ttl: number,
+    description: string
+  ): LDFeatureStore;
+}
+
+/**
+ * @ignore
+ */
+ declare module 'launchdarkly-node-server-sdk/sharedtest/store_tests' {
   import * as ld from 'launchdarkly-node-server-sdk';
+  import * as interfaces from 'launchdarkly-node-server-sdk/interfaces';
 
   /**
    * A standard test suite that should be run on every persistent feature store implementation.
@@ -1535,9 +1754,9 @@ declare module 'launchdarkly-node-server-sdk/sharedtest/store_tests' {
    * @param setSegments An asynchronous function that sets a user's big segment state.
    */
   export function runBigSegmentStoreTests(
-    createStore: (prefix: string, logger: ld.LDLogger) => ld.interfaces.BigSegmentStore,
+    createStore: (prefix: string, logger: ld.LDLogger) => interfaces.BigSegmentStore,
     clearExistingData: (prefix: string) => Promise<void>,
-    setMetadata: (prefix: string, metadata: ld.interfaces.BigSegmentStoreMetadata) => Promise<void>,
+    setMetadata: (prefix: string, metadata: interfaces.BigSegmentStoreMetadata) => Promise<void>,
     setSegments: (prefix: string, userHashKey: string, included: string[], excluded: string[]) => Promise<void>
   ): void;
 }
