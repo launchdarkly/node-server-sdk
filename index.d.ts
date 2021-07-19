@@ -1671,18 +1671,38 @@ declare module 'launchdarkly-node-server-sdk/requestor' {
   import { PersistentDataStore, PersistentDataStoreNonAtomic } from 'launchdarkly-node-server-sdk/interfaces';
 
   /**
-   * Creates a feature store implementation with standard caching behavior for a persistent store.
-   * 
-   * @param storeImplementation internal implementation object for a specific database type
-   * @param ttl cache TTL in seconds, or 0 for no caching
-   * @param description name of the database
-   * @returns the decorated store implementation
+   * A base feature store implementation used by database integrations.
    */
-  export default function CachingStoreWrapper(
-    storeImplementation: PersistentDataStore | PersistentDataStoreNonAtomic,
-    ttl: number,
-    description: string
-  ): LDFeatureStore;
+  class CachingStoreWrapper implements LDFeatureStore
+  {
+    /**
+     * Creates a feature store implementation with standard caching behavior for a persistent store.
+     * 
+     * @param storeImplementation internal implementation object for a specific database type
+     * @param ttl cache TTL in seconds, or 0 for no caching
+     * @param description name of the database
+     */
+    public constructor(
+      storeImplementation: PersistentDataStore | PersistentDataStoreNonAtomic,
+      ttl: number,
+      description: string
+    );
+
+    public get(kind: object, key: string, callback: (res: object) => void): void;
+
+    public all(kind: object, callback: (res: object) => void): void;
+
+    public init(allData: object, callback: () => void): void;
+
+    public delete(kind: object, key: string, version: string, callback: () => void): void;
+
+    public upsert(kind: object, data: object, callback: () => void): void;
+
+    public initialized(callback: (isInitialized: boolean) => void): void;
+
+    public close(): void;
+  }
+  export = CachingStoreWrapper;
 }
 
 /**
