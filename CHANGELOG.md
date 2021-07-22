@@ -2,6 +2,10 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [6.2.0] - 2021-07-22
+### Added:
+- The SDK now supports evaluation of Big Segments. An Early Access Program for creating and syncing Big Segments from customer data platforms is available to enterprise customers.
+
 ## [6.1.0] - 2021-06-21
 ### Added:
 - The SDK now supports the ability to control the proportion of traffic allocation to an experiment. This works in conjunction with a new platform feature now available to early access customers.
