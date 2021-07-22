@@ -3,8 +3,8 @@
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<title>LDEvaluationReason | LaunchDarkly Server-Side Node SDK (6.1.0)</title>
-	<meta name="description" content="Documentation for LaunchDarkly Server-Side Node SDK (6.1.0)">
+	<title>LDEvaluationReason | LaunchDarkly Server-Side Node SDK (6.2.0)</title>
+	<meta name="description" content="Documentation for LaunchDarkly Server-Side Node SDK (6.2.0)">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="../assets/css/main.css">
 </head>
@@ -22,7 +22,7 @@
 						<li class="state loading">Preparing search index...</li>
 						<li class="state failure">The search index is not available</li>
 					</ul>
-					<a href="../index.html" class="title">LaunchDarkly Server-Side Node SDK (6.1.0)</a>
+					<a href="../index.html" class="title">LaunchDarkly Server-Side Node SDK (6.2.0)</a>
 				</div>
 				<div class="table-cell" id="tsd-widgets">
 					<div id="tsd-filter">
@@ -89,7 +89,9 @@
 						<section class="tsd-index-section ">
 							<h3>Properties</h3>
 							<ul class="tsd-index-list">
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldevaluationreason.html#bigsegmentsstatus" class="tsd-kind-icon">big<wbr>Segments<wbr>Status</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldevaluationreason.html#errorkind" class="tsd-kind-icon">error<wbr>Kind</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldevaluationreason.html#inexperiment" class="tsd-kind-icon">in<wbr>Experiment</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldevaluationreason.html#kind" class="tsd-kind-icon">kind</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldevaluationreason.html#prerequisitekey" class="tsd-kind-icon">prerequisite<wbr>Key</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldevaluationreason.html#ruleid" class="tsd-kind-icon">rule<wbr>Id</a></li>
@@ -102,12 +104,38 @@
 			<section class="tsd-panel-group tsd-member-group ">
 				<h2>Properties</h2>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
+					<a name="bigsegmentsstatus" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagOptional">Optional</span> big<wbr>Segments<wbr>Status</h3>
+					<div class="tsd-signature tsd-kind-icon">big<wbr>Segments<wbr>Status<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">"HEALTHY"</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">"STALE"</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">"NOT_CONFIGURED"</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">"STORE_ERROR"</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L167">index.d.ts:167</a></li>
+						</ul>
+					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>Describes the validity of big segment information, if and only if the flag evaluation
+							required querying at least one big segment.</p>
+						</div>
+						<ul>
+							<li><code>&#39;HEALTHY&#39;</code>: The big segment query involved in the flag evaluation was successful, and
+							the segment state is considered up to date.</li>
+							<li><code>&#39;STALE&#39;</code>: The big segment query involved in the flag evaluation was successful, but
+							the segment state may not be up to date</li>
+							<li><code>&#39;NOT_CONFIGURED&#39;</code>: Big segments could not be queried for the flag evaluation because
+							the SDK configuration did not include a big segment store.</li>
+							<li><code>&#39;STORE_ERROR&#39;</code>: The big segment query involved in the flag evaluation failed, for
+							instance due to a database error.</li>
+						</ul>
+					</div>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
 					<a name="errorkind" class="tsd-anchor"></a>
 					<h3><span class="tsd-flag ts-flagOptional">Optional</span> error<wbr>Kind</h3>
 					<div class="tsd-signature tsd-kind-icon">error<wbr>Kind<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L128">index.d.ts:128</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L129">index.d.ts:129</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -117,12 +145,29 @@
 					</div>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
+					<a name="inexperiment" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagOptional">Optional</span> in<wbr>Experiment</h3>
+					<div class="tsd-signature tsd-kind-icon">in<wbr>Experiment<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">false</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">true</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L152">index.d.ts:152</a></li>
+						</ul>
+					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>Whether the evaluation was part of an experiment.</p>
+						</div>
+						<p>This is true if the evaluation resulted in an experiment rollout and served one of
+						the variations in the experiment. Otherwise it is false or undefined.</p>
+					</div>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
 					<a name="kind" class="tsd-anchor"></a>
 					<h3>kind</h3>
 					<div class="tsd-signature tsd-kind-icon">kind<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L123">index.d.ts:123</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L124">index.d.ts:124</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -147,7 +192,7 @@
 					<div class="tsd-signature tsd-kind-icon">prerequisite<wbr>Key<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L143">index.d.ts:143</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L144">index.d.ts:144</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -162,7 +207,7 @@
 					<div class="tsd-signature tsd-kind-icon">rule<wbr>Id<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L138">index.d.ts:138</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L139">index.d.ts:139</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -177,7 +222,7 @@
 					<div class="tsd-signature tsd-kind-icon">rule<wbr>Index<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L133">index.d.ts:133</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L134">index.d.ts:134</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -205,6 +250,9 @@
 						<a href="_launchdarkly_node_server_sdk_.filedatasourceoptions.html" class="tsd-kind-icon">File<wbr>Data<wbr>Source<wbr>Options</a>
 					</li>
 					<li class=" tsd-kind-interface tsd-parent-kind-module">
+						<a href="_launchdarkly_node_server_sdk_.ldbigsegmentsoptions.html" class="tsd-kind-icon">LDBig<wbr>Segments<wbr>Options</a>
+					</li>
+					<li class=" tsd-kind-interface tsd-parent-kind-module">
 						<a href="_launchdarkly_node_server_sdk_.ldclient.html" class="tsd-kind-icon">LDClient</a>
 					</li>
 					<li class=" tsd-kind-interface tsd-parent-kind-module">
@@ -216,7 +264,13 @@
 						<a href="_launchdarkly_node_server_sdk_.ldevaluationreason.html" class="tsd-kind-icon">LDEvaluation<wbr>Reason</a>
 						<ul>
 							<li class=" tsd-kind-property tsd-parent-kind-interface">
+								<a href="_launchdarkly_node_server_sdk_.ldevaluationreason.html#bigsegmentsstatus" class="tsd-kind-icon">big<wbr>Segments<wbr>Status</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-interface">
 								<a href="_launchdarkly_node_server_sdk_.ldevaluationreason.html#errorkind" class="tsd-kind-icon">error<wbr>Kind</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-interface">
+								<a href="_launchdarkly_node_server_sdk_.ldevaluationreason.html#inexperiment" class="tsd-kind-icon">in<wbr>Experiment</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-interface">
 								<a href="_launchdarkly_node_server_sdk_.ldevaluationreason.html#kind" class="tsd-kind-icon">kind</a>
@@ -286,9 +340,11 @@
 				<li class="tsd-kind-namespace"><span class="tsd-kind-icon">Namespace</span></li>
 				<li class="tsd-kind-function"><span class="tsd-kind-icon">Function</span></li>
 				<li class="tsd-kind-type-alias"><span class="tsd-kind-icon">Type alias</span></li>
+				<li class="tsd-kind-type-alias tsd-has-type-parameter"><span class="tsd-kind-icon">Type alias with type parameter</span></li>
 			</ul>
 			<ul class="tsd-legend">
 				<li class="tsd-kind-interface"><span class="tsd-kind-icon">Interface</span></li>
+				<li class="tsd-kind-interface tsd-has-type-parameter"><span class="tsd-kind-icon">Interface with type parameter</span></li>
 				<li class="tsd-kind-property tsd-parent-kind-interface"><span class="tsd-kind-icon">Property</span></li>
 			</ul>
 		</div>

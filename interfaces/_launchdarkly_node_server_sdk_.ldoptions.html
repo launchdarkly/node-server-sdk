@@ -3,8 +3,8 @@
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<title>LDOptions | LaunchDarkly Server-Side Node SDK (6.1.0)</title>
-	<meta name="description" content="Documentation for LaunchDarkly Server-Side Node SDK (6.1.0)">
+	<title>LDOptions | LaunchDarkly Server-Side Node SDK (6.2.0)</title>
+	<meta name="description" content="Documentation for LaunchDarkly Server-Side Node SDK (6.2.0)">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="../assets/css/main.css">
 </head>
@@ -22,7 +22,7 @@
 						<li class="state loading">Preparing search index...</li>
 						<li class="state failure">The search index is not available</li>
 					</ul>
-					<a href="../index.html" class="title">LaunchDarkly Server-Side Node SDK (6.1.0)</a>
+					<a href="../index.html" class="title">LaunchDarkly Server-Side Node SDK (6.2.0)</a>
 				</div>
 				<div class="table-cell" id="tsd-widgets">
 					<div id="tsd-filter">
@@ -90,6 +90,7 @@
 							<ul class="tsd-index-list">
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldoptions.html#allattributesprivate" class="tsd-kind-icon">all<wbr>Attributes<wbr>Private</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldoptions.html#baseuri" class="tsd-kind-icon">base<wbr>Uri</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldoptions.html#bigsegments" class="tsd-kind-icon">big<wbr>Segments</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldoptions.html#capacity" class="tsd-kind-icon">capacity</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldoptions.html#diagnosticoptout" class="tsd-kind-icon">diagnostic<wbr>Opt<wbr>Out</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_launchdarkly_node_server_sdk_.ldoptions.html#diagnosticrecordinginterval" class="tsd-kind-icon">diagnostic<wbr>Recording<wbr>Interval</a></li>
@@ -130,7 +131,7 @@
 					<div class="tsd-signature tsd-kind-icon">all<wbr>Attributes<wbr>Private<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">false</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">true</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L322">index.d.ts:322</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L359">index.d.ts:359</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -147,7 +148,7 @@
 					<div class="tsd-signature tsd-kind-icon">base<wbr>Uri<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L182">index.d.ts:182</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L206">index.d.ts:206</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -158,12 +159,33 @@
 					</div>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
+					<a name="bigsegments" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagOptional">Optional</span> big<wbr>Segments</h3>
+					<div class="tsd-signature tsd-kind-icon">big<wbr>Segments<span class="tsd-signature-symbol">:</span> <a href="_launchdarkly_node_server_sdk_.ldbigsegmentsoptions.html" class="tsd-signature-type">LDBigSegmentsOptions</a></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L272">index.d.ts:272</a></li>
+						</ul>
+					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>Additional parameters for configuring the SDK&#39;s big segments behavior.</p>
+						</div>
+						<p>&quot;Big segments&quot; are a specific type of user segments. For more information, read the
+						LaunchDarkly documentation about user segments: <a href="https://docs.launchdarkly.com/home/users">https://docs.launchdarkly.com/home/users</a></p>
+						<p>By default, there is no configuration and big segments cannot be evaluated. In this
+							case, any flag evaluation that references a big segment will behave as if no users
+							are included in any big segments, and the <a href="_launchdarkly_node_server_sdk_.ldevaluationreason.html">LDEvaluationReason</a> associated with any
+						such flag evaluation will have a <code>bigSegmentsStatus</code> of <code>&quot;NOT_CONFIGURED&quot;</code>.</p>
+					</div>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
 					<a name="capacity" class="tsd-anchor"></a>
 					<h3><span class="tsd-flag ts-flagOptional">Optional</span> capacity</h3>
 					<div class="tsd-signature tsd-kind-icon">capacity<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L209">index.d.ts:209</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L233">index.d.ts:233</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -180,7 +202,7 @@
 					<div class="tsd-signature tsd-kind-icon">diagnostic<wbr>Opt<wbr>Out<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">false</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">true</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L371">index.d.ts:371</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L408">index.d.ts:408</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -200,7 +222,7 @@
 					<div class="tsd-signature tsd-kind-icon">diagnostic<wbr>Recording<wbr>Interval<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L378">index.d.ts:378</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L415">index.d.ts:415</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -216,7 +238,7 @@
 					<div class="tsd-signature tsd-kind-icon">events<wbr>Uri<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L196">index.d.ts:196</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L220">index.d.ts:220</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -232,7 +254,7 @@
 					<div class="tsd-signature tsd-kind-icon">feature<wbr>Store<span class="tsd-signature-symbol">:</span> <a href="_launchdarkly_node_server_sdk_.ldfeaturestore.html" class="tsd-signature-type">LDFeatureStore</a><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">(</span>options<span class="tsd-signature-symbol">: </span><a href="_launchdarkly_node_server_sdk_.ldoptions.html" class="tsd-signature-type">LDOptions</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><a href="_launchdarkly_node_server_sdk_.ldfeaturestore.html" class="tsd-signature-type">LDFeatureStore</a><span class="tsd-signature-symbol">)</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L235">index.d.ts:235</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L259">index.d.ts:259</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -253,7 +275,7 @@
 					<div class="tsd-signature tsd-kind-icon">flush<wbr>Interval<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L248">index.d.ts:248</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L285">index.d.ts:285</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -268,7 +290,7 @@
 					<div class="tsd-signature tsd-kind-icon">inline<wbr>Users<wbr>InEvents<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">false</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">true</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L336">index.d.ts:336</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L373">index.d.ts:373</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -285,7 +307,7 @@
 					<div class="tsd-signature tsd-kind-icon">logger<span class="tsd-signature-symbol">:</span> <a href="_launchdarkly_node_server_sdk_.ldlogger.html" class="tsd-signature-type">LDLogger</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L222">index.d.ts:222</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L246">index.d.ts:246</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -306,7 +328,7 @@
 					<div class="tsd-signature tsd-kind-icon">offline<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">false</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">true</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L281">index.d.ts:281</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L318">index.d.ts:318</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -321,7 +343,7 @@
 					<div class="tsd-signature tsd-kind-icon">poll<wbr>Interval<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L253">index.d.ts:253</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L290">index.d.ts:290</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -336,7 +358,7 @@
 					<div class="tsd-signature tsd-kind-icon">private<wbr>Attribute<wbr>Names<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Array</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L328">index.d.ts:328</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L365">index.d.ts:365</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -352,7 +374,7 @@
 					<div class="tsd-signature tsd-kind-icon">proxy<wbr>Auth<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L276">index.d.ts:276</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L313">index.d.ts:313</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -368,7 +390,7 @@
 					<div class="tsd-signature tsd-kind-icon">proxy<wbr>Host<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L258">index.d.ts:258</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L295">index.d.ts:295</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -383,7 +405,7 @@
 					<div class="tsd-signature tsd-kind-icon">proxy<wbr>Port<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L265">index.d.ts:265</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L302">index.d.ts:302</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -399,7 +421,7 @@
 					<div class="tsd-signature tsd-kind-icon">proxy<wbr>Scheme<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L270">index.d.ts:270</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L307">index.d.ts:307</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -414,7 +436,7 @@
 					<div class="tsd-signature tsd-kind-icon">send<wbr>Events<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">false</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">true</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L314">index.d.ts:314</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L351">index.d.ts:351</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -429,7 +451,7 @@
 					<div class="tsd-signature tsd-kind-icon">stream<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">false</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">true</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L289">index.d.ts:289</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L326">index.d.ts:326</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -446,7 +468,7 @@
 					<div class="tsd-signature tsd-kind-icon">stream<wbr>Initial<wbr>Reconnect<wbr>Delay<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L300">index.d.ts:300</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L337">index.d.ts:337</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -465,7 +487,7 @@
 					<div class="tsd-signature tsd-kind-icon">stream<wbr>Uri<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L189">index.d.ts:189</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L213">index.d.ts:213</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -481,7 +503,7 @@
 					<div class="tsd-signature tsd-kind-icon">timeout<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L201">index.d.ts:201</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L225">index.d.ts:225</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -496,7 +518,7 @@
 					<div class="tsd-signature tsd-kind-icon">tls<wbr>Params<span class="tsd-signature-symbol">:</span> <a href="_launchdarkly_node_server_sdk_.ldtlsoptions.html" class="tsd-signature-type">LDTLSOptions</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L360">index.d.ts:360</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L397">index.d.ts:397</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -513,7 +535,7 @@
 					<div class="tsd-signature tsd-kind-icon">update<wbr>Processor<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">object</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L243">index.d.ts:243</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L280">index.d.ts:280</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -530,7 +552,7 @@
 					<div class="tsd-signature tsd-kind-icon">use<wbr>Ldd<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">false</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">true</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L309">index.d.ts:309</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L346">index.d.ts:346</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -548,7 +570,7 @@
 					<div class="tsd-signature tsd-kind-icon">user<wbr>Keys<wbr>Capacity<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L344">index.d.ts:344</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L381">index.d.ts:381</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -565,7 +587,7 @@
 					<div class="tsd-signature tsd-kind-icon">user<wbr>Keys<wbr>Flush<wbr>Interval<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L352">index.d.ts:352</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L389">index.d.ts:389</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -582,7 +604,7 @@
 					<div class="tsd-signature tsd-kind-icon">wrapper<wbr>Name<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L386">index.d.ts:386</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L423">index.d.ts:423</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -599,7 +621,7 @@
 					<div class="tsd-signature tsd-kind-icon">wrapper<wbr>Version<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/930627f/index.d.ts#L394">index.d.ts:394</a></li>
+							<li>Defined in <a href="https://github.com/launchdarkly/node-server-sdk/blob/559d682/index.d.ts#L431">index.d.ts:431</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -627,6 +649,9 @@
 					</li>
 					<li class=" tsd-kind-interface tsd-parent-kind-module">
 						<a href="_launchdarkly_node_server_sdk_.filedatasourceoptions.html" class="tsd-kind-icon">File<wbr>Data<wbr>Source<wbr>Options</a>
+					</li>
+					<li class=" tsd-kind-interface tsd-parent-kind-module">
+						<a href="_launchdarkly_node_server_sdk_.ldbigsegmentsoptions.html" class="tsd-kind-icon">LDBig<wbr>Segments<wbr>Options</a>
 					</li>
 					<li class=" tsd-kind-interface tsd-parent-kind-module">
 						<a href="_launchdarkly_node_server_sdk_.ldclient.html" class="tsd-kind-icon">LDClient</a>
@@ -662,6 +687,9 @@
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-interface">
 								<a href="_launchdarkly_node_server_sdk_.ldoptions.html#baseuri" class="tsd-kind-icon">base<wbr>Uri</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-interface">
+								<a href="_launchdarkly_node_server_sdk_.ldoptions.html#bigsegments" class="tsd-kind-icon">big<wbr>Segments</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-interface">
 								<a href="_launchdarkly_node_server_sdk_.ldoptions.html#capacity" class="tsd-kind-icon">capacity</a>
@@ -782,9 +810,11 @@
 				<li class="tsd-kind-namespace"><span class="tsd-kind-icon">Namespace</span></li>
 				<li class="tsd-kind-function"><span class="tsd-kind-icon">Function</span></li>
 				<li class="tsd-kind-type-alias"><span class="tsd-kind-icon">Type alias</span></li>
+				<li class="tsd-kind-type-alias tsd-has-type-parameter"><span class="tsd-kind-icon">Type alias with type parameter</span></li>
 			</ul>
 			<ul class="tsd-legend">
 				<li class="tsd-kind-interface"><span class="tsd-kind-icon">Interface</span></li>
+				<li class="tsd-kind-interface tsd-has-type-parameter"><span class="tsd-kind-icon">Interface with type parameter</span></li>
 				<li class="tsd-kind-property tsd-parent-kind-interface"><span class="tsd-kind-icon">Property</span></li>
 			</ul>
 		</div>
