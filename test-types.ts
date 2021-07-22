@@ -5,6 +5,7 @@
 // developer can use all of the SDK features.
 
 import * as ld from 'launchdarkly-node-server-sdk';
+import * as interfaces from 'launchdarkly-node-server-sdk/interfaces';
 
 var logger: ld.LDLogger = {
   error: (...args) => { },
@@ -94,3 +95,8 @@ client.allFlagsState(user).then((flagSet: ld.LDFlagsState) => { });
 var logger1: ld.LDLogger = ld.basicLogger();
 var logger2: ld.LDLogger = ld.basicLogger({ level: 'info' });
 var logger3: ld.LDLogger = ld.basicLogger({ destination: console.log });
+
+// BigSegmentStoreStatusProvider
+var bsssp: interfaces.BigSegmentStoreStatusProvider = client.bigSegmentStoreStatusProvider
+var bssStatus: interfaces.BigSegmentStoreStatus | undefined = bsssp.getStatus();
+bsssp.requireStatus().then((value: interfaces.BigSegmentStoreStatus) => { });
