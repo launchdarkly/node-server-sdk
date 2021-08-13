@@ -6,7 +6,7 @@
  * In typical usage, you will call [[init]] once at startup time to obtain an instance of
  * [[LDClient]], which provides access to all of the SDK's functionality.
  *
- * For more information, see the [SDK reference guide](http://docs.launchdarkly.com/docs/node-sdk-reference).
+ * For more information, see the [SDK reference guide](https://docs.launchdarkly.com/sdk/server-side/node-js).
  */
 
 declare module 'launchdarkly-node-server-sdk' {
@@ -28,7 +28,7 @@ declare module 'launchdarkly-node-server-sdk' {
    * The client will begin attempting to connect to LaunchDarkly as soon as it is created. To
    * determine when it is ready to use, call [[LDClient.waitForInitialization]], or register an
    * event listener for the `"ready"` event using [[LDClient.on]].
-   * 
+   *
    * **Important:** Do **not** try to instantiate `LDClient` with its constructor (`new LDClient()`); the SDK
    * does not currently support this.
    *
@@ -83,7 +83,7 @@ declare module 'launchdarkly-node-server-sdk' {
      *   The flag key.
      */
     getFlagReason(key: string): LDEvaluationReason;
-    
+
     /**
      * Returns a map of feature flag keys to values. If a flag would have evaluated to the
      * default value, its value will be null.
@@ -145,16 +145,16 @@ declare module 'launchdarkly-node-server-sdk' {
 
     /**
      * Whether the evaluation was part of an experiment.
-     * 
+     *
      * This is true if the evaluation resulted in an experiment rollout and served one of
      * the variations in the experiment. Otherwise it is false or undefined.
      */
     inExperiment?: boolean;
 
     /**
-     * Describes the validity of big segment information, if and only if the flag evaluation 
+     * Describes the validity of big segment information, if and only if the flag evaluation
      * required querying at least one big segment.
-     * 
+     *
      * - `'HEALTHY'`: The big segment query involved in the flag evaluation was successful, and
      *   the segment state is considered up to date.
      * - `'STALE'`: The big segment query involved in the flag evaluation was successful, but
@@ -173,7 +173,7 @@ declare module 'launchdarkly-node-server-sdk' {
    *
    * This is the result of calling [[LDClient.variationDetail]].
    *
-   * For more information, see the [SDK reference guide](https://docs.launchdarkly.com/docs/evaluation-reasons).
+   * For more information, see the [SDK reference guide](https://docs.launchdarkly.com/sdk/features/evaluation-reasons#nodejs-server-side).
    */
   export interface LDEvaluationDetail {
     /**
@@ -239,7 +239,7 @@ declare module 'launchdarkly-node-server-sdk' {
      * For a simple implementation that lets you filter by log level, see
      * [[basicLogger]]. You can also use an instance of `winston.Logger` from
      * the Winston logging package.
-     * 
+     *
      * If you do not set this property, the SDK uses [[basicLogger]] with a
      * minimum level of `info`.
      */
@@ -250,8 +250,8 @@ declare module 'launchdarkly-node-server-sdk' {
      *
      * By default, this is an in-memory data structure. Database integrations are also
      * available, as described in the
-     * [SDK features guide](https://docs.launchdarkly.com/sdk/features/database-integrations).
-     * 
+     * [SDK features guide](https://docs.launchdarkly.com/sdk/concepts/data-stores).
+     *
      * Some implementations provide the store implementation object itself, while others
      * provide a factory function that creates the store implementation based on the SDK
      * configuration; this property accepts either.
@@ -260,10 +260,10 @@ declare module 'launchdarkly-node-server-sdk' {
 
     /**
      * Additional parameters for configuring the SDK's big segments behavior.
-     * 
+     *
      * "Big segments" are a specific type of user segments. For more information, read the
-     * LaunchDarkly documentation about user segments: https://docs.launchdarkly.com/home/users
-     * 
+     * LaunchDarkly documentation about user segments: https://docs.launchdarkly.com/home/users/big-segments
+     *
      * By default, there is no configuration and big segments cannot be evaluated. In this
      * case, any flag evaluation that references a big segment will behave as if no users
      * are included in any big segments, and the {@link LDEvaluationReason} associated with any
@@ -391,7 +391,7 @@ declare module 'launchdarkly-node-server-sdk' {
     /**
      * Additional parameters to pass to the Node HTTPS API for secure requests.  These can include any
      * of the TLS-related parameters supported by `https.request()`, such as `ca`, `cert`, and `key`.
-     * 
+     *
      * For more information, see the Node documentation for `https.request()` and `tls.connect()`.
      */
     tlsParams?: LDTLSOptions;
@@ -433,16 +433,16 @@ declare module 'launchdarkly-node-server-sdk' {
 
   /**
    * Additional parameters for configuring the SDK's big segments behavior.
-   * 
+   *
    * "Big segments" are a specific type of user segments. For more information, read the LaunchDarkly
-   * documentation about user segments: https://docs.launchdarkly.com/home/users
-   * 
+   * documentation about user segments: https://docs.launchdarkly.com/home/users/big-segments
+   *
    * @see {@link LDOptions.bigSegments}
    */
   export interface LDBigSegmentsOptions {
     /**
      * Specifies the storage component that provides big segments data.
-     * 
+     *
      * This property is mandatory. It must be obtained from one of the SDK's database integrations,
      * such as https://github.com/launchdarkly/node-server-sdk-redis. You will normally specify a
      * database implementation that matches how the LaunchDarkly Relay Proxy is configured, since the
@@ -452,18 +452,18 @@ declare module 'launchdarkly-node-server-sdk' {
 
     /**
      * The maximum number of users whose big segment state will be cached by the SDK at any given time.
-     * 
+     *
      * To reduce database traffic, the SDK maintains a least-recently-used cache by user key. When a feature
      * flag that references a big segment is evaluated for some user who is not currently in the cache, the
      * SDK queries the database for all big segment memberships of that user, and stores them together in a
      * single cache entry. If the cache is full, the oldest entry is dropped.
-     * 
+     *
      * A higher value for `userCacheSize` means that database queries for big segments will be done
      * less often for recently-referenced users, if the application has many users, at the cost of
      * increased memory used by the cache.
-     * 
+     *
      * Cache entries can also expire based on the setting of {@link userCacheTime}.
-     * 
+     *
      * If not specified, the default value is 1000.
      */
     userCacheSize?: number;
@@ -471,11 +471,11 @@ declare module 'launchdarkly-node-server-sdk' {
     /**
      * The maximum length of time that the big segment state for a user will be cached by the SDK,
      * in seconds.
-     * 
+     *
      * See {@link userCacheSize} for more about this cache. A higher value for `userCacheTime` means
      * that database queries for the big segment state of any given user will be done less often, but
      * that changes to segment membership may not be detected as soon.
-     * 
+     *
      * If not specified, the default value is 5. Negative values are changed to the default.
      */
     userCacheTime?: number;
@@ -483,7 +483,7 @@ declare module 'launchdarkly-node-server-sdk' {
     /**
      * The interval at which the SDK will poll the big segment store to make sure it is available
      * and to determine how long ago it was updated, in seconds.
-     * 
+     *
      * If not specified, the default value is 5. Zero or negative values are changed to the default.
      */
     statusPollInterval?: number;
@@ -491,17 +491,17 @@ declare module 'launchdarkly-node-server-sdk' {
     /**
      * The maximum length of time between updates of the big segments data before the data is
      * considered out of date, in seconds.
-     * 
+     *
      * Normally, the LaunchDarkly Relay Proxy updates a timestamp in the big segments store at intervals to
      * confirm that it is still in sync with the LaunchDarkly data, even if there have been no changes to the
      * If the timestamp falls behind the current time by the amount specified in `staleAfter`, the SDK
      * assumes that something is not working correctly in this process and that the data may not be accurate.
-     * 
+     *
      * While in a stale state, the SDK will still continue using the last known data, but the status from
      * {@link interfaces.BigSegmentStoreStatusProvider.getStatus} will have `stale: true`, and any
      * {@link LDEvaluationReason} generated from a feature flag that references a big segment will have a
      * `bigSegmentsStatus` of `"STALE"`.
-     * 
+     *
      * If not specified, the default value is 120 (two minutes). Zero or negative values are changed to
      * the default.
      */
@@ -511,7 +511,7 @@ declare module 'launchdarkly-node-server-sdk' {
   /**
    * Additional parameters to pass to the Node HTTPS API for secure requests.  These can include any
    * of the TLS-related parameters supported by `https.request()`, such as `ca`, `cert`, and `key`.
-   * 
+   *
    * For more information, see the Node documentation for `https.request()` and `tls.connect()`.
    */
   export interface LDTLSOptions {
@@ -539,7 +539,7 @@ declare module 'launchdarkly-node-server-sdk' {
     /**
      * An optional secondary key for a user.
      *
-     * This affects [feature flag targeting](https://docs.launchdarkly.com/docs/targeting-users#section-targeting-rules-based-on-user-attributes)
+     * This affects [feature flag targeting](https://docs.launchdarkly.com/home/flags/targeting-users#targeting-rules-based-on-user-attributes)
      * as follows: if you have chosen to bucket users by a specific attribute, the secondary key (if set)
      * is used to further distinguish between users who are otherwise identical according to that attribute.
      */
@@ -622,11 +622,11 @@ declare module 'launchdarkly-node-server-sdk' {
    * `debug`. It will call the corresponding method of the `LDLogger` either with a
    * single string argument, or with a format string and variable arguments in the
    * format used by Node's `util.format()`.
-   * 
+   *
    * The [Winston](https://github.com/winstonjs/winston) logging package provides a
    * logger that conforms to this interface, so if you have created a logger with
    * Winston, you can simply put it into the [[LDOptions.logger]] property.
-   * 
+   *
    * If you do not provide a logger object, the SDK uses the [[basicLogger]]
    * implementation with a minimum level of `info`.
    */
@@ -669,9 +669,9 @@ declare module 'launchdarkly-node-server-sdk' {
    *
    * The feature store is what the client uses to store feature flag data that has been received
    * from LaunchDarkly. By default, it uses an in-memory implementation; database integrations are
-   * also available (see the [SDK features guide](https://docs.launchdarkly.com/sdk/features/database-integrations).
+   * also available. Read the [SDK features guide](https://docs.launchdarkly.com/sdk/concepts/data-stores).
    * You will not need to use this interface unless you are writing your own implementation.
-   * 
+   *
    * Feature store methods can and should call their callbacks directly whenever possible, rather
    * than deferring them with setImmediate() or process.nextTick(). This means that if for any
    * reason you are updating or querying a feature store directly in your application code (which
@@ -849,7 +849,7 @@ declare module 'launchdarkly-node-server-sdk' {
    * {@link https://nodejs.org/api/events.html#events_class_eventemitter|Node API documentation}. For a
    * description of events you can listen for, see [[on]].
    *
-   * @see {@link http://docs.launchdarkly.com/docs/node-sdk-reference|SDK Reference Guide}
+   * @see {@link https://docs.launchdarkly.com/sdk/server-side/node-js|SDK Reference Guide}
    */
   export interface LDClient extends EventEmitter {
     /**
@@ -875,18 +875,18 @@ declare module 'launchdarkly-node-server-sdk' {
      *
      * Note that you can also use event listeners ([[on]]) for the same purpose: the event `"ready"`
      * indicates success, and `"failed"` indicates failure.
-     * 
+     *
      * There is no built-in timeout for this method. If you want your code to stop waiting on the
      * Promise after some amount of time, you could use
      * {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/race|`Promise.race()`}
      * or one of the several NPM helper packages that provides a standard mechanism for this. Regardless
      * of whether you continue to wait, the SDK will still retry all connection failures indefinitely
      * unless it gets an unrecoverable error as described above.
-     * 
+     *
      * @returns
      *   A Promise that will be resolved if the client initializes successfully, or rejected if it
      *   fails. If successful, the result is the same client object.
-     * 
+     *
      * @example
      * This example shows use of Promise chaining methods for specifying handlers:
      * ```javascript
@@ -940,7 +940,7 @@ declare module 'launchdarkly-node-server-sdk' {
      * The `reason` property of the result will also be included in analytics events, if you are
      * capturing detailed event data for this flag.
      *
-     * For more information, see the [SDK reference guide](https://docs.launchdarkly.com/docs/evaluation-reasons).
+     * For more information, see the [SDK reference guide](https://docs.launchdarkly.com/sdk/features/evaluation-reasons#nodejs-server-side).
      *
      * @param key
      *   The unique key of the feature flag.
@@ -1042,18 +1042,18 @@ declare module 'launchdarkly-node-server-sdk' {
      *   as part of the custom event for Data Export.
      */
     track(key: string, user: LDUser, data?: any, metricValue?: number): void;
-    
+
     /**
-     * Associates two users for analytics purposes. 
-     * 
-     * This can be helpful in the situation where a person is represented by multiple 
-     * LaunchDarkly users. This may happen, for example, when a person initially logs into 
+     * Associates two users for analytics purposes.
+     *
+     * This can be helpful in the situation where a person is represented by multiple
+     * LaunchDarkly users. This may happen, for example, when a person initially logs into
      * an application-- the person might be represented by an anonymous user prior to logging
      * in and a different user after logging in, as denoted by a different user key.
-     * 
-     * @param user 
+     *
+     * @param user
      *   The newly identified user.
-     * @param previousUser 
+     * @param previousUser
      *   The previously identified user.
      */
     alias(user: LDUser, previousUser: LDUser): void;
@@ -1094,7 +1094,7 @@ declare module 'launchdarkly-node-server-sdk' {
 
     /**
      * A mechanism for tracking the status of a big segment store.
-     * 
+     *
      * This object has methods for checking whether the big segment store is (as far as the SDK
      * knows) currently operational and tracking changes in this status. See
      * {@link interfaces.BigSegmentStoreStatusProvider} for more about this functionality.
@@ -1103,12 +1103,12 @@ declare module 'launchdarkly-node-server-sdk' {
 
     /**
      * Registers an event listener that will be called when the client triggers some type of event.
-     * 
+     *
      * This is the standard `on` method inherited from Node's `EventEmitter`; see the
      * {@link https://nodejs.org/api/events.html#events_class_eventemitter|Node API docs} for more
      * details on how to manage event listeners. Here is a description of the event types defined
      * by `LDClient`.
-     * 
+     *
      * - `"ready"`: Sent only once, when the client has successfully connected to LaunchDarkly.
      * Alternately, you can detect this with [[waitForInitialization]].
      * - `"failed"`: Sent only once, if the client has permanently failed to connect to LaunchDarkly.
@@ -1149,18 +1149,18 @@ declare module 'launchdarkly-node-server-sdk' {
 
   /**
    * Provides a simple [[LDLogger]] implementation.
-   * 
+   *
    * This logging implementation uses a simple format that includes only the log level
    * and the message text. Output is written to the standard error stream (`console.error`).
    * You can filter by log level as described in [[BasicLoggerOptions.level]].
-   * 
+   *
    * To use the logger created by this function, put it into [[LDOptions.logger]]. If
    * you do not set [[LDOptions.logger]] to anything, the SDK uses a default logger
    * that is equivalent to `ld.basicLogger({ level: 'info' })`.
-   * 
+   *
    * @param options Configuration for the logger. If no options are specified, the
    *   logger uses `{ level: 'info' }`.
-   * 
+   *
    * @example
    * This example shows how to use `basicLogger` in your SDK options to enable console
    * logging only at `warn` and `error` levels.
@@ -1169,7 +1169,7 @@ declare module 'launchdarkly-node-server-sdk' {
    *     logger: ld.basicLogger({ level: 'warn' }),
    *   };
    * ```
-   * 
+   *
    * @example
    * This example shows how to use `basicLogger` in your SDK options to cause log
    * output to go to `console.log` instead of `console.error`.
@@ -1189,24 +1189,24 @@ declare module 'launchdarkly-node-server-sdk' {
   export interface BasicLoggerOptions {
     /**
      * The lowest level of log message to enable.
-     * 
+     *
      * See [[LDLogLevel]] for a list of possible levels. Setting a level here causes
      * all lower-importance levels to be disabled: for instance, if you specify
      * `'warn'`, then `'debug'` and `'info'` are disabled.
-     * 
+     *
      * If not specified, the default is `'info'` (meaning that `'debug'` is disabled).
      */
     level?: LDLogLevel;
 
     /**
      * An optional function to use to print each log line.
-     * 
+     *
      * If this is specified, `basicLogger` calls it to write each line of output. The
      * argument is a fully formatted log line, not including a linefeed. The function
      * is only called for log levels that are enabled.
-     * 
+     *
      * If not specified, the default is `console.error`.
-     * 
+     *
      * Setting this property to anything other than a function will cause SDK
      * initialization to fail.
      */
@@ -1215,7 +1215,7 @@ declare module 'launchdarkly-node-server-sdk' {
 
   /**
    * Logging levels that can be used with [[basicLogger]].
-   * 
+   *
    * Set [[BasicLoggerOptions.level]] to one of these values to control what levels
    * of log messages are enabled. Going from lowest importance (and most verbose)
    * to most importance, the levels are `'debug'`, `'info'`, `'warn'`, and `'error'`.
@@ -1249,33 +1249,33 @@ declare module 'launchdarkly-node-server-sdk' {
   /**
    * Creates an object that allows you to use local files as a source of feature flag state,
    * instead of connecting to LaunchDarkly. This would typically be used in a test environment.
-   * 
+   *
    * For more information about this feature, see the
-   * [SDK features guide](https://docs.launchdarkly.com/sdk/features/flags-from-files).
-   * 
+   * [SDK features guide](https://docs.launchdarkly.com/sdk/features/flags-from-files#nodejs-server-side).
+   *
    * To use this component, call `FileDataSource(options)` and store the result in the `updateProcessor`
    * property of your LaunchDarkly client configuration:
-   * 
+   *
    *     var dataSource = LaunchDarkly.FileDataSource({ paths: [ myFilePath ] });
    *     var config = { updateProcessor: dataSource };
    *
    * This will cause the client not to connect to LaunchDarkly to get feature flags, and use
    * the file data instead.
-   * 
+   *
    * The client may still make network connections to send analytics events, unless you have
    * disabled this in your configuration by setting [[LDOptions.sendEvents]] to `false`.
-   * 
+   *
    * The supported file formats are as follows:
-   * 
+   *
    * - JSON files in the format described in the
-   *   [SDK features guide](https://docs.launchdarkly.com/sdk/features/flags-from-files)
+   *   [SDK features guide](https://docs.launchdarkly.com/sdk/features/flags-from-files#nodejs-server-side)
    *   are always supported.
    * - The SDK can also read YAML files with an equivalent schema, if you explicitly install
    *   the [`yaml`](https://www.npmjs.com/package/yaml) package in your application. This
    *   package is not installed by default, to avoid adding to the size of the SDK bundle
    *   for this rarely-used feature. The SDK is compatible with any version of the package
    *   that supports calling `yaml.parse(string)` with no custom options.
-   * 
+   *
    * @param options
    *   Configuration for the data source. You should at least set the `paths` property.
    * @returns
@@ -1289,10 +1289,10 @@ declare module 'launchdarkly-node-server-sdk' {
 /**
  * This module contains types that allow customization of LaunchDarkly components, and
  * interfaces to other advanced SDK features.
- * 
+ *
  * Most applications will not need to refer to these types. You will use them if you are creating a
  * plug-in component, such as a database integration, or if you use advanced SDK features.
- * 
+ *
  * Currently this module contains no implementation code, but only TypeScript interfaces.
  */
 declare module 'launchdarkly-node-server-sdk/interfaces' {
@@ -1300,37 +1300,37 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
 
   /**
    * A read-only data store that allows querying of user membership in big segments.
-   * 
+   *
    * "Big segments" are a specific type of user segments. For more information, read the LaunchDarkly
-   * documentation about user segments: https://docs.launchdarkly.com/home/users
+   * documentation about user segments: https://docs.launchdarkly.com/home/users/big-segments
    */
   export interface BigSegmentStore {
     /**
      * Queries information about the overall state of the store.
-     * 
+     *
      * The resolved value of the Promise should always be a [[BigSegmentStoreMetadata]] object. If
-     * the store is accessible but contains no metadata, the object's `lastUpToDate` property can be 
+     * the store is accessible but contains no metadata, the object's `lastUpToDate` property can be
      * undefined. If the store is not accessible due to a database error, the method can throw an
      * exception/reject the promise.
-     * 
+     *
      * This method will be called only when the SDK needs the latest state, so it should not be cached.
-     * 
+     *
      * @returns a Promise for the result of the query
      */
     getMetadata(): Promise<BigSegmentStoreMetadata>;
 
     /**
      * Queries the store for a snapshot of the current segment state for a specific user.
-     * 
+     *
      * The userHash is a base64-encoded string produced by hashing the user key as defined by
      * the big segments specification; the store implementation does not need to know the details
      * of how this is done, because it deals only with already-hashed keys, but the string can be
      * assumed to only contain characters that are valid in base64.
-     * 
+     *
      * The resolved value of the Promise should be either a [[BigSegmentStoreMembership]], or
      * undefined if the user is not referenced in any big segments (this is equivalent to a
      * [[BigSegmentStoreMembership]] that has no properties).
-     * 
+     *
      * @param userHash identifies the user
      * @returns a Promise for the result of the query.
      */
@@ -1356,7 +1356,7 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
   /**
    * The return type of [[BigSegmentStore.getUserMembership]], describing which big segments a
    * specific user is included in or excluded from.
-   * 
+   *
    * This object may be cached by the SDK, so it should not be modified after it is created. It
    * is a snapshot of the segment membership state at one point in time.
    */
@@ -1366,7 +1366,7 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
      * identified in big segment data. This string is not identical to the segment key-- the SDK
      * will add other information. The store implementation should not be concerned with the
      * format of the string.
-     * 
+     *
      * A true value means that the user is explicitly included in the segment. A false value
      * means that the user is explicitly excluded from the segment-- and is not also explicitly
      * included (that is, if both an include and an exclude existed in the data, the include would
@@ -1378,15 +1378,15 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
 
   /**
    * An interface for querying the status of a big segment store.
-   * 
+   *
    * The big segment store is the component that receives information about big segments, normally
    * from a database populated by the LaunchDarkly Relay Proxy. "Big segments" are a specific type
    * of user segments. For more information, read the LaunchDarkly documentation about user
-   * segments: https://docs.launchdarkly.com/home/users
-   * 
+   * segments: https://docs.launchdarkly.com/home/users/big-segments
+   *
    * An implementation of this interface is returned by {@link LDClient.bigSegmentStoreStatusProvider}.
    * Application code never needs to implement this interface.
-   * 
+   *
    * Note that this type inherits from `EventEmitter`, so you can use the standard `on()`, `once()`,
    * and `off()` methods to receive status change events. The standard `EventEmitter` methods are
    * not documented here; see the {@link https://nodejs.org/api/events.html#events_class_eventemitter|Node API documentation}.
@@ -1396,7 +1396,7 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
   export interface BigSegmentStoreStatusProvider extends EventEmitter {
     /**
      * Gets the current status of the store, if known.
-     * 
+     *
      * @returns a {@link BigSegmentStoreStatus}, or `undefined` if the SDK has not yet queried the
      *   big segment store status
      */
@@ -1404,7 +1404,7 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
 
     /**
      * Gets the current status of the store, querying it if the status has not already been queried.
-     * 
+     *
      * @returns a Promise for the status of the store
      */
     requireStatus(): Promise<BigSegmentStoreStatus>;
@@ -1412,15 +1412,15 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
 
   /**
    * Information about the status of a big segment store, provided by {@link BigSegmentStoreStatusProvider}.
-   * 
+   *
    * "Big segments" are a specific type of user segments. For more information, read the LaunchDarkly
-   * documentation about user segments: https://docs.launchdarkly.com/home/users
+   * documentation about user segments: https://docs.launchdarkly.com/home/users/big-segments
    */
   export interface BigSegmentStoreStatus {
     /**
      * True if the big segment store is able to respond to queries, so that the SDK can
      * evaluate whether a user is in a segment or not.
-     * 
+     *
      * If this property is false, the store is not able to make queries (for instance, it may not have
      * a valid database connection). In this case, the SDK will treat any reference to a big segment
      * as if no users are included in that segment. Also, the {@link LDEvaluationReason} associated
@@ -1432,7 +1432,7 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
     /**
      * True if the big segment store is available, but has not been updated within the amount of time
      * specified by {@link LDBigSegmentsOptions.staleAfter}.
-     * 
+     *
      * This may indicate that the LaunchDarkly Relay Proxy, which populates the store, has stopped
      * running or has become unable to receive fresh data from LaunchDarkly. Any feature flag
      * evaluations that reference a big segment will be using the last known data, which may be out
@@ -1444,7 +1444,7 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
   /**
    * Used internally to describe the type of data being queried or updated, such as feature flags or
    * user segments.
-   * 
+   *
    * This is the actual type of the `kind` parameter in `LDFeatureStore` methods. Those methods are
    * still declared as taking `any` for backward compatibility, but in the future they will reference
    * this type.
@@ -1460,7 +1460,7 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
   /**
    * Used internally to describe the basic properties of stored data such as feature flags or user
    * segments.
-   * 
+   *
    * This is the actual type of parameters and return values in `LDFeatureStore` methods that refer
    * to a flag or segment item. Those methods still use the `object` type for backward compatibility.
    */
@@ -1513,7 +1513,7 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
   /**
    * Base interface for a simplified subset of the functionality of `LDFeatureStore`, to be used in
    * conjunction with `CachingStoreWrapper`.
-   * 
+   *
    * @see [[PersistentDataStore]]
    * @see [[PersistentDataStoreNonAtomic]]
    */
@@ -1585,7 +1585,7 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
   /**
    * Interface for a simplified subset of the functionality of `LDFeatureStore`, to be used in
    * conjunction with `CachingStoreWrapper`.
-   * 
+   *
    * @see [[PersistentDataStoreNonAtomic]]
    */
   export interface PersistentDataStore extends PersistentDataStoreBase {
@@ -1605,10 +1605,10 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
   /**
    * Interface for a simplified subset of the functionality of `LDFeatureStore`, to be used in
    * conjunction with `CachingStoreWrapper`.
-   * 
+   *
    * This is a variant of [[PersistentDataStore]] for databases that require somewhat different
    * initialization semantics, where we must specify a consistent ordering of writes.
-   * 
+   *
    * @see [[PersistentDataStore]]
    */
    export interface PersistentDataStoreNonAtomic {
@@ -1677,7 +1677,7 @@ declare module 'launchdarkly-node-server-sdk/requestor' {
   {
     /**
      * Creates a feature store implementation with standard caching behavior for a persistent store.
-     * 
+     *
      * @param storeImplementation internal implementation object for a specific database type
      * @param ttl cache TTL in seconds, or 0 for no caching
      * @param description name of the database
