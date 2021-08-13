@@ -107,7 +107,7 @@ The stream reconnection behavior has been changed to be consistent with other La
 - The new maximum is 30 seconds.
 - The backoff now applies to all types of stream failures.
 - There is now a jitter that randomly reduces each delay by up to 50%.
-- The delay now resets to the initial level if the stream has been active for at least 60 seconds. 
+- The delay now resets to the initial level if the stream has been active for at least 60 seconds.
 
 ## [5.11.3] - 2020-03-09
 ### Changed:
@@ -144,7 +144,7 @@ Note: if you are using the LaunchDarkly Relay Proxy to forward events, update th
 
 ## [5.10.2] - 2020-01-13
 ### Fixed:
-- The implementation of the `RedisFeatureStore` function was inconsistent with its TypeScript declaration: instead of taking `client` as an optional parameter, it was looking for it as a property within `redisOpts`. It now correctly supports the optional parameter; passing the property in `redisOpts` is still supported for backward compatibility, but is deprecated (since it is not a valid property of that object type) and will be removed in a future version. 
+- The implementation of the `RedisFeatureStore` function was inconsistent with its TypeScript declaration: instead of taking `client` as an optional parameter, it was looking for it as a property within `redisOpts`. It now correctly supports the optional parameter; passing the property in `redisOpts` is still supported for backward compatibility, but is deprecated (since it is not a valid property of that object type) and will be removed in a future version.
 
 ## [5.10.1] - 2020-01-06
 ### Fixed:
@@ -192,7 +192,7 @@ Note: if you are using the LaunchDarkly Relay Proxy to forward events, update th
 ## [5.8.1] - 2019-05-13
 ### Changed:
 - Changed the package name from `ldclient-node` to `launchdarkly-node-server-sdk`.
- 
+
 There are no other changes in this release. Substituting `ldclient-node` version 5.8.0 with `launchdarkly-node-server-sdk` version 5.8.1 (and updating any `require` or `import` lines that referred to the old package name) will not affect functionality.
 
 ## [5.8.0] - 2019-04-06
@@ -239,7 +239,7 @@ Changes are only in test code used by other libraries. There is no need to upgra
 
 ## [5.7.0] - 2019-01-11
 ### Added:
-- It is now possible to inject feature flags into the client from local JSON or YAML files, replacing the normal LaunchDarkly connection. This would typically be for testing purposes. See `FileDataSource` in the [TypeScript API documentation](https://github.com/launchdarkly/node-client/blob/master/index.d.ts), and ["Reading flags from a file"](https://docs.launchdarkly.com/v2.0/docs/reading-flags-from-a-file).
+- It is now possible to inject feature flags into the client from local JSON or YAML files, replacing the normal LaunchDarkly connection. This would typically be for testing purposes. See `FileDataSource` in the [TypeScript API documentation](https://github.com/launchdarkly/node-client/blob/master/index.d.ts), and ["Reading flags from a file"](https://docs.launchdarkly.com/sdk/features/flags-from-files#nodejs-server-side).
 
 ### Fixed:
 - Fixed a potential race condition that could happen when using a DynamoDB or Consul feature store. The Redis feature store was not affected.
@@ -357,7 +357,7 @@ Changes are only in test code used by other libraries. There is no need to upgra
 ## [5.0.0] - 2018-05-10
 
 ### Changed:
-- To reduce the network bandwidth used for analytics events, feature request events are now sent as counters rather than individual events, and user details are now sent only at intervals rather than in each event. These behaviors can be modified through the LaunchDarkly UI and with the new configuration option `inlineUsersInEvents`. For more details, see [Analytics Data Stream Reference](https://docs.launchdarkly.com/v2.0/docs/analytics-data-stream-reference).
+- To reduce the network bandwidth used for analytics events, feature request events are now sent as counters rather than individual events, and user details are now sent only at intervals rather than in each event. These behaviors can be modified through the LaunchDarkly UI and with the new configuration option `inlineUsersInEvents`. For more details, see [Data Export](https://docs.launchdarkly.com/home/data-export).
 - Pending analytics events are now flushed if 1. the configured `flush_interval` elapses or 2. you explicitly call `flush()`. Previously, if the number of events exceeded the configured capacity it would also trigger a flush; now, the client will simply drop events until the next timed or explicit flush occurs. This makes the Node SDK consistent with the other SDKs, and prevents unbounded use of network resources if you are generating analytics events rapidly.
 - When sending analytics events, if there is a connection error or an HTTP 5xx response, the client will try to send the events again one more time after a one-second delay.
 - In every function that takes an optional callback parameter, if you provide a callback, the function will not return a promise; a promise will be returned only if you omit the callback. Previously, it would always return a promise which would be resolved/rejected at the same time that the callback (if any) was called; this caused problems if you had not registered an error handler for the promise.
@@ -413,11 +413,11 @@ Changes are only in test code used by other libraries. There is no need to upgra
 
 ## [3.3.1] - 2018-01-23
 ### Fixed
-- Methods that expose a `Promise` interface now properly return the resolution or rejection value to the caller. #75 
+- Methods that expose a `Promise` interface now properly return the resolution or rejection value to the caller. #75
 
 ## [3.3.0] - 2018-01-19
 ### Added
-- Support for [private user attributes](https://docs.launchdarkly.com/docs/private-user-attributes).
+- Support for [private user attributes](https://docs.launchdarkly.com/home/users/attributes#creating-private-user-attributes).
 
 ## [3.2.1] - 2017-12-13
 ### Fixed
@@ -491,7 +491,7 @@ SDK key to become valid again.
 
 ## [3.0.4] - 2016-10-19
 ### Fixed
-- The event queue is no longer a global property, so multiple clients initialized in one node process now send events to the correct environment 
+- The event queue is no longer a global property, so multiple clients initialized in one node process now send events to the correct environment
 
 ## [3.0.3] - 2016-09-09
 ### Added
