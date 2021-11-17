@@ -47,7 +47,7 @@ describe('LDClient TLS configuration', () => {
       await withCloseable(LDClient.init(sdkKey, config), async client => {
         await sleepAsync(300); // the client won't signal an unrecoverable error, but it should log a message
         expect(config.logger.warn.mock.calls.length).toEqual(2);
-        expect(config.logger.warn.mock.calls[1][0]).toMatch(/self signed/);
+        expect(config.logger.warn.mock.calls[1][0]).toMatch(/self.signed/);
       });
     });
   });
