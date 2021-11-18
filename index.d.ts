@@ -1284,6 +1284,39 @@ declare module 'launchdarkly-node-server-sdk' {
   export function FileDataSource(
     options: FileDataSourceOptions
   ): object;
+
+  /**
+   * @returns
+   *   An object to put in the `updateProcessor` property for [[LDOptions]].
+   */
+  export function TestData(): TestData;
+
+  export interface TestData {
+      (config: LDOptions): LDStreamProcessor;
+      flag: (flagName: string) => FlagBuilder;
+      update: (flagBuilder: FlagBuilder) => Promise<any>;
+  }
+
+  export interface FlagBuilder {
+      isBooleanFlag: () => boolean;
+      booleanFlag: () => FlagBuilder;
+      on: (value: boolean) => FlagBuilder;
+      fallthroughVariation: (variation: boolean|number) => FlagBuilder;
+      offVariation: (variation: boolean|number) => FlagBuilder;
+      variationForAllUsers: (variation: boolean|number) => FlagBuilder;
+      valueForAllUsers: (value: any) => FlagBuilder;
+      variationForUser: (userKey: string, variation: boolean|number) => FlagBuilder;
+      clearRules: () => FlagBuilder;
+      clearUserTargets: () => FlagBuilder;
+      ifMatch: (userAttribute: string, ...values:any) => FlagRuleBuilder;
+      ifNotMatch: (userAttribute: string, ...values:any) => FlagRuleBuilder;
+  }
+
+  export interface FlagRuleBuilder {
+      andMatch: (userAttribute: string, ...values:any) => FlagRuleBuilder;
+      andNotMatch: (userAttribute: string, ...values:any) => FlagRuleBuilder;
+      thenReturn: (variation: boolean|number) => FlagBuilder;
+  }
 }
 
 /**
