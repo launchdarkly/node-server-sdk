@@ -1,8 +1,111 @@
 const LaunchDarkly = require('../index');
 const TestData = require('../test_data');
 const InMemoryFeatureStore = require('../feature_store');
+const dataKind = require('../versioned_data_kind');
+const { promisify, promisifySingle } = require('launchdarkly-js-test-helpers');
 
 describe('TestData', function() {
+  it('Initializes the datastore with flags when start is called', async function() {
+    const td = TestData();
+    const store = InMemoryFeatureStore();
+    td.update(td.flag('new-flag').variationForAllUsers(true));
+    const tds = td({featureStore: store});
+    await promisifySingle(tds.start)();
+    expect(tds.initialized()).toBe(true);
+    const res = await promisifySingle(store.all)(dataKind.features);
+    expect(res).toEqual({
+      'new-flag': {
+        fallthrough: {
+          variation: 0,
+        },
+        key: 'new-flag',
+        offVariation: 1,
+        on: true,
+        variations: [ true, false ],
+        version: 1
+      }
+    });
+  });
+
+  it('Updates the datastore with its flags when update is called', async function() {
+    const td = TestData();
+    const store = InMemoryFeatureStore();
+    const tds = td({featureStore: store});
+    await promisifySingle(tds.start)();
+
+    const res = await promisifySingle(store.all)(dataKind.features);
+    expect(res).toEqual({});
+
+    await promisifySingle(td.update)(td.flag('new-flag').variationForAllUsers(true));
+
+    const postUpdateRes = await promisifySingle(store.all)(dataKind.features);
+    expect(postUpdateRes).toEqual({
+      'new-flag': {
+        fallthrough: {
+          variation: 0,
+        },
+        key: 'new-flag',
+        offVariation: 1,
+        on: true,
+        variations: [ true, false ],
+        version: 1
+      }
+    });
+  });
+
+  it('The datasource does not update the store after stop is called', async function() {
+    const td = TestData();
+    const store = InMemoryFeatureStore();
+    const tds = td({featureStore: store});
+    await promisifySingle(tds.start)();
+
+    const res = await promisifySingle(store.all)(dataKind.features);
+    expect(res).toEqual({});
+
+    tds.stop();
+    await promisifySingle(td.update)(td.flag('new-flag').variationForAllUsers(true));
+
+    const postUpdateRes = await promisifySingle(store.all)(dataKind.features);
+    expect(postUpdateRes).toEqual({});
+  });
+
+  it('Can update a flag that exists in the store already', async function() {
+    const td = TestData();
+    const store = InMemoryFeatureStore();
+    const tds = td({featureStore: store});
+    await promisifySingle(tds.start)();
+
+    await promisifySingle(td.update)(td.flag('new-flag').variationForAllUsers(true));
+    const res = await promisifySingle(store.all)(dataKind.features);
+    expect(res).toEqual({
+      'new-flag': {
+        fallthrough: {
+          variation: 0,
+        },
+        key: 'new-flag',
+        offVariation: 1,
+        on: true,
+        variations: [ true, false ],
+        version: 1
+      }
+    });
+
+    await promisifySingle(td.update)(td.flag('new-flag').variationForAllUsers(false));
+    const res2 = await promisifySingle(store.all)(dataKind.features);
+    expect(res2).toEqual({
+      'new-flag': {
+        fallthrough: {
+          variation: 1,
+        },
+        key: 'new-flag',
+        offVariation: 1,
+        on: true,
+        variations: [ true, false ],
+        version: 2
+      }
+    });
+  });
+
   it('TestData.flag performs an immutable copy after update', function() {
     const td = TestData();
     const flag = td.flag('test-flag');

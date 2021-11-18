@@ -1,15 +1,40 @@
+const dataKind = require('./versioned_data_kind');
+const { promisify } = require('util');
+
 function TestData() {
   const existingFlagBuilders = {};
-  const dataSourceImpls = [];
+  let currentFlags = {};
+  let dataSourceImpls = [];
 
-  const td = () => {
+  function makeInitData() {
+      return { [dataKind.features.namespace]: JSON.parse(JSON.stringify(currentFlags)) };
+  }
+
+  const td = config => {
+    const featureStore = config.featureStore;
+
     const tds = {
-      start: true,
-      stop: true,
-      initialized: true,
-      close: true,
+      start: start,
+      stop: stop,
+      initialized: () => true,
+      close: stop,
+      upsert: upsert,
     };
+
+    function start(cb) {
+      featureStore.init(makeInitData(), cb);
+    }
+
+    function stop() {
+      dataSourceImpls.splice(dataSourceImpls.indexOf(this));
+    }
+
+    function upsert(value, cb) {
+      featureStore.upsert(dataKind.features, value, cb);
+    }
+
     dataSourceImpls.push(tds);
+
     return tds;
   };
 
@@ -21,8 +46,16 @@ function TestData() {
     }
   };
 
-  td.update = flagBuilder => {
-    existingFlagBuilders[flagBuilder._key] = flagBuilder;
+  td.update = (flagBuilder, cb) => {
+    const oldItem = currentFlags[flagBuilder._key];
+    const oldVersion = oldItem ? oldItem.version : 0;
+    const newFlag = flagBuilder.build(oldVersion + 1);
+    currentFlags[flagBuilder._key] = newFlag;
+    existingFlagBuilders[flagBuilder._key] = flagBuilder.copy();
+
+    Promise.all(dataSourceImpls.map(impl => {
+      return promisify(impl.upsert)(newFlag);
+    })).then(cb);
   };
 
   return td;
@@ -107,6 +140,14 @@ FlagBuilder.prototype.clearRules = function () {
   this._rules = null;
   return this;
 };
+
+FlagBuilder.prototype.variationForAllUsers = function (variation) {
+  return this.on(true).clearRules().clearUserTargets().fallthroughVariation(variation);
+};
+
+FlagBuilder.prototype.valueForAllUsers = function (value) {
+  return this.variations([value]).variationForAllUsers(0);
+}
 
 FlagBuilder.prototype.variationForUser = function (userKey, variation) {
   if (typeof variation === 'boolean') {
