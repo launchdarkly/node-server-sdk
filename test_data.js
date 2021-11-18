@@ -3,11 +3,11 @@ const { promisify } = require('util');
 
 function TestData() {
   const existingFlagBuilders = {};
-  let currentFlags = {};
-  let dataSourceImpls = [];
+  const currentFlags = {};
+  const dataSourceImpls = [];
 
   function makeInitData() {
-      return { [dataKind.features.namespace]: JSON.parse(JSON.stringify(currentFlags)) };
+    return { [dataKind.features.namespace]: JSON.parse(JSON.stringify(currentFlags)) };
   }
 
   const td = config => {
@@ -42,7 +42,7 @@ function TestData() {
     if (existingFlagBuilders[flagName]) {
       return existingFlagBuilders[flagName].copy();
     } else {
-      return new FlagBuilder(flagName);
+      return new FlagBuilder(flagName).booleanFlag();
     }
   };
 
@@ -53,9 +53,7 @@ function TestData() {
     currentFlags[flagBuilder._key] = newFlag;
     existingFlagBuilders[flagBuilder._key] = flagBuilder.copy();
 
-    Promise.all(dataSourceImpls.map(impl => {
-      return promisify(impl.upsert)(newFlag);
-    })).then(cb);
+    Promise.all(dataSourceImpls.map(impl => promisify(impl.upsert)(newFlag))).then(cb);
   };
 
   return td;
@@ -147,7 +145,7 @@ FlagBuilder.prototype.variationForAllUsers = function (variation) {
 
 FlagBuilder.prototype.valueForAllUsers = function (value) {
   return this.variations([value]).variationForAllUsers(0);
-}
+};
 
 FlagBuilder.prototype.variationForUser = function (userKey, variation) {
   if (typeof variation === 'boolean') {

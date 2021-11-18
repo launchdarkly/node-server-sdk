@@ -120,11 +120,11 @@ describe('TestData', function() {
     expect(td.flag('whatever').build(0).on).toBe(true);
   });
 
-  it('FlagBuilder has boolean flags shortcut', function() {
+  it('FlagBuilder defaults to boolean flag', function() {
     const td = TestData();
-    const flag = td.flag('test-flag-booleanFlags').booleanFlag();
+    const flag = td.flag('test-flag-booleanFlags');
     expect(flag.isBooleanFlag()).toBe(true)
-    const flag2 = td.flag('test-flag-notBooleanFlags');
+    const flag2 = td.flag('test-flag-notBooleanFlags').valueForAllUsers('yes');
     expect(flag2.isBooleanFlag()).toBe(false)
   });
 
