@@ -1395,7 +1395,7 @@ declare module 'launchdarkly-node-server-sdk' {
      * other variations, this also changes it to a boolean flag.
      *
      * @param variation
-     *    Either `true` or `false` or the index of the desired fallthrough
+     *    either `true` or `false` or the index of the desired fallthrough
      *    variation: 0 for the first, 1 for the second, etc.
      * @return the flag builder
      */
@@ -1409,7 +1409,7 @@ declare module 'launchdarkly-node-server-sdk' {
      * other variations, this also changes it to a boolean flag.
      *
      * @param variation
-     *    Either `true` or `false` or the index of the desired off
+     *    either `true` or `false` or the index of the desired off
      *    variation: 0 for the first, 1 for the second, etc.
      * @return the flag builder
      */
@@ -1426,7 +1426,7 @@ declare module 'launchdarkly-node-server-sdk' {
      * other variations, this also changes it to a boolean flag.
      *
      * @param varation
-     *    Either `true` or `false` or the index of the desired variation:
+     *    either `true` or `false` or the index of the desired variation:
      *    0 for the first, 1 for the second, etc.
      * @return the flag builder
      */
@@ -1459,7 +1459,7 @@ declare module 'launchdarkly-node-server-sdk' {
      *
      * @param userKey a user key
      * @param variation
-     *    Either `true` or `false` or the index of the desired variation:
+     *    either `true` or `false` or the index of the desired variation:
      *    0 for the first, 1 for the second, etc.
      * @return the flag builder
      */
@@ -1576,7 +1576,7 @@ declare module 'launchdarkly-node-server-sdk' {
      * variation values have already been defined.
 
      * @param variation
-     *    Either `true` or `false` or the index of the desired variation:
+     *    either `true` or `false` or the index of the desired variation:
      *    0 for the first, 1 for the second, etc.
      * @return the flag rule builder
      */

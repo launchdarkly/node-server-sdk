@@ -21,7 +21,7 @@ function TestData() {
       upsert: upsert,
     };
 
-    function start(cb) {
+    function start(cb = (() => {})) {
       featureStore.init(makeInitData(), cb);
     }
 
@@ -29,7 +29,7 @@ function TestData() {
       dataSourceImpls.splice(dataSourceImpls.indexOf(this));
     }
 
-    function upsert(value, cb) {
+    function upsert(value, cb = (() => {})) {
       featureStore.upsert(dataKind.features, value, cb);
     }
 

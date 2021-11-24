@@ -1,17 +1,19 @@
-const LaunchDarkly = require('../index');
+const LDClient = require('../index');
 const TestData = require('../test_data');
 const InMemoryFeatureStore = require('../feature_store');
 const dataKind = require('../versioned_data_kind');
 const { promisify, promisifySingle } = require('launchdarkly-js-test-helpers');
 
 describe('TestData', function() {
-  it('Initializes the datastore with flags when start is called', async function() {
+  it('initializes the datastore with flags configured before client is started', async function() {
     const td = TestData();
-    const store = InMemoryFeatureStore();
     td.update(td.flag('new-flag').variationForAllUsers(true));
-    const tds = td({featureStore: store});
-    await promisifySingle(tds.start)();
-    expect(tds.initialized()).toBe(true);
+
+    const store = InMemoryFeatureStore();
+    const client = LDClient.init('sdk_key', { offline: true, featureStore: store, updateProcessor: td });
+
+    await client.waitForInitialization();
+
     const res = await promisifySingle(store.all)(dataKind.features);
     expect(res).toEqual({
       'new-flag': {
@@ -25,14 +27,15 @@ describe('TestData', function() {
         version: 1
       }
     });
+
   });
 
-  it('Updates the datastore with its flags when update is called', async function() {
+  it('updates the datastore with its flags when update is called', async function() {
     const td = TestData();
     const store = InMemoryFeatureStore();
-    const tds = td({featureStore: store});
-    await promisifySingle(tds.start)();
+    const client = LDClient.init('sdk_key', { offline: true, featureStore: store, updateProcessor: td });
 
+    await client.waitForInitialization();
     const res = await promisifySingle(store.all)(dataKind.features);
     expect(res).toEqual({});
 
@@ -53,7 +56,7 @@ describe('TestData', function() {
     });
   });
 
-  it('The datasource does not update the store after stop is called', async function() {
+  it('the datasource does not update the store after stop is called', async function() {
     const td = TestData();
     const store = InMemoryFeatureStore();
     const tds = td({featureStore: store});
@@ -69,7 +72,7 @@ describe('TestData', function() {
     expect(postUpdateRes).toEqual({});
   });
 
-  it('Can update a flag that exists in the store already', async function() {
+  it('can update a flag that exists in the store already', async function() {
     const td = TestData();
     const store = InMemoryFeatureStore();
     const tds = td({featureStore: store});
@@ -106,7 +109,7 @@ describe('TestData', function() {
     });
   });
 
-  it('TestData.flag performs an immutable copy after update', function() {
+  it('should perform an immutable copy when TestData.flag is called after update', function() {
     const td = TestData();
     const flag = td.flag('test-flag');
     td.update(flag);
@@ -115,12 +118,12 @@ describe('TestData', function() {
     expect(flag_copy).not.toEqual(flag);
   });
 
-  it('FlagBuilder defaults to on', function() {
+  it('a new FlagBuilder defaults to on', function() {
     const td = TestData();
     expect(td.flag('whatever').build(0).on).toBe(true);
   });
 
-  it('FlagBuilder defaults to boolean flag', function() {
+  it('a new FlagBuilder defaults to boolean flag', function() {
     const td = TestData();
     const flag = td.flag('test-flag-booleanFlags');
     expect(flag.isBooleanFlag()).toBe(true)
@@ -128,7 +131,7 @@ describe('TestData', function() {
     expect(flag2.isBooleanFlag()).toBe(false)
   });
 
-  it('Can handle boolean values for *Variation setters', function() {
+  it('can handle boolean values for *Variation setters', function() {
     const td = TestData();
     const flag = td.flag('test-flag').fallthroughVariation(false);
     expect(flag.isBooleanFlag()).toBe(true);
@@ -139,7 +142,7 @@ describe('TestData', function() {
     expect(offFlag.build(0).fallthrough).toEqual({variation: 0});
   });
 
-  it('Can set boolean values for a specific user target', function() {
+  it('can set boolean values for a specific user target', function() {
     const td = TestData();
     const flag = td.flag('test-flag').variationForUser('ben', false);
     expect(flag.build(0).targets).toEqual([
@@ -152,7 +155,7 @@ describe('TestData', function() {
 
   });
 
-  it('Can add and remove a rule', function() {
+  it('can add and remove a rule', function() {
     const td = TestData();
     const flag = td.flag('test-flag')
                    .ifMatch('name', 'ben', 'christian')
