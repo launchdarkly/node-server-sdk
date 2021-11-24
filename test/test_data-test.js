@@ -14,8 +14,7 @@ describe('TestData', function() {
 
   it('FlagBuilder defaults to on', function() {
     const td = TestData();
-    //TODO switch to testing the built object
-    expect(td.flag('whatever')._on).toBe(true);
+    expect(td.flag('whatever').build(0).on).toBe(true);
   });
 
   it('FlagBuilder has boolean flags shortcut', function() {
@@ -30,24 +29,60 @@ describe('TestData', function() {
     const td = TestData();
     const flag = td.flag('test-flag').fallthroughVariation(false);
     expect(flag.isBooleanFlag()).toBe(true);
-    //TODO switch to testing the built object
-    expect(flag._fallthroughVariation).toBe(1);
+    expect(flag.build(0).fallthrough).toEqual({variation: 1});
 
     const offFlag = td.flag('off-flag').offVariation(true);
     expect(offFlag.isBooleanFlag()).toBe(true);
-    //TODO switch to testing the built object
-    expect(offFlag._fallthroughVariation).toBe(0);
+    expect(offFlag.build(0).fallthrough).toEqual({variation: 0});
   });
 
   it('Can set boolean values for a specific user target', function() {
     const td = TestData();
     const flag = td.flag('test-flag').variationForUser('ben', false);
+    expect(flag.build(0).targets).toEqual([
+      { variation: 1,
+        values: ['ben']
+      }
+    ]);
     const clearedFlag = flag.copy().clearUserTargets();
-    //TODO switch to testing the built object
-    expect(flag._targets).toEqual({
-      '1': ['ben']
-    });
-    expect(clearedFlag._targets).toEqual(null);
+    expect(clearedFlag.build(0)).not.toHaveProperty('targets');
 
+  });
+
+  it('Can add and remove a rule', function() {
+    const td = TestData();
+    const flag = td.flag('test-flag')
+                   .ifMatch('name', 'ben', 'christian')
+                   .andNotMatch('country', 'fr')
+                   .thenReturn(true);
+
+    expect(flag.build().rules).toEqual([
+      {
+        "id": "rule0",
+        "variation": 0,
+        "clauses":  [
+          {
+            "attribute": "name",
+            "negate": false,
+            "operator": "in",
+            "values":  [
+              "ben",
+              "christian",
+            ],
+          },
+          {
+            "attribute": "country",
+            "negate": true,
+            "operator": "in",
+            "values":  [
+              "fr",
+            ],
+          },
+        ],
+      }
+    ]);
+
+    const clearedRulesFlag = flag.clearRules();
+    expect(clearedRulesFlag.build(0)).not.toHaveProperty('rules');
   });
 });

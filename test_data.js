@@ -37,13 +37,17 @@ function FlagBuilder(flagName) {
 const TRUE_VARIATION_INDEX = 0;
 const FALSE_VARIATION_INDEX = 1;
 
+function variationForBoolean(aBool) {
+  return aBool ? TRUE_VARIATION_INDEX : FALSE_VARIATION_INDEX;
+}
+
 FlagBuilder.prototype.copy = function () {
   const to = new FlagBuilder(this._key);
   to._variations = [...this._variations];
   to._offVariation = this._offVariation;
   to._on = this._on;
   to._fallthroughVariation = this._fallthroughVariation;
-  to._targets = !this._targets ? null : JSON.parse(JSON.stringify(this._targets));
+  to._targets = !this._targets ? null : new Map(this._targets);
   to._rules = !this._rules ? null : JSON.parse(JSON.stringify(this._rules));
   return to;
 };
@@ -71,13 +75,9 @@ FlagBuilder.prototype.on = function (aBool) {
   return this;
 };
 
-FlagBuilder.variationForBoolean = function (aBool) {
-  return aBool ? TRUE_VARIATION_INDEX : FALSE_VARIATION_INDEX;
-};
-
 FlagBuilder.prototype.fallthroughVariation = function (variation) {
   if (typeof variation === 'boolean') {
-    this.booleanFlag().fallthroughVariation(FlagBuilder.variationForBoolean(variation));
+    this.booleanFlag().fallthroughVariation(variationForBoolean(variation));
   } else {
     this._fallthroughVariation = variation;
   }
@@ -86,7 +86,7 @@ FlagBuilder.prototype.fallthroughVariation = function (variation) {
 
 FlagBuilder.prototype.offVariation = function (variation) {
   if (typeof variation === 'boolean') {
-    this.booleanFlag().offVariation(FlagBuilder.variationForBoolean(variation));
+    this.booleanFlag().offVariation(variationForBoolean(variation));
   } else {
     this._offVariation = variation;
   }
@@ -103,31 +103,42 @@ FlagBuilder.prototype.clearUserTargets = function () {
   return this;
 };
 
+FlagBuilder.prototype.clearRules = function () {
+  this._rules = null;
+  return this;
+};
+
 FlagBuilder.prototype.variationForUser = function (userKey, variation) {
   if (typeof variation === 'boolean') {
-    return this.booleanFlag().variationForUser(userKey, FlagBuilder.variationForBoolean(variation));
+    return this.booleanFlag().variationForUser(userKey, variationForBoolean(variation));
   }
 
   if (!this._targets) {
-    this._targets = {};
+    this._targets = new Map();
   }
 
   this._variations.forEach((_, i) => {
     if (i === variation) {
       //If there is no set at the current variation then set it to the empty array
-      if (!this._targets[i]) {
-        this._targets[i] = [];
+      let targetForVariation;
+      if (this._targets.has(i)) {
+        targetForVariation = this._targets.get(i);
+      } else {
+        targetForVariation = [];
       }
       // Add user to current variation set if they arent already there
-      if (this._targets[i].indexOf(userKey) === -1) {
-        this._targets[i].push(userKey);
+      if (targetForVariation.indexOf(userKey) === -1) {
+        targetForVariation.push(userKey);
       }
+
+      this._targets.set(i, targetForVariation);
     } else {
       // remove user from other variation set if necessary
-      if (this._targets[i]) {
-        const userIndex = this._targets[i].indexOf(userKey);
+      if (this._targets.has(i)) {
+        const targetForVariation = this._targets.get(i);
+        const userIndex = targetForVariation.indexOf(userKey);
         if (userIndex !== -1) {
-          this._targets = this._targets[i].splice(userIndex);
+          this._targets.set(i, targetForVariation.splice(userIndex));
         }
       }
     }
@@ -135,4 +146,98 @@ FlagBuilder.prototype.variationForUser = function (userKey, variation) {
 
   return this;
 };
+
+FlagBuilder.prototype.addRule = function (flagRuleBuilder) {
+  if (!this._rules) {
+    this._rules = [];
+  }
+  this._rules.push(flagRuleBuilder);
+};
+
+FlagBuilder.prototype.ifMatch = function (attribute, ...values) {
+  const flagRuleBuilder = new FlagRuleBuilder(this);
+  return flagRuleBuilder.andMatch(attribute, ...values);
+};
+
+FlagBuilder.prototype.ifNotMatch = function (attribute, ...values) {
+  const flagRuleBuilder = new FlagRuleBuilder(this);
+  return flagRuleBuilder.andNotMatch(attribute, ...values);
+};
+
+FlagBuilder.prototype.build = function (version) {
+  const baseFlagObject = {
+    key: this._key,
+    version: version,
+    on: this._on,
+    offVariation: this._offVariation,
+    fallthrough: {
+      variation: this._fallthroughVariation,
+    },
+    variations: [...this._variations],
+  };
+
+  if (this._targets) {
+    const targets = [];
+    for (const [variationIndex, userKeys] of this._targets) {
+      targets.push({
+        variation: variationIndex,
+        values: userKeys,
+      });
+    }
+    baseFlagObject.targets = targets;
+  }
+
+  if (this._rules) {
+    baseFlagObject.rules = this._rules.map((rule, i) => rule.build(i));
+  }
+
+  return baseFlagObject;
+};
+
+/* FlagRuleBuilder */
+function FlagRuleBuilder(flagBuilder) {
+  this._flagBuilder = flagBuilder;
+  this._clauses = [];
+  this._variation = null;
+}
+
+FlagRuleBuilder.prototype.andMatch = function (attribute, ...values) {
+  this._clauses.push({
+    attribute: attribute,
+    operator: 'in',
+    values: values,
+    negate: false,
+  });
+  return this;
+};
+
+FlagRuleBuilder.prototype.andNotMatch = function (attribute, ...values) {
+  this._clauses.push({
+    attribute: attribute,
+    operator: 'in',
+    values: values,
+    negate: true,
+  });
+  return this;
+};
+
+FlagRuleBuilder.prototype.thenReturn = function (variation) {
+  if (typeof variation === 'boolean') {
+    this._flagBuilder.booleanFlag();
+    return this.thenReturn(variationForBoolean(variation));
+  }
+
+  this._variation = variation;
+  this._flagBuilder.addRule(this);
+  return this._flagBuilder;
+};
+
+FlagRuleBuilder.prototype.build = function (id) {
+  return {
+    id: 'rule' + id,
+    variation: this._variation,
+    clauses: this._clauses,
+  };
+};
+
 module.exports = TestData;
