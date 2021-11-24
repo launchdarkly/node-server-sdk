@@ -1286,250 +1286,240 @@ declare module 'launchdarkly-node-server-sdk' {
   ): object;
 
   /**
-   * Creates an object that allows you to in-memory values as a source of feature flag state,
-   * instead of connecting to LaunchDarkly. This would typically be used in a test environment.
+   * A mechanism for providing dynamically updatable feature flag state in a simplified form to an SDK
+   * client in test scenarios.
+
+   * Unlike [[FileData]], this mechanism does not use any external resources. It provides only
+   * the data that the application has put into it using the [[TestData.update]] method.
    *
-   * For more information about this feature, see the
-   * [SDK features guide](https://docs.launchdarkly.com/sdk/features/test-data-sources).
+   * @example
+   *     const td = LaunchDarkly.TestData();
+   *     testData.update(td.flag("flag-key-1").booleanFlag().variationForAllUsers(true));
+   *     const client = new LDClient(sdkKey, { updateProcessor: td });
    *
-   * To use this component, call `TestData()` and store the result in the `updateProcessor`
-   * property of your LaunchDarkly client configuration:
+   *     // flags can be updated at any time:
+   *     td.update(td.flag("flag-key-2")
+   *         .variationForUser("some-user-key", true)
+   *         .fallthroughVariation(false));
    *
-   *     var testData = LaunchDarkly.TestData();
-   *     var config = { updateProcessor: testData };
+   * The above example uses a simple boolean flag, but more complex configurations are possible using
+   * the methods of the [[FlagBuilder]] that is returned [[FlagBuilder.flag]]. [[FlagBuilder]]
+   * supports many of the ways a flag can be configured on the LaunchDarkly dashboard, but does not
+   * currently support 1. rule operators other than "in" and "not in", or 2. percentage rollouts.
+
+   * If the same `TestData` instance is used to configure multiple `LDClient` instances,
+   * any changes made to the data will propagate to all of the `LDClient`s.
    *
-   * This will cause the client not to connect to LaunchDarkly to get feature flags, and use
-   * the in-memory data instead.
-   *
-   * The client may still make network connections to send analytics events, unless you have
-   * disabled this in your configuration by setting [[LDOptions.sendEvents]] to `false`.
-   *
-   * Some examples of how test flags can be configured:
-   *
-   *     testData.update(testData.flag('some-flag')
-   *                             .valueForAllUsers(true));
-   *     testData.update(testData.flag('some-rule-flag')
-   *                             .ifMatch('country', 'fr')
-   *                             .thenReturn(true));
-   *
-   * @returns
-   *   An object to put in the `updateProcessor` property for [[LDOptions]].
+   * @see [[FileDataSource]]
    */
   export function TestData(): TestData;
 
-  /**
-   * An object that can be passed as the `updateProcessor` for [[LDOptions]].
-   */
-  export interface LDUpdateProcessor {
-      (config: LDOptions): LDStreamProcessor;
-  }
+  export interface TestData {
+    /**
+     * Creates or copies a [[FlagBuilder]] for building a test flag configuration.
+     *
+     * If the flag key has already been defined in this `TestData` instance,
+     * then the builder starts with the same configuration that was last
+     * provided for this flag.
+     *
+     * Otherwise, it starts with a new default configuration in which the flag
+     * has `true` and `false` variations, is `true` for all users when targeting
+     * is turned on and `false` otherwise, and currently has targeting turned on.
+     * You can change any of those properties and provide more complex behavior
+     * using the `FlagBuilder` methods.
+     *
+     * Once you have set the desired configuration, pass the builder to
+     * [[TestData.update]].
+     *
+     * @param key the flag key
+     * @returns a flag configuration builder
+     *
+     */
+    flag(key: string): FlagBuilder;
 
-  export interface TestData extends LDUpdateProcessor {
-      /**
-       * Creates or copies a [[FlagBuilder]] for building a test flag configuration.
-       *
-       * If the flag key has already been defined in this `TestData` instance,
-       * then the builder starts with the same configuration that was last
-       * provided for this flag.
-       *
-       * Otherwise, it starts with a new default configuration in which the flag
-       * has `true` and `false` variations, is `true` for all users when targeting
-       * is turned on and `false` otherwise, and currently has targeting turned on.
-       * You can change any of those properties and provide more complex behavior
-       * using the `FlagBuilder` methods.
-       *
-       * Once you have set the desired configuration, pass the builder to
-       * [[TestData.update]].
-       *
-       * @param key the flag key
-       * @returns a flag configuration builder
-       *
-       */
-      flag: (key: string) => FlagBuilder;
-
-      /**
-       * Updates the test data with the specified flag configuration.
-       *
-       * This has the same effect as if a flag were added or modified in the
-       * LaunchDarkly dashboard. It immediately propagates the flag changes to
-       * any [[LDClient]] instance(s) that you have already configured to use
-       * this `TestData`. If no `LDClient` has been started yet, it simply adds
-       * this flag to the test data which will be provided to any `LDClient`
-       * that you subsequently configure.
-       *
-       * Any subsequent changes to this `FlagBuilder` instance do not affect
-       * the test data unless you call the `FlagBuilder.update` again.
-       *
-       * @param flagBuilder a flag configuration builder
-       * @return a promise that will resolve when the feature stores are updated
-       */
-      update: (flagBuilder: FlagBuilder) => Promise<any>;
+    /**
+     * Updates the test data with the specified flag configuration.
+     *
+     * This has the same effect as if a flag were added or modified in the
+     * LaunchDarkly dashboard. It immediately propagates the flag changes to
+     * any [[LDClient]] instance(s) that you have already configured to use
+     * this `TestData`. If no `LDClient` has been started yet, it simply adds
+     * this flag to the test data which will be provided to any `LDClient`
+     * that you subsequently configure.
+     *
+     * Any subsequent changes to this `FlagBuilder` instance do not affect
+     * the test data unless you call the `FlagBuilder.update` again.
+     *
+     * @param flagBuilder a flag configuration builder
+     * @return a promise that will resolve when the feature stores are updated
+     */
+    update(flagBuilder: FlagBuilder): Promise<any>;
   }
 
   /**
    * A builder for feature flag configurations to be used with `TestData`.
    */
   export interface FlagBuilder {
-      /**
-       * A shortcut for setting the flag to use the standard boolean configuration.
-       *
-       * This will default for all new flags created with `TestData.flag`. The
-       * flag will have two variations, `true` and `false` (in that order). It
-       * will return `false` whenever targeting is off and `true` when targeting
-       * is on unless other settings specify otherwise.
-       *
-       * @return the flag builder
-       */
-      booleanFlag: () => FlagBuilder;
+    /**
+     * A shortcut for setting the flag to use the standard boolean configuration.
+     *
+     * This is the default for all new flags created with [[TestData.flag]]. The
+     * flag will have two variations, `true` and `false` (in that order). It
+     * will return `false` whenever targeting is off and `true` when targeting
+     * is on unless other settings specify otherwise.
+     *
+     * @return the flag builder
+     */
+    booleanFlag(): FlagBuilder;
 
-      /**
-       * Sets targeting to be on or off for this flag.
-       *
-       * The effect of this depends on the rest of the flag configuration, just
-       * as it does on the real LaunchDarkly dashboard. In the default configuration
-       * that you get from calling `TestData.flag` with a new flag key, the flag
-       * will return `false` whenever targeting is off and `true` when targeting
-       * is on.
-       *
-       * @param targetingOn true if targeting should be on
-       * @return the flag builder
-       */
-      on: (targetingOn: boolean) => FlagBuilder;
+    /**
+     * Sets targeting to be on or off for this flag.
+     *
+     * The effect of this depends on the rest of the flag configuration, just
+     * as it does on the real LaunchDarkly dashboard. In the default configuration
+     * that you get from calling `TestData.flag` with a new flag key, the flag
+     * will return `false` whenever targeting is off and `true` when targeting
+     * is on.
+     *
+     * @param targetingOn true if targeting should be on
+     * @return the flag builder
+     */
+    on(targetingOn: boolean): FlagBuilder;
 
-      /**
-       * Specifies the fallthrough variation for a flag. The fallthrough is
-       * the value that is returned if targeting is on and the user was not
-       * matched by a more specific target or rule.
-       *
-       * If a boolean is supplied, and the flag was previously configured with
-       * other variations, this also changes it to a boolean flag.
-       *
-       * @param variation
-       *    Either `true` or `false` or the index of the desired fallthrough
-       *    variation: 0 for the first, 1 for the second, etc.
-       * @return the flag builder
-       */
-      fallthroughVariation: (variation: boolean|number) => FlagBuilder;
+    /**
+     * Specifies the fallthrough variation for a flag. The fallthrough is
+     * the value that is returned if targeting is on and the user was not
+     * matched by a more specific target or rule.
+     *
+     * If a boolean is supplied, and the flag was previously configured with
+     * other variations, this also changes it to a boolean flag.
+     *
+     * @param variation
+     *    Either `true` or `false` or the index of the desired fallthrough
+     *    variation: 0 for the first, 1 for the second, etc.
+     * @return the flag builder
+     */
+    fallthroughVariation(variation: boolean|number): FlagBuilder;
 
-      /**
-       * Specifies the off variation for a flag. This is the variation that is
-       * returned whenever targeting is off.
-       *
-       * If a boolean is supplied, and the flag was previously configured with
-       * other variations, this also changes it to a boolean flag.
-       *
-       * @param variation
-       *    Either `true` or `false` or the index of the desired off
-       *    variation: 0 for the first, 1 for the second, etc.
-       * @return the flag builder
-       */
-      offVariation: (variation: boolean|number) => FlagBuilder;
+    /**
+     * Specifies the off variation for a flag. This is the variation that is
+     * returned whenever targeting is off.
+     *
+     * If a boolean is supplied, and the flag was previously configured with
+     * other variations, this also changes it to a boolean flag.
+     *
+     * @param variation
+     *    Either `true` or `false` or the index of the desired off
+     *    variation: 0 for the first, 1 for the second, etc.
+     * @return the flag builder
+     */
+    offVariation(variation: boolean|number): FlagBuilder;
 
-      /**
-       * Sets the flag to always return the specified variation for all users.
-       *
-       * Targeting is switched on, any existing targets or rules are removed,
-       * and the fallthrough variation is set to the specified value. The off
-       * variation is left unchanged.
-       *
-       * If a boolean is supplied, and the flag was previously configured with
-       * other variations, this also changes it to a boolean flag.
-       *
-       * @param varation
-       *    Either `true` or `false` or the index of the desired variation:
-       *    0 for the first, 1 for the second, etc.
-       * @return the flag builder
-       */
-      variationForAllUsers: (variation: boolean|number) => FlagBuilder;
+    /**
+     * Sets the flag to always return the specified variation for all users.
+     *
+     * Targeting is switched on, any existing targets or rules are removed,
+     * and the fallthrough variation is set to the specified value. The off
+     * variation is left unchanged.
+     *
+     * If a boolean is supplied, and the flag was previously configured with
+     * other variations, this also changes it to a boolean flag.
+     *
+     * @param varation
+     *    Either `true` or `false` or the index of the desired variation:
+     *    0 for the first, 1 for the second, etc.
+     * @return the flag builder
+     */
+    variationForAllUsers(variation: boolean|number): FlagBuilder;
 
-      /**
-       * Sets the flag to always return the specified variation value for all users.
-       *
-       * The value may be of any valid JSON type. This method changes the flag to have
-       * only a single variation, which is this value, and to return the same variation
-       * regardless of whether targeting is on or off. Any existing targets or rules
-       * are removed.
-       *
-       * @param value The desired value to be returned for all users.
-       * @return the flag builder
-       */
-      valueForAllUsers: (value: any) => FlagBuilder;
+    /**
+     * Sets the flag to always return the specified variation value for all users.
+     *
+     * The value may be of any valid JSON type. This method changes the flag to have
+     * only a single variation, which is this value, and to return the same variation
+     * regardless of whether targeting is on or off. Any existing targets or rules
+     * are removed.
+     *
+     * @param value The desired value to be returned for all users.
+     * @return the flag builder
+     */
+    valueForAllUsers(value: any): FlagBuilder;
 
-      /**
-       * Sets the flag to return the specified variation for a specifi user key
-       * when targeting is on.
-       *
-       * This has no effect when targeting is turned off for the flag.
-       *
-       * If the variation is a boolean value and the flag was not already a boolean
-       * flag, this also changes it to be a boolean flag.
-       *
-       * If the variation is an integer, it specifies a variation out of whatever
-       * variation values have already been defined.
-       *
-       * @param userKey a user key
-       * @param variation
-       *    Either `true` or `false` or the index of the desired variation:
-       *    0 for the first, 1 for the second, etc.
-       * @return the flag builder
-       */
-      variationForUser: (userKey: string, variation: boolean|number) => FlagBuilder;
+    /**
+     * Sets the flag to return the specified variation for a specific user key
+     * when targeting is on.
+     *
+     * This has no effect when targeting is turned off for the flag.
+     *
+     * If the variation is a boolean value and the flag was not already a boolean
+     * flag, this also changes it to be a boolean flag.
+     *
+     * If the variation is an integer, it specifies a variation out of whatever
+     * variation values have already been defined.
+     *
+     * @param userKey a user key
+     * @param variation
+     *    Either `true` or `false` or the index of the desired variation:
+     *    0 for the first, 1 for the second, etc.
+     * @return the flag builder
+     */
+    variationForUser(userKey: string, variation: boolean|number): FlagBuilder;
 
-      /**
-       * Removes any existing rules from the flag. This undoes the effect of methods
-       * like `ifMatch`.
-       *
-       * @return the same flag builder
-       */
-      clearRules: () => FlagBuilder;
+    /**
+     * Removes any existing rules from the flag. This undoes the effect of methods
+     * like `ifMatch`.
+     *
+     * @return the same flag builder
+     */
+    clearRules(): FlagBuilder;
 
-      /**
-       * Removes any existing user targets from the flag. This undoes the effect of
-       * methods like `variationForUser`
-       *
-       * @return the same flag builder
-       */
-      clearUserTargets: () => FlagBuilder;
+    /**
+     * Removes any existing user targets from the flag. This undoes the effect of
+     * methods like `variationForUser`
+     *
+     * @return the same flag builder
+     */
+    clearUserTargets(): FlagBuilder;
 
-      /**
-       * Starts defining a flag rule using the "is one of" operator.
-       *
-       * For example, this creates a rule that returnes `true` if the name is
-       * "Patsy" or "Edina":
-       *
-       *     testData.flag('flag')
-       *             .ifMatch('name', 'Patsy', 'Edina')
-       *             .thenReturn(true)
-       *
-       * @param attribute the user attribute to match against
-       * @param values values to compare to
-       * @return
-       *    a flag rule builder; call `thenReturn` to finish the rule
-       *    or add more tests with another method like `andMatch`
-       */
-      ifMatch: (userAttribute: string, ...values:any) => FlagRuleBuilder;
+    /**
+     * Starts defining a flag rule using the "is one of" operator.
+     *
+     * For example, this creates a rule that returnes `true` if the name is
+     * "Patsy" or "Edina":
+     *
+     *     testData.flag('flag')
+     *             .ifMatch('name', 'Patsy', 'Edina')
+     *             .thenReturn(true)
+     *
+     * @param attribute the user attribute to match against
+     * @param values values to compare to
+     * @return
+     *    a flag rule builder; call `thenReturn` to finish the rule
+     *    or add more tests with another method like `andMatch`
+     */
+    ifMatch(userAttribute: string, ...values:any): FlagRuleBuilder;
 
-      /**
-       * Starts defining a flag rule using the "is not one of" operator.
-       *
-       * For example, this creates a rule that returnes `true` if the name is
-       * neither "Saffron" nor "Bubble":
-       *
-       *     testData.flag('flag')
-       *             .ifNotMatch('name', 'Saffron', 'Bubble')
-       *             .thenReturn(true)
-       *
-       * @param attribute the user attribute to match against
-       * @param values values to compare to
-       * @return
-       *    a flag rule builder; call `thenReturn` to finish the rule
-       *    or add more tests with another method like `andNotMatch`
-       */
-      ifNotMatch: (userAttribute: string, ...values:any) => FlagRuleBuilder;
+    /**
+     * Starts defining a flag rule using the "is not one of" operator.
+     *
+     * For example, this creates a rule that returnes `true` if the name is
+     * neither "Saffron" nor "Bubble":
+     *
+     *     testData.flag('flag')
+     *             .ifNotMatch('name', 'Saffron', 'Bubble')
+     *             .thenReturn(true)
+     *
+     * @param attribute the user attribute to match against
+     * @param values values to compare to
+     * @return
+     *    a flag rule builder; call `thenReturn` to finish the rule
+     *    or add more tests with another method like `andNotMatch`
+     */
+    ifNotMatch(userAttribute: string, ...values:any): FlagRuleBuilder;
   }
 
   /**
-   * A builder for feature flag rules to be used with `FlagBuilder`.
+   * A builder for feature flag rules to be used with [[FlagBuilder]].
    *
    * In the LaunchDarkly model, a flag can have any number of rules, and
    * a rule can have any number of clauses. A clause is an individual test
@@ -1542,47 +1532,55 @@ declare module 'launchdarkly-node-server-sdk' {
    * Finally, call `thenReturn` to finish defining the rule.
    */
   export interface FlagRuleBuilder {
-      /**
-       * Adds another clause using the "is one of operator".
-       *
-       * For example, this creates a rule that returns `true` if the name is
-       * "Patsy" and the country is "gb":
-       *
-       *     testData.flag('flag')
-       *             .ifMatch('name', 'Patsy')
-       *             .andMatch('country', 'gb')
-       *             .thenReturn(true)
-       *
-       * @param attribute the user attribute to match against
-       * @param values values to compare to
-       * @return the flag rule builder
-       */
-      andMatch: (userAttribute: string, ...values:any) => FlagRuleBuilder;
+    /**
+     * Adds another clause using the "is one of" operator.
+     *
+     * For example, this creates a rule that returns `true` if the name is
+     * "Patsy" and the country is "gb":
+     *
+     *     testData.flag('flag')
+     *             .ifMatch('name', 'Patsy')
+     *             .andMatch('country', 'gb')
+     *             .thenReturn(true)
+     *
+     * @param attribute the user attribute to match against
+     * @param values values to compare to
+     * @return the flag rule builder
+     */
+    andMatch(userAttribute: string, ...values:any): FlagRuleBuilder;
 
-      /**
-       * Adds another clause using the "is not one of operator".
-       *
-       * For example, this creates a rule that returns `true` if the name is
-       * "Patsy" and the country is not "gb":
-       *
-       *     testData.flag('flag')
-       *             .ifMatch('name', 'Patsy')
-       *             .andNotMatch('country', 'gb')
-       *             .thenReturn(true)
-       *
-       * @param attribute the user attribute to match against
-       * @param values values to compare to
-       * @return the flag rule builder
-       */
-      andNotMatch: (userAttribute: string, ...values:any) => FlagRuleBuilder;
+    /**
+     * Adds another clause using the "is not one of" operator.
+     *
+     * For example, this creates a rule that returns `true` if the name is
+     * "Patsy" and the country is not "gb":
+     *
+     *     testData.flag('flag')
+     *             .ifMatch('name', 'Patsy')
+     *             .andNotMatch('country', 'gb')
+     *             .thenReturn(true)
+     *
+     * @param attribute the user attribute to match against
+     * @param values values to compare to
+     * @return the flag rule builder
+     */
+    andNotMatch(userAttribute: string, ...values:any): FlagRuleBuilder;
 
-      /**
-       * Finishes defining the rule, specify the result value as a boolean.
-       *
-       * @param variation the value to return if the rule matches the user
-       * @return the flag rule builder
-       */
-      thenReturn: (variation: boolean|number) => FlagBuilder;
+    /**
+     * Finishes defining the rule, specifying the result value as either a boolean or an index
+     *
+     * If the variation is a boolean value and the flag was not already a boolean
+     * flag, this also changes it to be a boolean flag.
+     *
+     * If the variation is an integer, it specifies a variation out of whatever
+     * variation values have already been defined.
+
+     * @param variation
+     *    Either `true` or `false` or the index of the desired variation:
+     *    0 for the first, 1 for the second, etc.
+     * @return the flag rule builder
+     */
+    thenReturn(variation: boolean|number): FlagBuilder;
   }
 }
 
