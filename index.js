@@ -2,6 +2,7 @@ const { basicLogger } = require('./loggers');
 const { BigSegmentStoreManager } = require('./big_segments');
 const FeatureStoreEventWrapper = require('./feature_store_event_wrapper');
 const FileDataSource = require('./file_data_source');
+const TestData = require('./test_data');
 const Requestor = require('./requestor');
 const EventEmitter = require('events').EventEmitter;
 const EventFactory = require('./event_factory');
@@ -415,6 +416,7 @@ module.exports = {
   init: newClient,
   basicLogger: basicLogger,
   FileDataSource: FileDataSource,
+  TestData: TestData,
   errors: errors,
 };
 
