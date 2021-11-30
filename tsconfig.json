@@ -3,6 +3,7 @@
     "module": "commonjs",
     "strict": true,
     "lib": [
+      "dom",
       "es6"
     ]
   },
