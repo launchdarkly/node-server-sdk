@@ -250,7 +250,7 @@ function segmentMatchUser(segment, user, queries, stateOut, cb) {
   }
 
   if (!segment.generation) {
-    // Big segment queries can only be done if the generation is known. If it's unset,
+    // Big Segment queries can only be done if the generation is known. If it's unset,
     // that probably means the data store was populated by an older SDK that doesn't know
     // about the generation property and therefore dropped it from the JSON data. We'll treat
     // that as a "not configured" condition.
@@ -261,7 +261,7 @@ function segmentMatchUser(segment, user, queries, stateOut, cb) {
   if (stateOut.bigSegmentsStatus) {
     // We've already done the query at some point during the flag evaluation and stored
     // the result (if any) in stateOut.bigSegmentsMembership, so we don't need to do it
-    // again. Even if multiple big segments are being referenced, the membership includes
+    // again. Even if multiple Big Segments are being referenced, the membership includes
     // *all* of the user's segment memberships.
     return cb(bigSegmentMatchUser(stateOut.bigSegmentsMembership, segment, user));
   }
@@ -461,7 +461,7 @@ function sha1Hex(input) {
 }
 
 function makeBigSegmentRef(segment) {
-  // The format of big segment references is independent of what store implementation is being
+  // The format of Big Segment references is independent of what store implementation is being
   // used; the store implementation receives only this string and does not know the details of
   // the data model. The Relay Proxy will use the same format when writing to the store.
   return segment.key + '.g' + segment.generation;
