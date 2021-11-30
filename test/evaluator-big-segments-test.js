@@ -9,9 +9,9 @@ const {
   makeSegmentMatchClause,
 } = require('./evaluator_helpers');
 
-// Tests of flag evaluation involving big segments.
+// Tests of flag evaluation involving Big Segments.
 
-describe('Evaluator - big segments', () => {
+describe('Evaluator - Big Segments', () => {
   it('segment is not matched if there is no way to query it', async () => {
     const segment = {
       key: 'test',

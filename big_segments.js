@@ -37,7 +37,7 @@ function BigSegmentStoreManager(store, config, logger) {
     return lastStatus;
   };
 
-  // Called by the evaluator when it needs to get the big segment membership state for a user.
+  // Called by the evaluator when it needs to get the Big Segment membership state for a user.
   //
   // If there is a cached membership state for the user, it returns the cached state. Otherwise,
   // it converts the user key into the hash string used by the BigSegmentStore, queries the store,
@@ -59,7 +59,7 @@ function BigSegmentStoreManager(store, config, logger) {
         }
         cache.set(userKey, membership);
       } catch (e) {
-        logger.error('Big segment store membership query returned error: ' + e);
+        logger.error('Big Segment store membership query returned error: ' + e);
         return [null, 'STORE_ERROR'];
       }
       cache.set(userKey, membership);
@@ -78,18 +78,18 @@ function BigSegmentStoreManager(store, config, logger) {
       lastStatus = { available: false, stale: false };
       return;
     }
-    logger.debug('Querying big segment store status');
+    logger.debug('Querying Big Segment store status');
     let newStatus;
     try {
       const metadata = await store.getMetadata();
       newStatus = { available: true, stale: !metadata || !metadata.lastUpToDate || isStale(metadata.lastUpToDate) };
     } catch (e) {
-      logger.error('Big segment store status query returned error: ' + e);
+      logger.error('Big Segment store status query returned error: ' + e);
       newStatus = { available: false, stale: false };
     }
     if (!lastStatus || lastStatus.available !== newStatus.available || lastStatus.stale !== newStatus.stale) {
       logger.debug(
-        'Big segment store status changed from %s to %s',
+        'Big Segment store status changed from %s to %s',
         JSON.stringify(lastStatus),
         JSON.stringify(newStatus)
       );
