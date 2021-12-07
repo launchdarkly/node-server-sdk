@@ -1286,10 +1286,28 @@ declare module 'launchdarkly-node-server-sdk' {
   ): object;
 
   /**
+   * A mechanism for providing dynamically updatable feature flag state in a simplified form to
+   * an SDK client in test scenarios.
+   * 
+   * This function constructs a new [[TestData]] object. See [[TestData]] for usage details.
+   *
+   * @example
+   *     const td = LaunchDarkly.TestData();
+   *     testData.update(td.flag("flag-key-1").booleanFlag().variationForAllUsers(true));
+   *     const client = new LDClient(sdkKey, { updateProcessor: td });
+   *
+   *     // flags can be updated at any time:
+   *     td.update(td.flag("flag-key-2")
+   *         .variationForUser("some-user-key", true)
+   *         .fallthroughVariation(false));
+   */
+  export function TestData(): TestData;
+
+  /**
    * A mechanism for providing dynamically updatable feature flag state in a simplified form to an SDK
    * client in test scenarios.
-
-   * Unlike [[FileData]], this mechanism does not use any external resources. It provides only
+   *
+   * Unlike [[FileDataSource]], this mechanism does not use any external resources. It provides only
    * the data that the application has put into it using the [[TestData.update]] method.
    *
    * @example
@@ -1303,17 +1321,15 @@ declare module 'launchdarkly-node-server-sdk' {
    *         .fallthroughVariation(false));
    *
    * The above example uses a simple boolean flag, but more complex configurations are possible using
-   * the methods of the [[FlagBuilder]] that is returned [[FlagBuilder.flag]]. [[FlagBuilder]]
+   * the methods of the [[FlagBuilder]] that is returned by [[TestData.flag]]. [[FlagBuilder]]
    * supports many of the ways a flag can be configured on the LaunchDarkly dashboard, but does not
    * currently support 1. rule operators other than "in" and "not in", or 2. percentage rollouts.
-
+   *
    * If the same `TestData` instance is used to configure multiple `LDClient` instances,
    * any changes made to the data will propagate to all of the `LDClient`s.
    *
    * @see [[FileDataSource]]
    */
-  export function TestData(): TestData;
-
   export interface TestData {
     /**
      * Creates or copies a [[FlagBuilder]] for building a test flag configuration.
@@ -1348,7 +1364,7 @@ declare module 'launchdarkly-node-server-sdk' {
      * that you subsequently configure.
      *
      * Any subsequent changes to this `FlagBuilder` instance do not affect
-     * the test data unless you call the `FlagBuilder.update` again.
+     * the test data unless you call `update` again.
      *
      * @param flagBuilder a flag configuration builder
      * @return a promise that will resolve when the feature stores are updated
@@ -1357,7 +1373,7 @@ declare module 'launchdarkly-node-server-sdk' {
   }
 
   /**
-   * A builder for feature flag configurations to be used with `TestData`.
+   * A builder for feature flag configurations to be used with [[TestData]].
    */
   export interface FlagBuilder {
     /**
@@ -1377,7 +1393,7 @@ declare module 'launchdarkly-node-server-sdk' {
      *
      * The effect of this depends on the rest of the flag configuration, just
      * as it does on the real LaunchDarkly dashboard. In the default configuration
-     * that you get from calling `TestData.flag` with a new flag key, the flag
+     * that you get from calling [[TestData.flag]] with a new flag key, the flag
      * will return `false` whenever targeting is off and `true` when targeting
      * is on.
      *
@@ -1467,7 +1483,7 @@ declare module 'launchdarkly-node-server-sdk' {
 
     /**
      * Removes any existing rules from the flag. This undoes the effect of methods
-     * like `ifMatch`.
+     * like [[ifMatch]].
      *
      * @return the same flag builder
      */
@@ -1475,7 +1491,7 @@ declare module 'launchdarkly-node-server-sdk' {
 
     /**
      * Removes any existing user targets from the flag. This undoes the effect of
-     * methods like `variationForUser`
+     * methods like [[variationForUser]].
      *
      * @return the same flag builder
      */
