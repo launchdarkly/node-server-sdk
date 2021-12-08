@@ -109,7 +109,7 @@ const fds = integrations.FileDataSource(fdsOptions);
 
 // TestData
 const td: integrations.TestData = integrations.TestData();
-const fb: integrations.FlagBuilder = td.flag('key');
+const fb: integrations.TestDataFlagBuilder = td.flag('key');
 td.update(fb);
 fb.ifMatch('name', 'x').thenReturn(true);
 

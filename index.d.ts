@@ -1358,7 +1358,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
    *         .fallthroughVariation(false));
    *
    * The above example uses a simple boolean flag, but more complex configurations are possible using
-   * the methods of the [[FlagBuilder]] that is returned by [[TestData.flag]]. [[FlagBuilder]]
+   * the methods of the [[TestDataFlagBuilder]] that is returned by [[TestData.flag]]. [[TestDataFlagBuilder]]
    * supports many of the ways a flag can be configured on the LaunchDarkly dashboard, but does not
    * currently support 1. rule operators other than "in" and "not in", or 2. percentage rollouts.
    *
@@ -1369,7 +1369,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
    */
   export interface TestData {
     /**
-     * Creates or copies a [[FlagBuilder]] for building a test flag configuration.
+     * Creates or copies a [[TestDataFlagBuilder]] for building a test flag configuration.
      *
      * If the flag key has already been defined in this `TestData` instance,
      * then the builder starts with the same configuration that was last
@@ -1379,7 +1379,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      * has `true` and `false` variations, is `true` for all users when targeting
      * is turned on and `false` otherwise, and currently has targeting turned on.
      * You can change any of those properties and provide more complex behavior
-     * using the `FlagBuilder` methods.
+     * using the `TestDataFlagBuilder` methods.
      *
      * Once you have set the desired configuration, pass the builder to
      * [[TestData.update]].
@@ -1388,7 +1388,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      * @returns a flag configuration builder
      *
      */
-    flag(key: string): FlagBuilder;
+    flag(key: string): TestDataFlagBuilder;
 
     /**
      * Updates the test data with the specified flag configuration.
@@ -1400,19 +1400,19 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      * this flag to the test data which will be provided to any `LDClient`
      * that you subsequently configure.
      *
-     * Any subsequent changes to this `FlagBuilder` instance do not affect
+     * Any subsequent changes to this `TestDataFlagBuilder` instance do not affect
      * the test data unless you call `update` again.
      *
      * @param flagBuilder a flag configuration builder
      * @return a promise that will resolve when the feature stores are updated
      */
-    update(flagBuilder: FlagBuilder): Promise<any>;
+    update(flagBuilder: TestDataFlagBuilder): Promise<any>;
   }
 
   /**
    * A builder for feature flag configurations to be used with [[TestData]].
    */
-  export interface FlagBuilder {
+  export interface TestDataFlagBuilder {
     /**
      * A shortcut for setting the flag to use the standard boolean configuration.
      *
@@ -1423,7 +1423,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *
      * @return the flag builder
      */
-    booleanFlag(): FlagBuilder;
+    booleanFlag(): TestDataFlagBuilder;
 
     /**
      * Sets targeting to be on or off for this flag.
@@ -1437,7 +1437,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      * @param targetingOn true if targeting should be on
      * @return the flag builder
      */
-    on(targetingOn: boolean): FlagBuilder;
+    on(targetingOn: boolean): TestDataFlagBuilder;
 
     /**
      * Specifies the fallthrough variation for a flag. The fallthrough is
@@ -1452,7 +1452,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *    variation: 0 for the first, 1 for the second, etc.
      * @return the flag builder
      */
-    fallthroughVariation(variation: boolean|number): FlagBuilder;
+    fallthroughVariation(variation: boolean|number): TestDataFlagBuilder;
 
     /**
      * Specifies the off variation for a flag. This is the variation that is
@@ -1466,7 +1466,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *    variation: 0 for the first, 1 for the second, etc.
      * @return the flag builder
      */
-    offVariation(variation: boolean|number): FlagBuilder;
+    offVariation(variation: boolean|number): TestDataFlagBuilder;
 
     /**
      * Sets the flag to always return the specified variation for all users.
@@ -1483,7 +1483,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *    0 for the first, 1 for the second, etc.
      * @return the flag builder
      */
-    variationForAllUsers(variation: boolean|number): FlagBuilder;
+    variationForAllUsers(variation: boolean|number): TestDataFlagBuilder;
 
     /**
      * Sets the flag to always return the specified variation value for all users.
@@ -1496,7 +1496,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      * @param value The desired value to be returned for all users.
      * @return the flag builder
      */
-    valueForAllUsers(value: any): FlagBuilder;
+    valueForAllUsers(value: any): TestDataFlagBuilder;
 
     /**
      * Sets the flag to return the specified variation for a specific user key
@@ -1516,7 +1516,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *    0 for the first, 1 for the second, etc.
      * @return the flag builder
      */
-    variationForUser(userKey: string, variation: boolean|number): FlagBuilder;
+    variationForUser(userKey: string, variation: boolean|number): TestDataFlagBuilder;
 
     /**
      * Removes any existing rules from the flag. This undoes the effect of methods
@@ -1524,7 +1524,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *
      * @return the same flag builder
      */
-    clearRules(): FlagBuilder;
+    clearRules(): TestDataFlagBuilder;
 
     /**
      * Removes any existing user targets from the flag. This undoes the effect of
@@ -1532,7 +1532,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *
      * @return the same flag builder
      */
-    clearUserTargets(): FlagBuilder;
+    clearUserTargets(): TestDataFlagBuilder;
 
     /**
      * Starts defining a flag rule using the "is one of" operator.
@@ -1550,7 +1550,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *    a flag rule builder; call `thenReturn` to finish the rule
      *    or add more tests with another method like `andMatch`
      */
-    ifMatch(userAttribute: string, ...values:any): FlagRuleBuilder;
+    ifMatch(userAttribute: string, ...values:any): TestDataRuleBuilder;
 
     /**
      * Starts defining a flag rule using the "is not one of" operator.
@@ -1568,11 +1568,11 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *    a flag rule builder; call `thenReturn` to finish the rule
      *    or add more tests with another method like `andNotMatch`
      */
-    ifNotMatch(userAttribute: string, ...values:any): FlagRuleBuilder;
+    ifNotMatch(userAttribute: string, ...values:any): TestDataRuleBuilder;
   }
 
   /**
-   * A builder for feature flag rules to be used with [[FlagBuilder]].
+   * A builder for feature flag rules to be used with [[TestDataFlagBuilder]].
    *
    * In the LaunchDarkly model, a flag can have any number of rules, and
    * a rule can have any number of clauses. A clause is an individual test
@@ -1584,7 +1584,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
    * you may add more clauses with the rule builder's methods such as `andMatch`.
    * Finally, call `thenReturn` to finish defining the rule.
    */
-  export interface FlagRuleBuilder {
+  export interface TestDataRuleBuilder {
     /**
      * Adds another clause using the "is one of" operator.
      *
@@ -1600,7 +1600,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      * @param values values to compare to
      * @return the flag rule builder
      */
-    andMatch(userAttribute: string, ...values:any): FlagRuleBuilder;
+    andMatch(userAttribute: string, ...values:any): TestDataRuleBuilder;
 
     /**
      * Adds another clause using the "is not one of" operator.
@@ -1617,7 +1617,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      * @param values values to compare to
      * @return the flag rule builder
      */
-    andNotMatch(userAttribute: string, ...values:any): FlagRuleBuilder;
+    andNotMatch(userAttribute: string, ...values:any): TestDataRuleBuilder;
 
     /**
      * Finishes defining the rule, specifying the result value as either a boolean or an index
@@ -1633,7 +1633,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *    0 for the first, 1 for the second, etc.
      * @return the flag rule builder
      */
-    thenReturn(variation: boolean|number): FlagBuilder;
+    thenReturn(variation: boolean|number): TestDataFlagBuilder;
   }
 }
 

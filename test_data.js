@@ -42,7 +42,7 @@ function TestData() {
     if (existingFlagBuilders[flagName]) {
       return existingFlagBuilders[flagName].copy();
     } else {
-      return new FlagBuilder(flagName).booleanFlag();
+      return new TestDataFlagBuilder(flagName).booleanFlag();
     }
   };
 
@@ -59,7 +59,7 @@ function TestData() {
   return td;
 }
 
-function FlagBuilder(flagName) {
+function TestDataFlagBuilder(flagName) {
   this._key = flagName;
   this._on = true;
   this._variations = [];
@@ -72,8 +72,8 @@ function variationForBoolean(aBool) {
   return aBool ? TRUE_VARIATION_INDEX : FALSE_VARIATION_INDEX;
 }
 
-FlagBuilder.prototype.copy = function () {
-  const to = new FlagBuilder(this._key);
+TestDataFlagBuilder.prototype.copy = function () {
+  const to = new TestDataFlagBuilder(this._key);
   to._variations = [...this._variations];
   to._offVariation = this._offVariation;
   to._on = this._on;
@@ -83,7 +83,7 @@ FlagBuilder.prototype.copy = function () {
   return to;
 };
 
-FlagBuilder.prototype.isBooleanFlag = function () {
+TestDataFlagBuilder.prototype.isBooleanFlag = function () {
   return (
     this._variations.length === 2 &&
     this._variations[TRUE_VARIATION_INDEX] === true &&
@@ -91,7 +91,7 @@ FlagBuilder.prototype.isBooleanFlag = function () {
   );
 };
 
-FlagBuilder.prototype.booleanFlag = function () {
+TestDataFlagBuilder.prototype.booleanFlag = function () {
   if (this.isBooleanFlag()) {
     return this;
   } else {
@@ -101,12 +101,12 @@ FlagBuilder.prototype.booleanFlag = function () {
   }
 };
 
-FlagBuilder.prototype.on = function (aBool) {
+TestDataFlagBuilder.prototype.on = function (aBool) {
   this._on = aBool;
   return this;
 };
 
-FlagBuilder.prototype.fallthroughVariation = function (variation) {
+TestDataFlagBuilder.prototype.fallthroughVariation = function (variation) {
   if (typeof variation === 'boolean') {
     this.booleanFlag().fallthroughVariation(variationForBoolean(variation));
   } else {
@@ -115,7 +115,7 @@ FlagBuilder.prototype.fallthroughVariation = function (variation) {
   return this;
 };
 
-FlagBuilder.prototype.offVariation = function (variation) {
+TestDataFlagBuilder.prototype.offVariation = function (variation) {
   if (typeof variation === 'boolean') {
     this.booleanFlag().offVariation(variationForBoolean(variation));
   } else {
@@ -124,30 +124,30 @@ FlagBuilder.prototype.offVariation = function (variation) {
   return this;
 };
 
-FlagBuilder.prototype.variations = function (values) {
+TestDataFlagBuilder.prototype.variations = function (values) {
   this._variations = [...values];
   return this;
 };
 
-FlagBuilder.prototype.clearUserTargets = function () {
+TestDataFlagBuilder.prototype.clearUserTargets = function () {
   this._targets = null;
   return this;
 };
 
-FlagBuilder.prototype.clearRules = function () {
+TestDataFlagBuilder.prototype.clearRules = function () {
   this._rules = null;
   return this;
 };
 
-FlagBuilder.prototype.variationForAllUsers = function (variation) {
+TestDataFlagBuilder.prototype.variationForAllUsers = function (variation) {
   return this.on(true).clearRules().clearUserTargets().fallthroughVariation(variation);
 };
 
-FlagBuilder.prototype.valueForAllUsers = function (value) {
+TestDataFlagBuilder.prototype.valueForAllUsers = function (value) {
   return this.variations([value]).variationForAllUsers(0);
 };
 
-FlagBuilder.prototype.variationForUser = function (userKey, variation) {
+TestDataFlagBuilder.prototype.variationForUser = function (userKey, variation) {
   if (typeof variation === 'boolean') {
     return this.booleanFlag().variationForUser(userKey, variationForBoolean(variation));
   }
@@ -186,24 +186,24 @@ FlagBuilder.prototype.variationForUser = function (userKey, variation) {
   return this;
 };
 
-FlagBuilder.prototype.addRule = function (flagRuleBuilder) {
+TestDataFlagBuilder.prototype.addRule = function (flagRuleBuilder) {
   if (!this._rules) {
     this._rules = [];
   }
   this._rules.push(flagRuleBuilder);
 };
 
-FlagBuilder.prototype.ifMatch = function (attribute, ...values) {
-  const flagRuleBuilder = new FlagRuleBuilder(this);
+TestDataFlagBuilder.prototype.ifMatch = function (attribute, ...values) {
+  const flagRuleBuilder = new TestDataRuleBuilder(this);
   return flagRuleBuilder.andMatch(attribute, ...values);
 };
 
-FlagBuilder.prototype.ifNotMatch = function (attribute, ...values) {
-  const flagRuleBuilder = new FlagRuleBuilder(this);
+TestDataFlagBuilder.prototype.ifNotMatch = function (attribute, ...values) {
+  const flagRuleBuilder = new TestDataRuleBuilder(this);
   return flagRuleBuilder.andNotMatch(attribute, ...values);
 };
 
-FlagBuilder.prototype.build = function (version) {
+TestDataFlagBuilder.prototype.build = function (version) {
   const baseFlagObject = {
     key: this._key,
     version: version,
@@ -233,14 +233,14 @@ FlagBuilder.prototype.build = function (version) {
   return baseFlagObject;
 };
 
-/* FlagRuleBuilder */
-function FlagRuleBuilder(flagBuilder) {
+/* TestDataRuleBuilder */
+function TestDataRuleBuilder(flagBuilder) {
   this._flagBuilder = flagBuilder;
   this._clauses = [];
   this._variation = null;
 }
 
-FlagRuleBuilder.prototype.andMatch = function (attribute, ...values) {
+TestDataRuleBuilder.prototype.andMatch = function (attribute, ...values) {
   this._clauses.push({
     attribute: attribute,
     operator: 'in',
@@ -250,7 +250,7 @@ FlagRuleBuilder.prototype.andMatch = function (attribute, ...values) {
   return this;
 };
 
-FlagRuleBuilder.prototype.andNotMatch = function (attribute, ...values) {
+TestDataRuleBuilder.prototype.andNotMatch = function (attribute, ...values) {
   this._clauses.push({
     attribute: attribute,
     operator: 'in',
@@ -260,7 +260,7 @@ FlagRuleBuilder.prototype.andNotMatch = function (attribute, ...values) {
   return this;
 };
 
-FlagRuleBuilder.prototype.thenReturn = function (variation) {
+TestDataRuleBuilder.prototype.thenReturn = function (variation) {
   if (typeof variation === 'boolean') {
     this._flagBuilder.booleanFlag();
     return this.thenReturn(variationForBoolean(variation));
@@ -271,7 +271,7 @@ FlagRuleBuilder.prototype.thenReturn = function (variation) {
   return this._flagBuilder;
 };
 
-FlagRuleBuilder.prototype.build = function (id) {
+TestDataRuleBuilder.prototype.build = function (id) {
   return {
     id: 'rule' + id,
     variation: this._variation,
