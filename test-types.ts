@@ -5,6 +5,7 @@
 // developer can use all of the SDK features.
 
 import * as ld from 'launchdarkly-node-server-sdk';
+import * as integrations from 'launchdarkly-node-server-sdk/integrations';
 import * as interfaces from 'launchdarkly-node-server-sdk/interfaces';
 
 var logger: ld.LDLogger = {
@@ -95,6 +96,24 @@ client.allFlagsState(user).then((flagSet: ld.LDFlagsState) => { });
 var logger1: ld.LDLogger = ld.basicLogger();
 var logger2: ld.LDLogger = ld.basicLogger({ level: 'info' });
 var logger3: ld.LDLogger = ld.basicLogger({ destination: console.log });
+
+// integrations module:
+
+// FileDataSource
+const fdsOptions: integrations.FileDataSourceOptions = {
+  paths: [ 'filepath' ],
+  autoUpdate: true,
+  logger: ld.basicLogger(),
+};
+const fds = integrations.FileDataSource(fdsOptions);
+
+// TestData
+const td: integrations.TestData = integrations.TestData();
+const fb: integrations.FlagBuilder = td.flag('key');
+td.update(fb);
+fb.ifMatch('name', 'x').thenReturn(true);
+
+// interfaces module:
 
 // BigSegmentStoreStatusProvider
 var bsssp: interfaces.BigSegmentStoreStatusProvider = client.bigSegmentStoreStatusProvider

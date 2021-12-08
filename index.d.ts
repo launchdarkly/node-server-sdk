@@ -1225,6 +1225,37 @@ declare module 'launchdarkly-node-server-sdk' {
 
   /**
    * Configuration for [[FileDataSource]].
+   * 
+   * @deprecated Import this type from the `launchdarkly-node-server-sdk/integrations` module instead.
+   *   It will be removed from the main SDK module in a future release.
+   */
+  export interface FileDataSourceOptions {
+    paths: Array<string>;
+    autoUpdate?: boolean;
+    logger?: LDLogger | object;
+  }
+
+  /**
+   * Creates an object that allows you to use local files as a source of feature flag state,
+   * instead of connecting to LaunchDarkly. This would typically be used in a test environment.
+   *
+   * @deprecated Import this function from the `launchdarkly-node-server-sdk/integrations` module instead.
+   *   It will be removed from the main SDK module in a future release.
+   */
+  export function FileDataSource(
+    options: FileDataSourceOptions
+  ): object;
+}
+
+/**
+ * This module contains tools for connecting the LaunchDarkly client to other software, or
+ * to test fixtures.
+ */
+declare module 'launchdarkly-node-server-sdk/integrations' {
+  import { LDLogger } from 'launchdarkly-node-server-sdk';
+  
+  /**
+   * Configuration for [[FileDataSource]].
    */
   export interface FileDataSourceOptions {
     /**
@@ -1256,8 +1287,10 @@ declare module 'launchdarkly-node-server-sdk' {
    * To use this component, call `FileDataSource(options)` and store the result in the `updateProcessor`
    * property of your LaunchDarkly client configuration:
    *
-   *     var dataSource = LaunchDarkly.FileDataSource({ paths: [ myFilePath ] });
-   *     var config = { updateProcessor: dataSource };
+   *     const { FileDataSource } = require('launchdarkly-node-server-sdk/integrations');
+   * 
+   *     const dataSource = FileDataSource({ paths: [ myFilePath ] });
+   *     const config = { updateProcessor: dataSource };
    *
    * This will cause the client not to connect to LaunchDarkly to get feature flags, and use
    * the file data instead.
@@ -1292,7 +1325,9 @@ declare module 'launchdarkly-node-server-sdk' {
    * This function constructs a new [[TestData]] object. See [[TestData]] for usage details.
    *
    * @example
-   *     const td = LaunchDarkly.TestData();
+   *     const { TestData } = require('launchdarkly-node-server-sdk/interfaces');
+   * 
+   *     const td = TestData();
    *     testData.update(td.flag("flag-key-1").booleanFlag().variationForAllUsers(true));
    *     const client = new LDClient(sdkKey, { updateProcessor: td });
    *
@@ -1307,11 +1342,13 @@ declare module 'launchdarkly-node-server-sdk' {
    * A mechanism for providing dynamically updatable feature flag state in a simplified form to an SDK
    * client in test scenarios.
    *
-   * Unlike [[FileDataSource]], this mechanism does not use any external resources. It provides only
+   * Unlike [[FileData]], this mechanism does not use any external resources. It provides only
    * the data that the application has put into it using the [[TestData.update]] method.
    *
    * @example
-   *     const td = LaunchDarkly.TestData();
+   *     const { TestData } = require('launchdarkly-node-server-sdk/interfaces');
+   * 
+   *     const td = TestData();
    *     testData.update(td.flag("flag-key-1").booleanFlag().variationForAllUsers(true));
    *     const client = new LDClient(sdkKey, { updateProcessor: td });
    *
