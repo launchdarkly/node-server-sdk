@@ -32,8 +32,7 @@ function NamespacedDataSet() {
     for (const ns in itemsByNamespace) {
       const items = itemsByNamespace[ns];
       const keys = Object.keys(items).sort(); // sort to make tests determinate
-      for (const i in keys) {
-        const key = keys[i];
+      for (const key of keys) {
         callback(ns, key, items[key]);
       }
     }
@@ -138,16 +137,14 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
   function computeDependencies(kind, item) {
     const ret = NamespacedDataSet();
     if (kind === dataKind.features) {
-      for (const i in item.prerequisites || []) {
-        ret.set(dataKind.features.namespace, item.prerequisites[i].key, true);
+      for (const prerequisite of item.prerequisites || []) {
+        ret.set(dataKind.features.namespace, prerequisite.key, true);
       }
-      for (const i in item.rules || []) {
-        const rule = item.rules[i];
-        for (const j in rule.clauses || []) {
-          const clause = rule.clauses[j];
+      for (const rule of item.rules || []) {
+        for (const clause of rule.clauses || []) {
           if (clause.op === 'segmentMatch') {
-            for (const k in clause.values) {
-              ret.set(dataKind.segments.namespace, clause.values[k], true);
+            for (const value of clause.values) {
+              ret.set(dataKind.segments.namespace, value, true);
             }
           }
         }
