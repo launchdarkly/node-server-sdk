@@ -46,14 +46,14 @@ function TestData() {
     }
   };
 
-  td.update = (flagBuilder, cb) => {
+  td.update = flagBuilder => {
     const oldItem = currentFlags[flagBuilder._key];
     const oldVersion = oldItem ? oldItem.version : 0;
     const newFlag = flagBuilder.build(oldVersion + 1);
     currentFlags[flagBuilder._key] = newFlag;
     existingFlagBuilders[flagBuilder._key] = flagBuilder.copy();
 
-    Promise.all(dataSourceImpls.map(impl => promisify(impl.upsert)(newFlag))).then(cb);
+    return Promise.all(dataSourceImpls.map(impl => promisify(impl.upsert)(newFlag)));
   };
 
   return td;
@@ -95,9 +95,7 @@ TestDataFlagBuilder.prototype.booleanFlag = function () {
   if (this.isBooleanFlag()) {
     return this;
   } else {
-    return this.variations([true, false])
-      .fallthroughVariation(TRUE_VARIATION_INDEX)
-      .offVariation(FALSE_VARIATION_INDEX);
+    return this.variations(true, false).fallthroughVariation(TRUE_VARIATION_INDEX).offVariation(FALSE_VARIATION_INDEX);
   }
 };
 
@@ -124,7 +122,7 @@ TestDataFlagBuilder.prototype.offVariation = function (variation) {
   return this;
 };
 
-TestDataFlagBuilder.prototype.variations = function (values) {
+TestDataFlagBuilder.prototype.variations = function (...values) {
   this._variations = [...values];
   return this;
 };
@@ -144,7 +142,7 @@ TestDataFlagBuilder.prototype.variationForAllUsers = function (variation) {
 };
 
 TestDataFlagBuilder.prototype.valueForAllUsers = function (value) {
-  return this.variations([value]).variationForAllUsers(0);
+  return this.variations(value).variationForAllUsers(0);
 };
 
 TestDataFlagBuilder.prototype.variationForUser = function (userKey, variation) {

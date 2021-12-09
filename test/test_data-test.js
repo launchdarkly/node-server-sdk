@@ -39,7 +39,7 @@ describe('TestData', function() {
     const res = await promisifySingle(store.all)(dataKind.features);
     expect(res).toEqual({});
 
-    await promisifySingle(td.update)(td.flag('new-flag').variationForAllUsers(true));
+    await td.update(td.flag('new-flag').variationForAllUsers(true));
 
     const postUpdateRes = await promisifySingle(store.all)(dataKind.features);
     expect(postUpdateRes).toEqual({
@@ -66,7 +66,7 @@ describe('TestData', function() {
     expect(res).toEqual({});
 
     tds.stop();
-    await promisifySingle(td.update)(td.flag('new-flag').variationForAllUsers(true));
+    await td.update(td.flag('new-flag').variationForAllUsers(true));
 
     const postUpdateRes = await promisifySingle(store.all)(dataKind.features);
     expect(postUpdateRes).toEqual({});
@@ -78,7 +78,7 @@ describe('TestData', function() {
     const tds = td({featureStore: store});
     await promisifySingle(tds.start)();
 
-    await promisifySingle(td.update)(td.flag('new-flag').variationForAllUsers(true));
+    await td.update(td.flag('new-flag').variationForAllUsers(true));
     const res = await promisifySingle(store.all)(dataKind.features);
     expect(res).toEqual({
       'new-flag': {
@@ -93,7 +93,7 @@ describe('TestData', function() {
       }
     });
 
-    await promisifySingle(td.update)(td.flag('new-flag').variationForAllUsers(false));
+    await td.update(td.flag('new-flag').variationForAllUsers(false));
     const res2 = await promisifySingle(store.all)(dataKind.features);
     expect(res2).toEqual({
       'new-flag': {
@@ -129,6 +129,13 @@ describe('TestData', function() {
     expect(flag.isBooleanFlag()).toBe(true)
     const flag2 = td.flag('test-flag-notBooleanFlags').valueForAllUsers('yes');
     expect(flag2.isBooleanFlag()).toBe(false)
+  });
+
+  it('FlagBuilder can set variations', function() {
+    const td = TestData();
+    const flag = td.flag('test-flag');
+    flag.variations('a', 'b');
+    expect(flag.build(0).variations).toEqual([ 'a', 'b' ]);
   });
 
   it('can handle boolean values for *Variation setters', function() {

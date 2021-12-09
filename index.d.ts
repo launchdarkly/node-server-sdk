@@ -1426,6 +1426,18 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
     booleanFlag(): TestDataFlagBuilder;
 
     /**
+     * Sets the allowable variation values for the flag.
+     *
+     * The values may be of any JSON-compatible type: boolean, number, string, array,
+     * or object. For instance, a boolean flag normally has `variations(true, false)`;
+     * a string-valued flag might have `variations("red", "green")`; etc.
+     * 
+     * @param values any number of variation values
+     * @return the flag builder
+     */
+    variations(...values: any[]): TestDataFlagBuilder;
+
+    /**
      * Sets targeting to be on or off for this flag.
      *
      * The effect of this depends on the rest of the flag configuration, just
