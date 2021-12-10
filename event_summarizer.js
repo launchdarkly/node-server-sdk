@@ -37,8 +37,7 @@ function EventSummarizer() {
 
   es.getSummary = () => {
     const flagsOut = {};
-    for (const i in counters) {
-      const c = counters[i];
+    for (const c of Object.values(counters)) {
       let flag = flagsOut[c.key];
       if (!flag) {
         flag = {
