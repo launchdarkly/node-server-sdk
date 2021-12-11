@@ -195,8 +195,8 @@ function CachingStoreWrapper(underlyingStore, ttl, description) {
     if (!cache) {
       return;
     }
-    for (const kindNamespace in dataKind) {
-      cache.del(allCacheKey(dataKind[kindNamespace]));
+    for (const eachKind of Object.values(dataKind)) {
+      cache.del(allCacheKey(eachKind));
     }
   }
 

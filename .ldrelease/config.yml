@@ -1,8 +1,10 @@
+version: 2
+
 repo:
   public: node-server-sdk
   private: node-server-sdk-private
 
-releasableBranches:
+branches:
   - name: master
     description: 6.x
   - name: 5.x
@@ -11,11 +13,14 @@ publications:
   - url: https://www.npmjs.com/package/launchdarkly-node-server-sdk
     description: npm
 
-template:
-  name: npm
+jobs:
+  - docker:
+      image: node:12-buster
+    template:
+      name: npm
 
 documentation:
-  githubPages: true
+  gitHubPages: true
   title: LaunchDarkly Server-Side Node SDK
 
 sdk:

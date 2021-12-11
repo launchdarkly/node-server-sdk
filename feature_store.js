@@ -44,12 +44,9 @@ function InMemoryFeatureStore() {
     const results = {};
     const items = allData[kind.namespace] || {};
 
-    for (const key in items) {
-      if (Object.hasOwnProperty.call(items, key)) {
-        const item = items[key];
-        if (item && !item.deleted) {
-          results[key] = item;
-        }
+    for (const [key, item] of Object.entries(items)) {
+      if (item && !item.deleted) {
+        results[key] = item;
       }
     }
 

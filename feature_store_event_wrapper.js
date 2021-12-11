@@ -29,11 +29,9 @@ function NamespacedDataSet() {
   }
 
   function enumerate(callback) {
-    for (const ns in itemsByNamespace) {
-      const items = itemsByNamespace[ns];
+    for (const [ns, items] of Object.entries(itemsByNamespace)) {
       const keys = Object.keys(items).sort(); // sort to make tests determinate
-      for (const i in keys) {
-        const key = keys[i];
+      for (const key of keys) {
         callback(ns, key, items[key]);
       }
     }
@@ -138,16 +136,14 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
   function computeDependencies(kind, item) {
     const ret = NamespacedDataSet();
     if (kind === dataKind.features) {
-      for (const i in item.prerequisites || []) {
-        ret.set(dataKind.features.namespace, item.prerequisites[i].key, true);
+      for (const prereq of item.prerequisites || []) {
+        ret.set(dataKind.features.namespace, prereq.key, true);
       }
-      for (const i in item.rules || []) {
-        const rule = item.rules[i];
-        for (const j in rule.clauses || []) {
-          const clause = rule.clauses[j];
+      for (const rule of item.rules || []) {
+        for (const clause of rule.clauses || []) {
           if (clause.op === 'segmentMatch') {
-            for (const k in clause.values) {
-              ret.set(dataKind.segments.namespace, clause.values[k], true);
+            for (const value of clause.values) {
+              ret.set(dataKind.segments.namespace, value, true);
             }
           }
         }
@@ -168,10 +164,9 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
         featureStore.init(newData, () => {
           dependencyTracker.reset();
 
-          for (const namespace in newData) {
-            const items = newData[namespace];
+          for (const [namespace, items] of Object.entries(newData)) {
             const kind = dataKind[namespace];
-            for (const key in items) {
+            for (const key of Object.keys(items || {})) {
               const item = items[key];
               dependencyTracker.updateDependenciesFrom(namespace, key, computeDependencies(kind, item));
             }
@@ -179,11 +174,11 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
 
           if (checkForChanges) {
             const updatedItems = NamespacedDataSet();
-            for (const namespace in newData) {
+            for (const namespace of Object.keys(newData)) {
               const oldDataForKind = oldData[namespace];
               const newDataForKind = newData[namespace];
               const mergedData = Object.assign({}, oldDataForKind, newDataForKind);
-              for (const key in mergedData) {
+              for (const key of Object.keys(mergedData)) {
                 addIfModified(
                   namespace,
                   key,

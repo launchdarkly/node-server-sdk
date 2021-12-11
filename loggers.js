@@ -13,7 +13,7 @@ function basicLogger(options) {
 
   let minLevel = 1; // default is 'info'
   if (options && options.level) {
-    for (const i in logLevels) {
+    for (let i = 0; i < logLevels.length; i++) {
       if (logLevels[i] === options.level) {
         minLevel = i;
       }
@@ -36,7 +36,7 @@ function basicLogger(options) {
   }
 
   const logger = {};
-  for (const i in logLevels) {
+  for (let i = 0; i < logLevels.length; i++) {
     const levelName = logLevels[i];
     if (levelName !== 'none') {
       if (i < minLevel) {

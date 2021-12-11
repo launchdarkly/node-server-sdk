@@ -152,16 +152,16 @@ declare module 'launchdarkly-node-server-sdk' {
     inExperiment?: boolean;
 
     /**
-     * Describes the validity of big segment information, if and only if the flag evaluation
-     * required querying at least one big segment.
+     * Describes the validity of Big Segment information, if and only if the flag evaluation
+     * required querying at least one Big Segment.
      *
-     * - `'HEALTHY'`: The big segment query involved in the flag evaluation was successful, and
+     * - `'HEALTHY'`: The Big Segment query involved in the flag evaluation was successful, and
      *   the segment state is considered up to date.
-     * - `'STALE'`: The big segment query involved in the flag evaluation was successful, but
+     * - `'STALE'`: The Big Segment query involved in the flag evaluation was successful, but
      *   the segment state may not be up to date
-     * - `'NOT_CONFIGURED'`: Big segments could not be queried for the flag evaluation because
-     *   the SDK configuration did not include a big segment store.
-     * - `'STORE_ERROR'`: The big segment query involved in the flag evaluation failed, for
+     * - `'NOT_CONFIGURED'`: Big Segments could not be queried for the flag evaluation because
+     *   the SDK configuration did not include a Big Segment store.
+     * - `'STORE_ERROR'`: The Big Segment query involved in the flag evaluation failed, for
      *   instance due to a database error.
      */
     bigSegmentsStatus?: "HEALTHY" | "STALE" | "NOT_CONFIGURED" | "STORE_ERROR";
@@ -259,14 +259,14 @@ declare module 'launchdarkly-node-server-sdk' {
     featureStore?: LDFeatureStore | ((options: LDOptions) => LDFeatureStore);
 
     /**
-     * Additional parameters for configuring the SDK's big segments behavior.
+     * Additional parameters for configuring the SDK's Big Segments behavior.
      *
-     * "Big segments" are a specific type of user segments. For more information, read the
-     * LaunchDarkly documentation about user segments: https://docs.launchdarkly.com/home/users/big-segments
+     * Big Segments are a specific type of user segments. For more information, read the
+     * LaunchDarkly documentation: https://docs.launchdarkly.com/home/users/big-segments
      *
-     * By default, there is no configuration and big segments cannot be evaluated. In this
-     * case, any flag evaluation that references a big segment will behave as if no users
-     * are included in any big segments, and the {@link LDEvaluationReason} associated with any
+     * By default, there is no configuration and Big Segments cannot be evaluated. In this
+     * case, any flag evaluation that references a Big Segment will behave as if no users
+     * are included in any Big Segments, and the {@link LDEvaluationReason} associated with any
      * such flag evaluation will have a `bigSegmentsStatus` of `"NOT_CONFIGURED"`.
      */
     bigSegments?: LDBigSegmentsOptions;
@@ -432,33 +432,33 @@ declare module 'launchdarkly-node-server-sdk' {
   }
 
   /**
-   * Additional parameters for configuring the SDK's big segments behavior.
+   * Additional parameters for configuring the SDK's Big Segments behavior.
    *
-   * "Big segments" are a specific type of user segments. For more information, read the LaunchDarkly
-   * documentation about user segments: https://docs.launchdarkly.com/home/users/big-segments
+   * Big Segments are a specific type of user segments. For more information, read the LaunchDarkly
+   * documentation: https://docs.launchdarkly.com/home/users/big-segments
    *
    * @see {@link LDOptions.bigSegments}
    */
   export interface LDBigSegmentsOptions {
     /**
-     * Specifies the storage component that provides big segments data.
+     * Specifies the storage component that provides Big Segments data.
      *
      * This property is mandatory. It must be obtained from one of the SDK's database integrations,
      * such as https://github.com/launchdarkly/node-server-sdk-redis. You will normally specify a
      * database implementation that matches how the LaunchDarkly Relay Proxy is configured, since the
-     * Relay Proxy manages the big segment data.
+     * Relay Proxy manages the Big Segment data.
      */
     store: (options: LDOptions) => interfaces.BigSegmentStore;
 
     /**
-     * The maximum number of users whose big segment state will be cached by the SDK at any given time.
+     * The maximum number of users whose Big Segment state will be cached by the SDK at any given time.
      *
      * To reduce database traffic, the SDK maintains a least-recently-used cache by user key. When a feature
-     * flag that references a big segment is evaluated for some user who is not currently in the cache, the
-     * SDK queries the database for all big segment memberships of that user, and stores them together in a
+     * flag that references a Big Segment is evaluated for some user who is not currently in the cache, the
+     * SDK queries the database for all Big Segment memberships of that user, and stores them together in a
      * single cache entry. If the cache is full, the oldest entry is dropped.
      *
-     * A higher value for `userCacheSize` means that database queries for big segments will be done
+     * A higher value for `userCacheSize` means that database queries for Big Segments will be done
      * less often for recently-referenced users, if the application has many users, at the cost of
      * increased memory used by the cache.
      *
@@ -469,11 +469,11 @@ declare module 'launchdarkly-node-server-sdk' {
     userCacheSize?: number;
 
     /**
-     * The maximum length of time that the big segment state for a user will be cached by the SDK,
+     * The maximum length of time that the Big Segment state for a user will be cached by the SDK,
      * in seconds.
      *
      * See {@link userCacheSize} for more about this cache. A higher value for `userCacheTime` means
-     * that database queries for the big segment state of any given user will be done less often, but
+     * that database queries for the Big Segment state of any given user will be done less often, but
      * that changes to segment membership may not be detected as soon.
      *
      * If not specified, the default value is 5. Negative values are changed to the default.
@@ -481,7 +481,7 @@ declare module 'launchdarkly-node-server-sdk' {
     userCacheTime?: number;
 
     /**
-     * The interval at which the SDK will poll the big segment store to make sure it is available
+     * The interval at which the SDK will poll the Big Segment store to make sure it is available
      * and to determine how long ago it was updated, in seconds.
      *
      * If not specified, the default value is 5. Zero or negative values are changed to the default.
@@ -489,17 +489,17 @@ declare module 'launchdarkly-node-server-sdk' {
     statusPollInterval?: number;
 
     /**
-     * The maximum length of time between updates of the big segments data before the data is
+     * The maximum length of time between updates of the Big Segments data before the data is
      * considered out of date, in seconds.
      *
-     * Normally, the LaunchDarkly Relay Proxy updates a timestamp in the big segments store at intervals to
+     * Normally, the LaunchDarkly Relay Proxy updates a timestamp in the Big Segment store at intervals to
      * confirm that it is still in sync with the LaunchDarkly data, even if there have been no changes to the
      * If the timestamp falls behind the current time by the amount specified in `staleAfter`, the SDK
      * assumes that something is not working correctly in this process and that the data may not be accurate.
      *
      * While in a stale state, the SDK will still continue using the last known data, but the status from
      * {@link interfaces.BigSegmentStoreStatusProvider.getStatus} will have `stale: true`, and any
-     * {@link LDEvaluationReason} generated from a feature flag that references a big segment will have a
+     * {@link LDEvaluationReason} generated from a feature flag that references a Big Segment will have a
      * `bigSegmentsStatus` of `"STALE"`.
      *
      * If not specified, the default value is 120 (two minutes). Zero or negative values are changed to
@@ -1093,9 +1093,9 @@ declare module 'launchdarkly-node-server-sdk' {
     flush(callback?: (err: Error, res: boolean) => void): Promise<void>;
 
     /**
-     * A mechanism for tracking the status of a big segment store.
+     * A mechanism for tracking the status of a Big Segment store.
      *
-     * This object has methods for checking whether the big segment store is (as far as the SDK
+     * This object has methods for checking whether the Big Segment store is (as far as the SDK
      * knows) currently operational and tracking changes in this status. See
      * {@link interfaces.BigSegmentStoreStatusProvider} for more about this functionality.
      */
@@ -1299,10 +1299,10 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
   import { EventEmitter } from 'events';
 
   /**
-   * A read-only data store that allows querying of user membership in big segments.
+   * A read-only data store that allows querying of user membership in Big Segments.
    *
-   * "Big segments" are a specific type of user segments. For more information, read the LaunchDarkly
-   * documentation about user segments: https://docs.launchdarkly.com/home/users/big-segments
+   * Big Segments are a specific type of user segments. For more information, read the LaunchDarkly
+   * documentation: https://docs.launchdarkly.com/home/users/big-segments
    */
   export interface BigSegmentStore {
     /**
@@ -1323,12 +1323,12 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
      * Queries the store for a snapshot of the current segment state for a specific user.
      *
      * The userHash is a base64-encoded string produced by hashing the user key as defined by
-     * the big segments specification; the store implementation does not need to know the details
+     * the Big Segments specification; the store implementation does not need to know the details
      * of how this is done, because it deals only with already-hashed keys, but the string can be
      * assumed to only contain characters that are valid in base64.
      *
      * The resolved value of the Promise should be either a [[BigSegmentStoreMembership]], or
-     * undefined if the user is not referenced in any big segments (this is equivalent to a
+     * undefined if the user is not referenced in any Big Segments (this is equivalent to a
      * [[BigSegmentStoreMembership]] that has no properties).
      *
      * @param userHash identifies the user
@@ -1354,7 +1354,7 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
   }
 
   /**
-   * The return type of [[BigSegmentStore.getUserMembership]], describing which big segments a
+   * The return type of [[BigSegmentStore.getUserMembership]], describing which Big Segments a
    * specific user is included in or excluded from.
    *
    * This object may be cached by the SDK, so it should not be modified after it is created. It
@@ -1363,7 +1363,7 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
   export interface BigSegmentStoreMembership {
     /**
      * Each property key in this object is a "segment reference", which is how segments are
-     * identified in big segment data. This string is not identical to the segment key-- the SDK
+     * identified in Big Segment data. This string is not identical to the segment key-- the SDK
      * will add other information. The store implementation should not be concerned with the
      * format of the string.
      *
@@ -1377,12 +1377,12 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
   }
 
   /**
-   * An interface for querying the status of a big segment store.
+   * An interface for querying the status of a Big Segment store.
    *
-   * The big segment store is the component that receives information about big segments, normally
-   * from a database populated by the LaunchDarkly Relay Proxy. "Big segments" are a specific type
-   * of user segments. For more information, read the LaunchDarkly documentation about user
-   * segments: https://docs.launchdarkly.com/home/users/big-segments
+   * The Big Segment store is the component that receives information about Big Segments, normally
+   * from a database populated by the LaunchDarkly Relay Proxy. Big Segments are a specific type
+   * of user segments. For more information, read the LaunchDarkly documentation:
+   * https://docs.launchdarkly.com/home/users/big-segments
    *
    * An implementation of this interface is returned by {@link LDClient.bigSegmentStoreStatusProvider}.
    * Application code never needs to implement this interface.
@@ -1398,7 +1398,7 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
      * Gets the current status of the store, if known.
      *
      * @returns a {@link BigSegmentStoreStatus}, or `undefined` if the SDK has not yet queried the
-     *   big segment store status
+     *   Big Segment store status
      */
     getStatus(): BigSegmentStoreStatus | undefined;
 
@@ -1411,31 +1411,31 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
   }
 
   /**
-   * Information about the status of a big segment store, provided by {@link BigSegmentStoreStatusProvider}.
+   * Information about the status of a Big Segment store, provided by {@link BigSegmentStoreStatusProvider}.
    *
-   * "Big segments" are a specific type of user segments. For more information, read the LaunchDarkly
-   * documentation about user segments: https://docs.launchdarkly.com/home/users/big-segments
+   * Big Segments are a specific type of user segments. For more information, read the LaunchDarkly
+   * documentation: https://docs.launchdarkly.com/home/users/big-segments
    */
   export interface BigSegmentStoreStatus {
     /**
-     * True if the big segment store is able to respond to queries, so that the SDK can
+     * True if the Big Segment store is able to respond to queries, so that the SDK can
      * evaluate whether a user is in a segment or not.
      *
      * If this property is false, the store is not able to make queries (for instance, it may not have
-     * a valid database connection). In this case, the SDK will treat any reference to a big segment
+     * a valid database connection). In this case, the SDK will treat any reference to a Big Segment
      * as if no users are included in that segment. Also, the {@link LDEvaluationReason} associated
-     * with any flag evaluation that references a big segment when the store is not available will
+     * with any flag evaluation that references a Big Segment when the store is not available will
      * have a `bigSegmentsStatus` of `"STORE_ERROR"`.
      */
     available: boolean;
 
     /**
-     * True if the big segment store is available, but has not been updated within the amount of time
+     * True if the Big Segment store is available, but has not been updated within the amount of time
      * specified by {@link LDBigSegmentsOptions.staleAfter}.
      *
      * This may indicate that the LaunchDarkly Relay Proxy, which populates the store, has stopped
      * running or has become unable to receive fresh data from LaunchDarkly. Any feature flag
-     * evaluations that reference a big segment will be using the last known data, which may be out
+     * evaluations that reference a Big Segment will be using the last known data, which may be out
      * of date.
      */
     stale: boolean;
@@ -1750,7 +1750,7 @@ declare module 'launchdarkly-node-server-sdk/requestor' {
   ): void;
 
   /**
-   * A standard test suite that should be run on every big segment store implementation.
+   * A standard test suite that should be run on every Big Segment store implementation.
    *
    * This test suite uses `jest` and should be run inside a `describe` block.
    *
@@ -1766,12 +1766,12 @@ declare module 'launchdarkly-node-server-sdk/requestor' {
    * in separate files, if `jest` parallelization is enabled; they can interfere with each
    * other's database state if they are interleaved.
    *
-   * @param createStore A function that creates a big segment store instance with the
+   * @param createStore A function that creates a Big Segment store instance with the
    *   specified key prefix.
    * @param clearExistingData An asynchronous function that removes any existing data from
    *   the database for the specified key prefix only.
    * @param setMetadata An asynchronous function that updates the store metadata.
-   * @param setSegments An asynchronous function that sets a user's big segment state.
+   * @param setSegments An asynchronous function that sets a user's Big Segment state.
    */
   export function runBigSegmentStoreTests(
     createStore: (prefix: string, logger: ld.LDLogger) => interfaces.BigSegmentStore,
