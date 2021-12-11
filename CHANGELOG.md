@@ -2,6 +2,10 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [6.2.1] - 2021-12-10
+### Fixed:
+- Replaced all uses of `for...in` for iterating over arrays and properties to use other constructs such as `for...of`. This makes the SDK more resilient in environments where application code or other libraries may have added new properties to the prototypes of standard JS types such as `Array`. (Thanks, [luke-schleicher](https://github.com/launchdarkly/node-server-sdk/pull/230)!)
+
 ## [6.2.0] - 2021-07-22
 ### Added:
 - The SDK now supports evaluation of Big Segments. An Early Access Program for creating and syncing Big Segments from customer data platforms is available to enterprise customers.
