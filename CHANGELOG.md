@@ -2,6 +2,10 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [6.2.2] - 2022-01-04
+### Fixed:
+- Some unsupported options were accidentally being passed to `http.request` and `https.request`. This did not affect Node itself, but it could cause problems when using tools that modify HTTP behavior with an interceptor, as discussed [here](https://github.com/mswjs/interceptors/issues/188).
+
 ## [6.2.1] - 2021-12-10
 ### Fixed:
 - Replaced all uses of `for...in` for iterating over arrays and properties to use other constructs such as `for...of`. This makes the SDK more resilient in environments where application code or other libraries may have added new properties to the prototypes of standard JS types such as `Array`. (Thanks, [luke-schleicher](https://github.com/launchdarkly/node-server-sdk/pull/230)!)
