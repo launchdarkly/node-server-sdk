@@ -1,3 +1,4 @@
+const { withCloseable } = require('launchdarkly-js-test-helpers');
 var InMemoryFeatureStore = require('../feature_store');
 var LDClient = require('../index.js');
 var dataKind = require('../versioned_data_kind');
@@ -41,15 +42,8 @@ function stubUpdateProcessor() {
   return updateProcessor;
 }
 
-function createClient(overrideOptions, flagsMap) {
-  var store = InMemoryFeatureStore();
-  if (flagsMap !== undefined) {
-    var allData = {};
-    allData[dataKind.features.namespace] = flagsMap;
-    store.init(allData);
-  }
+function createClient(overrideOptions) {
   var defaults = {
-    featureStore: store,
     eventProcessor: stubEventProcessor(),
     updateProcessor: stubUpdateProcessor(),
     logger: stubLogger()
@@ -57,9 +51,37 @@ function createClient(overrideOptions, flagsMap) {
   return LDClient.init('secret', Object.assign({}, defaults, overrideOptions));
 }
 
+async function withClient(overrideOptions, callback) {
+  return withCloseable(createClient(overrideOptions), callback);
+}
+
+function initializedStoreWithFlags(...flags) {
+  const flagsMap = {};
+  for (const f of flags) {
+    flagsMap[f.key] = f;
+  }
+  const store = InMemoryFeatureStore();
+  store.init({
+    [dataKind.features.namespace]: flagsMap,
+    [dataKind.segments.namespace]: {}
+  });
+  return store;
+}
+
+function uninitializedStoreWithFlags(...flags) {
+  const store = InMemoryFeatureStore();
+  for (const f of flags) {
+    store.upsert(dataKind.features, f);
+  }
+  return store;
+}
+
 module.exports = {
-  createClient: createClient,
-  stubEventProcessor: stubEventProcessor,
-  stubLogger: stubLogger,
-  stubUpdateProcessor: stubUpdateProcessor
+  createClient,
+  initializedStoreWithFlags,
+  stubEventProcessor,
+  stubLogger,
+  stubUpdateProcessor,
+  uninitializedStoreWithFlags,
+  withClient,
 };

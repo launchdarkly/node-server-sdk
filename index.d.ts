@@ -1407,6 +1407,44 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      * @return a promise that will resolve when the feature stores are updated
      */
     update(flagBuilder: TestDataFlagBuilder): Promise<any>;
+
+    /**
+     * Copies a full feature flag data model object into the test data.
+     *
+     * It immediately propagates the flag change to any [[LDClient]] instance(s) that you have already
+     * configured to use this `TestData`. If no [[LDClient]] has been started yet, it simply adds
+     * this flag to the test data which will be provided to any LDClient that you subsequently
+     * configure.
+     *
+     * Use this method if you need to use advanced flag configuration properties that are not supported by
+     * the simplified [[TestDataFlagBuilder]] API. Otherwise it is recommended to use the regular
+     * [[flag]]/[[update]] mechanism to avoid dependencies on details of the data model.
+     *
+     * You cannot make incremental changes with [[flag]]/[[update]] to a flag that has been added in this way;
+     * you can only replace it with an entirely new flag configuration.
+     * 
+     * @param flagConfig the flag configuration as a JSON object
+     * @return a promise that will resolve when the feature stores are updated
+     */
+    usePreconfiguredFlag(flagConfig: any): Promise<any>;
+
+    /**
+     * Copies a full user segment data model object into the test data.
+     *
+     * It immediately propagates the change to any [[LDClient]] instance(s) that you have already
+     * configured to use this `TestData`. If no [[LDClient]] has been started yet, it simply adds
+     * this segment to the test data which will be provided to any LDClient that you subsequently
+     * configure.
+     *
+     * This method is currently the only way to inject user segment data, since there is no builder
+     * API for segments. It is mainly intended for the SDK's own tests of user segment functionality,
+     * since application tests that need to produce a desired evaluation state could do so more easily
+     * by just setting flag values.
+     * 
+     * @param segmentConfig the segment configuration as a JSON object
+     * @return a promise that will resolve when the feature stores are updated
+     */
+    usePreconfiguredSegment(segmentConfig: any): Promise<any>;
   }
 
   /**

@@ -4,10 +4,14 @@ const { promisify } = require('util');
 function TestData() {
   const existingFlagBuilders = {};
   const currentFlags = {};
+  const currentSegments = {};
   const dataSourceImpls = [];
 
   function makeInitData() {
-    return { [dataKind.features.namespace]: JSON.parse(JSON.stringify(currentFlags)) };
+    return {
+      [dataKind.features.namespace]: { ...currentFlags },
+      [dataKind.segments.namespace]: { ...currentSegments },
+    };
   }
 
   const td = config => {
@@ -29,8 +33,8 @@ function TestData() {
       dataSourceImpls.splice(dataSourceImpls.indexOf(this));
     }
 
-    function upsert(value, cb = () => {}) {
-      featureStore.upsert(dataKind.features, value, cb);
+    function upsert(kind, value, cb = () => {}) {
+      featureStore.upsert(kind, value, cb);
     }
 
     dataSourceImpls.push(tds);
@@ -53,8 +57,22 @@ function TestData() {
     currentFlags[flagBuilder._key] = newFlag;
     existingFlagBuilders[flagBuilder._key] = flagBuilder.copy();
 
-    return Promise.all(dataSourceImpls.map(impl => promisify(impl.upsert)(newFlag)));
+    return Promise.all(dataSourceImpls.map(impl => promisify(impl.upsert)(dataKind.features, newFlag)));
   };
+
+  function usePreconfiguredItem(kind, item, current) {
+    const oldItem = current[item.key];
+    const newItem = { ...item, version: oldItem ? oldItem.version + 1 : item.version };
+    /* eslint-disable no-param-reassign */
+    current[item.key] = newItem;
+    /* eslint-enable no-param-reassign */
+
+    return Promise.all(dataSourceImpls.map(impl => promisify(impl.upsert)(kind, newItem)));
+  }
+
+  td.usePreconfiguredFlag = flag => usePreconfiguredItem(dataKind.features, flag, currentFlags);
+
+  td.usePreconfiguredSegment = segment => usePreconfiguredItem(dataKind.segments, segment, currentSegments);
 
   return td;
 }

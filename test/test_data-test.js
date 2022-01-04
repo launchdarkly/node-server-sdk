@@ -27,7 +27,6 @@ describe('TestData', function() {
         version: 1
       }
     });
-
   });
 
   it('updates the datastore with its flags when update is called', async function() {
@@ -53,6 +52,52 @@ describe('TestData', function() {
         variations: [ true, false ],
         version: 1
       }
+    });
+  });
+
+  it('can include preconfigured items', async function() {
+    const td = TestData();
+    td.usePreconfiguredFlag({ key: 'my-flag', version: 1000, on: true });
+    td.usePreconfiguredSegment({ key: 'my-segment', version: 2000 });
+
+    const store = InMemoryFeatureStore();
+    const client = LDClient.init('sdk_key', { offline: true, featureStore: store, updateProcessor: td });
+
+    await client.waitForInitialization();
+
+    const flags = await promisifySingle(store.all)(dataKind.features);
+    expect(flags).toEqual({
+      'my-flag': {
+        key: 'my-flag',
+        version: 1000,
+        on: true,
+      }
+    });
+
+    const segments = await promisifySingle(store.all)(dataKind.segments);
+    expect(segments).toEqual({
+      'my-segment': {
+        key: 'my-segment',
+        version: 2000
+      }
+    });
+
+    td.usePreconfiguredFlag({ key: 'my-flag', on: false });
+
+    const updatedFlag = await promisifySingle(store.get)(dataKind.features, 'my-flag');
+    expect(updatedFlag).toEqual({
+      key: 'my-flag',
+      version: 1001,
+      on: false,
+    });
+
+    td.usePreconfiguredSegment({ key: 'my-segment', included: [ 'x' ] });
+
+    const updatedSegment = await promisifySingle(store.get)(dataKind.segments, 'my-segment');
+    expect(updatedSegment).toEqual({
+      key: 'my-segment',
+      version: 2001,
+      included: [ 'x' ],
     });
   });
 

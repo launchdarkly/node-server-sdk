@@ -1,10 +1,9 @@
 const { hashForUserKey } = require('../big_segments');
 const { makeBigSegmentRef } = require('../evaluator');
-const InMemoryFeatureStore = require('../feature_store');
-const dataKind = require('../versioned_data_kind');
+const { TestData } = require('../integrations');
 const stubs = require('./stubs');
 const { makeSegmentMatchClause } = require('./evaluator_helpers');
-const { promisifySingle, withCloseable } = require('launchdarkly-js-test-helpers');
+const { withCloseable } = require('launchdarkly-js-test-helpers');
 
 describe('LDClient - big segments', () => {
 
@@ -26,18 +25,16 @@ describe('LDClient - big segments', () => {
   }
 
   async function makeClient(bigSegmentsStore, config) {
-    const dataStore = InMemoryFeatureStore();
-    const initData = {
-      [dataKind.features.namespace]: { [flag.key]: flag },
-      [dataKind.segments.namespace]: { [bigSegment.key]: bigSegment },
-    };
-    await promisifySingle(dataStore.init)(initData);
+    const td = TestData();
+    td.usePreconfiguredFlag(flag);
+    td.usePreconfiguredSegment(bigSegment);
 
     const bigSegmentsConfig = {
       store: bigSegmentsStore && (() => bigSegmentsStore),
       ...(config && config.bigSegments),
     };
-    return stubs.createClient({ ...config, featureStore: dataStore, bigSegments: bigSegmentsConfig });
+
+    return stubs.createClient({ ...config, updateProcessor: td, bigSegments: bigSegmentsConfig });
   }
 
   it('user not found in big segment store', async () => {
