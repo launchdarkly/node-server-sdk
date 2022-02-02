@@ -298,21 +298,34 @@ const newClient = function (sdkKey, originalConfig) {
       options = options || {};
     }
     return wrapPromiseCallback(
-      new Promise((resolve, reject) => {
+      (async () => {
         if (client.isOffline()) {
           config.logger.info('allFlagsState() called in offline mode. Returning empty state.');
-          return resolve(FlagsStateBuilder(false).build());
+          return FlagsStateBuilder(false).build();
         }
 
         if (!user) {
           config.logger.info('allFlagsState() called without user. Returning empty state.');
-          return resolve(FlagsStateBuilder(false).build());
+          return FlagsStateBuilder(false).build();
         }
 
-        const builder = FlagsStateBuilder(true, options.withReasons);
+        let valid = true;
+
+        if (!initComplete) {
+          const inited = await new Promise(resolve => config.featureStore.initialized(resolve));
+          if (inited) {
+            config.logger.warn("Called allFlagsState before client initialization; using last known values from data store")
+          } else {
+            config.logger.warn("Called allFlagsState before client initialization. Data store not available; returning empty state") //nolint:lll
+            valid = false
+          }
+        }
+
+        const builder = FlagsStateBuilder(valid, options.withReasons);
         const clientOnly = options.clientSideOnly;
         const detailsOnlyIfTracked = options.detailsOnlyForTrackedFlags;
-        config.featureStore.all(dataKind.features, flags => {
+
+        return await new Promise((resolve, reject) => config.featureStore.all(dataKind.features, flags => {
           safeAsyncEach(
             flags,
             (flag, iterateeCb) => {
@@ -342,8 +355,8 @@ const newClient = function (sdkKey, originalConfig) {
             },
             err => (err ? reject(err) : resolve(builder.build()))
           );
-        });
-      }),
+        }));
+      })(),
       callback
     );
   };
