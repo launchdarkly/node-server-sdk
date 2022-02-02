@@ -314,10 +314,14 @@ const newClient = function (sdkKey, originalConfig) {
         if (!initComplete) {
           const inited = await new Promise(resolve => config.featureStore.initialized(resolve));
           if (inited) {
-            config.logger.warn("Called allFlagsState before client initialization; using last known values from data store")
+            config.logger.warn(
+              'Called allFlagsState before client initialization; using last known values from data store'
+            );
           } else {
-            config.logger.warn("Called allFlagsState before client initialization. Data store not available; returning empty state") //nolint:lll
-            valid = false
+            config.logger.warn(
+              'Called allFlagsState before client initialization. Data store not available; returning empty state'
+            );
+            valid = false;
           }
         }
 
@@ -325,37 +329,39 @@ const newClient = function (sdkKey, originalConfig) {
         const clientOnly = options.clientSideOnly;
         const detailsOnlyIfTracked = options.detailsOnlyForTrackedFlags;
 
-        return await new Promise((resolve, reject) => config.featureStore.all(dataKind.features, flags => {
-          safeAsyncEach(
-            flags,
-            (flag, iterateeCb) => {
-              if (clientOnly && !flag.clientSide) {
-                iterateeCb();
-              } else {
-                // At the moment, we don't send any events here
-                evaluator.evaluate(flag, user, eventFactoryDefault, (err, detail) => {
-                  if (err !== null) {
-                    maybeReportError(
-                      new Error('Error for feature flag "' + flag.key + '" while evaluating all flags: ' + err)
-                    );
-                  }
-                  const requireExperimentData = isExperiment(flag, detail.reason);
-                  builder.addFlag(
-                    flag,
-                    detail.value,
-                    detail.variationIndex,
-                    detail.reason,
-                    flag.trackEvents || requireExperimentData,
-                    requireExperimentData,
-                    detailsOnlyIfTracked
-                  );
+        return await new Promise((resolve, reject) =>
+          config.featureStore.all(dataKind.features, flags => {
+            safeAsyncEach(
+              flags,
+              (flag, iterateeCb) => {
+                if (clientOnly && !flag.clientSide) {
                   iterateeCb();
-                });
-              }
-            },
-            err => (err ? reject(err) : resolve(builder.build()))
-          );
-        }));
+                } else {
+                  // At the moment, we don't send any events here
+                  evaluator.evaluate(flag, user, eventFactoryDefault, (err, detail) => {
+                    if (err !== null) {
+                      maybeReportError(
+                        new Error('Error for feature flag "' + flag.key + '" while evaluating all flags: ' + err)
+                      );
+                    }
+                    const requireExperimentData = isExperiment(flag, detail.reason);
+                    builder.addFlag(
+                      flag,
+                      detail.value,
+                      detail.variationIndex,
+                      detail.reason,
+                      flag.trackEvents || requireExperimentData,
+                      requireExperimentData,
+                      detailsOnlyIfTracked
+                    );
+                    iterateeCb();
+                  });
+                }
+              },
+              err => (err ? reject(err) : resolve(builder.build()))
+            );
+          })
+        );
       })(),
       callback
     );

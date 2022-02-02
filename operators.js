@@ -44,7 +44,7 @@ function semVerOperator(fn) {
 }
 
 function parseSemVer(input) {
-  if (typeof(input) !== 'string') {
+  if (typeof input !== 'string') {
     return null;
   }
   if (input.startsWith('v')) {
