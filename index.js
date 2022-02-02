@@ -4,7 +4,7 @@ const FeatureStoreEventWrapper = require('./feature_store_event_wrapper');
 const FileDataSource = require('./file_data_source');
 const Requestor = require('./requestor');
 const EventEmitter = require('events').EventEmitter;
-const EventFactory = require('./event_factory');
+const { EventFactory, isExperiment } = require('./event_factory');
 const EventProcessor = require('./event_processor');
 const PollingProcessor = require('./polling');
 const StreamingProcessor = require('./streaming');
@@ -309,9 +309,8 @@ const newClient = function (sdkKey, originalConfig) {
           return resolve(FlagsStateBuilder(false).build());
         }
 
-        const builder = FlagsStateBuilder(true);
+        const builder = FlagsStateBuilder(true, options.withReasons);
         const clientOnly = options.clientSideOnly;
-        const withReasons = options.withReasons;
         const detailsOnlyIfTracked = options.detailsOnlyForTrackedFlags;
         config.featureStore.all(dataKind.features, flags => {
           safeAsyncEach(
@@ -327,11 +326,14 @@ const newClient = function (sdkKey, originalConfig) {
                       new Error('Error for feature flag "' + flag.key + '" while evaluating all flags: ' + err)
                     );
                   }
+                  const requireExperimentData = isExperiment(flag, detail.reason);
                   builder.addFlag(
                     flag,
                     detail.value,
                     detail.variationIndex,
-                    withReasons ? detail.reason : null,
+                    detail.reason,
+                    flag.trackEvents || requireExperimentData,
+                    requireExperimentData,
                     detailsOnlyIfTracked
                   );
                   iterateeCb();
