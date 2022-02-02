@@ -44,6 +44,9 @@ function semVerOperator(fn) {
 }
 
 function parseSemVer(input) {
+  if (typeof(input) !== 'string') {
+    return null;
+  }
   if (input.startsWith('v')) {
     // the semver library tolerates a leading "v", but the standard does not.
     return null;
