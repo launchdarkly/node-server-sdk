@@ -11,7 +11,8 @@ function FlagsStateBuilder(valid, withReasons) {
     }
     const omitDetails =
       detailsOnlyIfTracked &&
-      !trackEvents && !trackReason &&
+      !trackEvents &&
+      !trackReason &&
       (flag.debugEventsUntilDate === undefined || flag.debugEventsUntilDate === null);
     if (!omitDetails) {
       meta.version = flag.version;
