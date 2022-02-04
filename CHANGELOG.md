@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [6.2.3] - 2022-02-04
+### Fixed:
+- When using `allFlagsState` to produce bootstrap data for the JavaScript SDK, the Node SDK was not returning the correct metadata for evaluations that involved an experiment. As a result, the analytics events produced by the JavaScript SDK did not correctly reflect experimentation results.
+- Referencing the user attribute `secondary` in a flag rule did not work.
+- When using semantic version comparison operators, if one of the values was not a string, instead of correctly causing only that comparison to fail, it made the whole flag evaluation fail.
+- The `allFlagsState` method was not logging any warning if it was called when the client was in an uninitialized state. It now logs a warning, consistent with the other SDKs.
+
 ## [6.2.2] - 2022-01-04
 ### Fixed:
 - Some unsupported options were accidentally being passed to `http.request` and `https.request`. This did not affect Node itself, but it could cause problems when using tools that modify HTTP behavior with an interceptor, as discussed [here](https://github.com/mswjs/interceptors/issues/188).
