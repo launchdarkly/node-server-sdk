@@ -298,52 +298,71 @@ const newClient = function (sdkKey, originalConfig) {
       options = options || {};
     }
     return wrapPromiseCallback(
-      new Promise((resolve, reject) => {
+      (async () => {
         if (client.isOffline()) {
           config.logger.info('allFlagsState() called in offline mode. Returning empty state.');
-          return resolve(FlagsStateBuilder(false).build());
+          return FlagsStateBuilder(false).build();
         }
 
         if (!user) {
           config.logger.info('allFlagsState() called without user. Returning empty state.');
-          return resolve(FlagsStateBuilder(false).build());
+          return FlagsStateBuilder(false).build();
         }
 
-        const builder = FlagsStateBuilder(true, options.withReasons);
+        let valid = true;
+
+        if (!initComplete) {
+          const inited = await new Promise(resolve => config.featureStore.initialized(resolve));
+          if (inited) {
+            config.logger.warn(
+              'Called allFlagsState before client initialization; using last known values from data store'
+            );
+          } else {
+            config.logger.warn(
+              'Called allFlagsState before client initialization. Data store not available; returning empty state'
+            );
+            valid = false;
+          }
+        }
+
+        const builder = FlagsStateBuilder(valid, options.withReasons);
         const clientOnly = options.clientSideOnly;
         const detailsOnlyIfTracked = options.detailsOnlyForTrackedFlags;
-        config.featureStore.all(dataKind.features, flags => {
-          safeAsyncEach(
-            flags,
-            (flag, iterateeCb) => {
-              if (clientOnly && !flag.clientSide) {
-                iterateeCb();
-              } else {
-                // At the moment, we don't send any events here
-                evaluator.evaluate(flag, user, eventFactoryDefault, (err, detail) => {
-                  if (err !== null) {
-                    maybeReportError(
-                      new Error('Error for feature flag "' + flag.key + '" while evaluating all flags: ' + err)
-                    );
-                  }
-                  const requireExperimentData = isExperiment(flag, detail.reason);
-                  builder.addFlag(
-                    flag,
-                    detail.value,
-                    detail.variationIndex,
-                    detail.reason,
-                    flag.trackEvents || requireExperimentData,
-                    requireExperimentData,
-                    detailsOnlyIfTracked
-                  );
+
+        return await new Promise((resolve, reject) =>
+          config.featureStore.all(dataKind.features, flags => {
+            safeAsyncEach(
+              flags,
+              (flag, iterateeCb) => {
+                if (clientOnly && !flag.clientSide) {
                   iterateeCb();
-                });
-              }
-            },
-            err => (err ? reject(err) : resolve(builder.build()))
-          );
-        });
-      }),
+                } else {
+                  // At the moment, we don't send any events here
+                  evaluator.evaluate(flag, user, eventFactoryDefault, (err, detail) => {
+                    if (err !== null) {
+                      maybeReportError(
+                        new Error('Error for feature flag "' + flag.key + '" while evaluating all flags: ' + err)
+                      );
+                    }
+                    const requireExperimentData = isExperiment(flag, detail.reason);
+                    builder.addFlag(
+                      flag,
+                      detail.value,
+                      detail.variationIndex,
+                      detail.reason,
+                      flag.trackEvents || requireExperimentData,
+                      requireExperimentData,
+                      detailsOnlyIfTracked
+                    );
+                    iterateeCb();
+                  });
+                }
+              },
+              err => (err ? reject(err) : resolve(builder.build()))
+            );
+          })
+        );
+      })(),
       callback
     );
   };
