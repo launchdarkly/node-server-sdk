@@ -5,7 +5,7 @@ const util = require('util');
 const stringifyAttrs = require('./utils/stringifyAttrs');
 const { safeAsyncEachSeries } = require('./utils/asyncUtils');
 
-const builtins = ['key', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name', 'anonymous'];
+const builtins = ['key', 'secondary', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name', 'anonymous'];
 const userAttrsToStringifyForEvaluation = ['key', 'secondary'];
 // Currently we are not stringifying the rest of the built-in attributes prior to evaluation, only for events.
 // This is because it could affect evaluation results for existing users (ch35206).

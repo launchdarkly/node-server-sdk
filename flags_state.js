@@ -1,22 +1,30 @@
-function FlagsStateBuilder(valid) {
+function FlagsStateBuilder(valid, withReasons) {
   const builder = {};
   const flagValues = {};
   const flagMetadata = {};
 
-  builder.addFlag = (flag, value, variation, reason, detailsOnlyIfTracked) => {
+  builder.addFlag = (flag, value, variation, reason, trackEvents, trackReason, detailsOnlyIfTracked) => {
     flagValues[flag.key] = value;
     const meta = {};
-    if (!detailsOnlyIfTracked || flag.trackEvents || flag.debugEventsUntilDate) {
-      meta.version = flag.version;
-      if (reason) {
-        meta.reason = reason;
-      }
-    }
     if (variation !== undefined && variation !== null) {
       meta.variation = variation;
     }
-    if (flag.trackEvents) {
+    const omitDetails =
+      detailsOnlyIfTracked &&
+      !trackEvents &&
+      !trackReason &&
+      (flag.debugEventsUntilDate === undefined || flag.debugEventsUntilDate === null);
+    if (!omitDetails) {
+      meta.version = flag.version;
+    }
+    if (reason && (trackReason || (withReasons && !omitDetails))) {
+      meta.reason = reason;
+    }
+    if (trackEvents) {
       meta.trackEvents = true;
+    }
+    if (trackReason) {
+      meta.trackReason = true;
     }
     if (flag.debugEventsUntilDate !== undefined && flag.debugEventsUntilDate !== null) {
       meta.debugEventsUntilDate = flag.debugEventsUntilDate;

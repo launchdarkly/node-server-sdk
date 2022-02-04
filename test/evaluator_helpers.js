@@ -1,4 +1,4 @@
-const EventFactory = require('../event_factory');
+const { EventFactory } = require('../event_factory');
 
 const basicUser = { key: 'userkey' };
 const eventFactory = EventFactory(false);
