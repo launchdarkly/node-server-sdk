@@ -1,28 +1,28 @@
+function isExperiment(flag, reason) {
+  if (reason) {
+    // If the reason says we're in an experiment, we are. Otherwise, apply
+    // the legacy rule exclusion logic.
+    if (reason.inExperiment) {
+      return true;
+    }
+    switch (reason.kind) {
+      case 'RULE_MATCH': {
+        const index = reason.ruleIndex;
+        if (index !== undefined) {
+          const rules = flag.rules || [];
+          return index >= 0 && index < rules.length && !!rules[index].trackEvents;
+        }
+        break;
+      }
+      case 'FALLTHROUGH':
+        return !!flag.trackEventsFallthrough;
+    }
+  }
+  return false;
+}
+
 function EventFactory(withReasons) {
   const ef = {};
-
-  function isExperiment(flag, reason) {
-    if (reason) {
-      // If the reason says we're in an experiment, we are. Otherwise, apply
-      // the legacy rule exclusion logic.
-      if (reason.inExperiment) {
-        return true;
-      }
-      switch (reason.kind) {
-        case 'RULE_MATCH': {
-          const index = reason.ruleIndex;
-          if (index !== undefined) {
-            const rules = flag.rules || [];
-            return index >= 0 && index < rules.length && !!rules[index].trackEvents;
-          }
-          break;
-        }
-        case 'FALLTHROUGH':
-          return !!flag.trackEventsFallthrough;
-      }
-    }
-    return false;
-  }
 
   ef.newEvalEvent = (flag, user, detail, defaultVal, prereqOfFlag) => {
     const addExperimentData = isExperiment(flag, detail.reason);
@@ -128,4 +128,7 @@ function EventFactory(withReasons) {
   return ef;
 }
 
-module.exports = EventFactory;
+module.exports = {
+  EventFactory,
+  isExperiment,
+};

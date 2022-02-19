@@ -125,8 +125,7 @@ function StreamProcessor(sdkKey, config, requestor, diagnosticsManager, specifie
           reportJsonError('patch', e.data);
           return;
         }
-        for (const k in dataKind) {
-          const kind = dataKind[k];
+        for (const kind of Object.values(dataKind)) {
           const key = getKeyFromPath(kind, patch.path);
           if (key !== null) {
             config.logger.debug('Updating ' + key + ' in ' + kind.namespace);
@@ -150,8 +149,7 @@ function StreamProcessor(sdkKey, config, requestor, diagnosticsManager, specifie
           return;
         }
         const version = data.version;
-        for (const k in dataKind) {
-          const kind = dataKind[k];
+        for (const kind of Object.values(dataKind)) {
           const key = getKeyFromPath(kind, data.path);
           if (key !== null) {
             config.logger.debug('Deleting ' + key + ' in ' + kind.namespace);

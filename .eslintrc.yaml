@@ -75,6 +75,12 @@ rules:
     - error
     - props: true
   
+  # https://eslint.org/docs/rules/no-restricted-syntax
+  no-restricted-syntax:
+    - error
+    - selector: ForInStatement
+      message: avoid for...in which can pick up properties from prototypes; use for...of, or plain for if you need array indices
+
   # https://eslint.org/docs/rules/no-return-assign
   no-return-assign: error
 
