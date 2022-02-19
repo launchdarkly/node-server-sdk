@@ -1,4 +1,6 @@
-var stubs = require('./stubs');
+const { TestData } = require('../integrations');
+
+const stubs = require('./stubs');
 
 describe('LDClient - analytics events', () => {
 
@@ -14,18 +16,11 @@ describe('LDClient - analytics events', () => {
 
   describe('feature event', () => {
     it('generates event for existing feature', async () => {
-      var flag = {
-        key: 'flagkey',
-        version: 1,
-        on: true,
-        targets: [],
-        fallthrough: { variation: 1 },
-        variations: ['a', 'b'],
-        trackEvents: true
-      };
-      var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
+      const td = TestData();
+      td.update(td.flag('flagkey').on(true).variations('a', 'b').fallthroughVariation(1));
+      var client = stubs.createClient({ eventProcessor, updateProcessor: td });
       await client.waitForInitialization();
-      await client.variation(flag.key, defaultUser, 'c');
+      await client.variation('flagkey', defaultUser, 'c');
 
       expect(eventProcessor.events).toHaveLength(1);
       var e = eventProcessor.events[0];
@@ -36,24 +31,16 @@ describe('LDClient - analytics events', () => {
         user: defaultUser,
         variation: 1,
         value: 'b',
-        default: 'c',
-        trackEvents: true
+        default: 'c'
       });
     });
 
     it('generates event for existing feature when user is anonymous', async () => {
-      var flag = {
-        key: 'flagkey',
-        version: 1,
-        on: true,
-        targets: [],
-        fallthrough: { variation: 1 },
-        variations: ['a', 'b'],
-        trackEvents: true
-      };
-      var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
+      const td = TestData();
+      td.update(td.flag('flagkey').on(true).variations('a', 'b').fallthroughVariation(1));
+      var client = stubs.createClient({ eventProcessor, updateProcessor: td });
       await client.waitForInitialization();
-      await client.variation(flag.key, anonymousUser, 'c');
+      await client.variation('flagkey', anonymousUser, 'c');
 
       expect(eventProcessor.events).toHaveLength(1);
       var e = eventProcessor.events[0];
@@ -64,24 +51,16 @@ describe('LDClient - analytics events', () => {
         user: anonymousUser,
         variation: 1,
         value: 'b',
-        default: 'c',
-        trackEvents: true
+        default: 'c'
       });
     });
 
     it('generates event for existing feature with reason', async () => {
-      var flag = {
-        key: 'flagkey',
-        version: 1,
-        on: true,
-        targets: [],
-        fallthrough: { variation: 1 },
-        variations: ['a', 'b'],
-        trackEvents: true
-      };
-      var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
+      const td = TestData();
+      td.update(td.flag('flagkey').on(true).variations('a', 'b').fallthroughVariation(1));
+      var client = stubs.createClient({ eventProcessor, updateProcessor: td });
       await client.waitForInitialization();
-      await client.variationDetail(flag.key, defaultUser, 'c');
+      await client.variationDetail('flagkey', defaultUser, 'c');
 
       expect(eventProcessor.events).toHaveLength(1);
       var e = eventProcessor.events[0];
@@ -93,13 +72,13 @@ describe('LDClient - analytics events', () => {
         variation: 1,
         value: 'b',
         default: 'c',
-        reason: { kind: 'FALLTHROUGH' },
-        trackEvents: true
+        reason: { kind: 'FALLTHROUGH' }
       });
     });
 
     it('forces tracking when a matched rule has trackEvents set', async () => {
-      var flag = {
+      const td = TestData();
+      td.usePreconfiguredFlag({ // TestData doesn't normally set trackEvents
         key: 'flagkey',
         version: 1,
         on: true,
@@ -114,10 +93,10 @@ describe('LDClient - analytics events', () => {
         ],
         fallthrough: { variation: 1 },
         variations: ['a', 'b']
-      };
-      var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
+      });
+      var client = stubs.createClient({ eventProcessor, updateProcessor: td });
       await client.waitForInitialization();
-      await client.variation(flag.key, defaultUser, 'c');
+      await client.variation('flagkey', defaultUser, 'c');
 
       expect(eventProcessor.events).toHaveLength(1);
       var e = eventProcessor.events[0];
@@ -136,7 +115,8 @@ describe('LDClient - analytics events', () => {
     });
 
     it('does not force tracking when a matched rule does not have trackEvents set', async () => {
-      var flag = {
+      const td = TestData();
+      td.usePreconfiguredFlag({
         key: 'flagkey',
         version: 1,
         on: true,
@@ -150,10 +130,10 @@ describe('LDClient - analytics events', () => {
         ],
         fallthrough: { variation: 1 },
         variations: ['a', 'b']
-      };
-      var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
+      });
+      var client = stubs.createClient({ eventProcessor, updateProcessor: td });
       await client.waitForInitialization();
-      await client.variation(flag.key, defaultUser, 'c');
+      await client.variation('flagkey', defaultUser, 'c');
 
       expect(eventProcessor.events).toHaveLength(1);
       var e = eventProcessor.events[0];
@@ -170,7 +150,8 @@ describe('LDClient - analytics events', () => {
     });
 
     it('forces tracking for fallthrough result when trackEventsFallthrough is set', async () => {
-      var flag = {
+      const td = TestData();
+      td.usePreconfiguredFlag({
         key: 'flagkey',
         version: 1,
         on: true,
@@ -179,10 +160,10 @@ describe('LDClient - analytics events', () => {
         fallthrough: { variation: 1 },
         variations: ['a', 'b'],
         trackEventsFallthrough: true
-      };
-      var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
+      });
+      var client = stubs.createClient({ eventProcessor, updateProcessor: td });
       await client.waitForInitialization();
-      await client.variation(flag.key, defaultUser, 'c');
+      await client.variation('flagkey', defaultUser, 'c');
 
       expect(eventProcessor.events).toHaveLength(1);
       var e = eventProcessor.events[0];
@@ -201,7 +182,8 @@ describe('LDClient - analytics events', () => {
     });
 
     it('forces tracking when an evaluation is in the tracked portion of an experiment rollout', async () => {
-      var flag = {
+      const td = TestData();
+      td.usePreconfiguredFlag({
         key: 'flagkey',
         version: 1,
         on: true,
@@ -219,10 +201,10 @@ describe('LDClient - analytics events', () => {
           },
         },
         variations: ['a', 'b'],
-      };
-      var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
+      });
+      var client = stubs.createClient({ eventProcessor, updateProcessor: td });
       await client.waitForInitialization();
-      await client.variation(flag.key, defaultUser, 'c');
+      await client.variation('flagkey', defaultUser, 'c');
 
       expect(eventProcessor.events).toHaveLength(1);
       var e = eventProcessor.events[0];
@@ -241,7 +223,8 @@ describe('LDClient - analytics events', () => {
     });
 
     it('does not force tracking when an evaluation is in the untracked portion of an experiment rollout', async () => {
-      var flag = {
+      const td = TestData();
+      td.usePreconfiguredFlag({
         key: 'flagkey',
         version: 1,
         on: true,
@@ -260,11 +243,10 @@ describe('LDClient - analytics events', () => {
           },
         },
         variations: ['a', 'b'],
-      };
-      var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
+      });
+      var client = stubs.createClient({ eventProcessor, updateProcessor: td });
       await client.waitForInitialization();
-      debugger;
-      await client.variation(flag.key, defaultUser, 'c');
+      await client.variation('flagkey', defaultUser, 'c');
 
       expect(eventProcessor.events).toHaveLength(1);
       var e = eventProcessor.events[0];
@@ -281,18 +263,11 @@ describe('LDClient - analytics events', () => {
     });
 
     it('does not force tracking for fallthrough result when trackEventsFallthrough is not set', async () => {
-      var flag = {
-        key: 'flagkey',
-        version: 1,
-        on: true,
-        targets: [],
-        rules: [],
-        fallthrough: { variation: 1 },
-        variations: ['a', 'b']
-      };
-      var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
+      const td = TestData();
+      td.update(td.flag('flagkey').on(true).variations('a', 'b').fallthroughVariation(1));
+      var client = stubs.createClient({ eventProcessor, updateProcessor: td });
       await client.waitForInitialization();
-      await client.variation(flag.key, defaultUser, 'c');
+      await client.variation('flagkey', defaultUser, 'c');
 
       expect(eventProcessor.events).toHaveLength(1);
       var e = eventProcessor.events[0];
@@ -341,19 +316,12 @@ describe('LDClient - analytics events', () => {
     });
 
     it('generates event for existing feature when user key is missing', async () => {
-      var flag = {
-        key: 'flagkey',
-        version: 1,
-        on: true,
-        targets: [],
-        fallthrough: { variation: 1 },
-        variations: ['a', 'b'],
-        trackEvents: true
-      };
-      var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
+      const td = TestData();
+      td.update(td.flag('flagkey').on(true).variations('a', 'b').fallthroughVariation(1));
+      var client = stubs.createClient({ eventProcessor, updateProcessor: td });
       var badUser = { name: 'Bob' };
       await client.waitForInitialization();
-      await client.variation(flag.key, badUser, 'c');
+      await client.variation('flagkey', badUser, 'c');
 
       expect(eventProcessor.events).toHaveLength(1);
       var e = eventProcessor.events[0];
@@ -364,24 +332,16 @@ describe('LDClient - analytics events', () => {
         user: badUser,
         variation: null,
         value: 'c',
-        default: 'c',
-        trackEvents: true
+        default: 'c'
       });
     });
 
     it('generates event for existing feature when user is null', async () => {
-      var flag = {
-        key: 'flagkey',
-        version: 1,
-        on: true,
-        targets: [],
-        fallthrough: { variation: 1 },
-        variations: ['a', 'b'],
-        trackEvents: true
-      };
-      var client = stubs.createClient({ eventProcessor: eventProcessor }, { flagkey: flag });
+      const td = TestData();
+      td.update(td.flag('flagkey').on(true).variations('a', 'b').fallthroughVariation(1));
+      var client = stubs.createClient({ eventProcessor, updateProcessor: td });
       await client.waitForInitialization();
-      await client.variation(flag.key, null, 'c');
+      await client.variation('flagkey', null, 'c');
 
       expect(eventProcessor.events).toHaveLength(1);
       var e = eventProcessor.events[0];
@@ -391,8 +351,7 @@ describe('LDClient - analytics events', () => {
         version: 1,
         user: null,
         value: 'c',
-        default: 'c',
-        trackEvents: true
+        default: 'c'
       });
     });
   });

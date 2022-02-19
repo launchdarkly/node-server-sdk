@@ -1,33 +1,17 @@
-var InMemoryFeatureStore = require('../feature_store');
-var dataKind = require('../versioned_data_kind');
-var stubs = require('./stubs');
+const { TestData } = require('../integrations');
+const stubs = require('./stubs');
 
 describe('LDClient', () => {
 
   var defaultUser = { key: 'user' };
 
-  function createClientWithFlagsInUninitializedStore(flagsMap) {
-    var store = InMemoryFeatureStore();
-    for (var key in flagsMap) {
-      store.upsert(dataKind.features, flagsMap[key]);
-    }
-    return stubs.createClient({ featureStore: store }, {});
-  }
-
   describe('variation()', () => {
     it('evaluates an existing flag', async () => {
-      var flag = {
-        key: 'flagkey',
-        version: 1,
-        on: true,
-        targets: [],
-        fallthrough: { variation: 1 },
-        variations: ['a', 'b'],
-        trackEvents: true
-      };
-      var client = stubs.createClient({}, { flagkey: flag });
+      const td = TestData();
+      td.update(td.flag('flagkey').on(true).variations('a', 'b').fallthroughVariation(1));
+      var client = stubs.createClient({ updateProcessor: td });
       await client.waitForInitialization();
-      var result = await client.variation(flag.key, defaultUser, 'c');
+      var result = await client.variation('flagkey', defaultUser, 'c');
       expect(result).toEqual('b');
     });
 
@@ -39,15 +23,10 @@ describe('LDClient', () => {
     });
 
     it('returns default if client is offline', async () => {
-      var flag = {
-        key: 'flagkey',
-        version: 1,
-        on: false,
-        offVariation: 0,
-        variations: ['value']
-      };
+      const td = TestData();
+      td.update(td.flag('flagkey').variations('value').variationForAllUsers(0));
       var logger = stubs.stubLogger();
-      var client = stubs.createClient({ offline: true, logger: logger }, { flagkey: flag });
+      var client = stubs.createClient({ offline: true, updateProcessor: td, logger });
       await client.waitForInitialization();
       var result = await client.variation('flagkey', defaultUser, 'default');
       expect(result).toEqual('default');
@@ -55,30 +34,33 @@ describe('LDClient', () => {
     });
 
     it('returns default if client and store are not initialized', async () => {
-      var flag = {
+      // Can't use TestData to set up this condition, because it always initializes successfully
+      const flag = {
         key: 'flagkey',
         version: 1,
         on: false,
         offVariation: 0,
         variations: ['value']
       };
-      var client = createClientWithFlagsInUninitializedStore({ flagkey: flag });
+      const featureStore = stubs.uninitializedStoreWithFlags(flag);
+      var client = stubs.createClient({ featureStore });
       var result = await client.variation('flagkey', defaultUser, 'default');
       expect(result).toEqual('default');
     });
 
     it('returns value from store if store is initialized but client is not', async () => {
-      var flag = {
+      // Can't use TestData to set up this condition, because it always initializes successfully
+      var featureStore = stubs.initializedStoreWithFlags({
         key: 'flagkey',
         version: 1,
         on: false,
         offVariation: 0,
         variations: ['value']
-      };
+      });
       var logger = stubs.stubLogger();
       var updateProcessor = stubs.stubUpdateProcessor();
       updateProcessor.shouldInitialize = false;
-      var client = stubs.createClient({ updateProcessor: updateProcessor, logger: logger }, { flagkey: flag });
+      var client = stubs.createClient({ updateProcessor, featureStore, logger });
       var result = await client.variation('flagkey', defaultUser, 'default');
       expect(result).toEqual('value');
       expect(logger.warn).toHaveBeenCalled();
@@ -92,14 +74,15 @@ describe('LDClient', () => {
     });
 
     it('returns default for flag that evaluates to null', async () => {
-      var flag = {
+      const td = TestData();
+      td.usePreconfiguredFlag({ // TestData normally won't construct a flag with offVariation: null
         key: 'flagkey',
         on: false,
         offVariation: null
-      };
-      var client = stubs.createClient({}, { flagkey: flag });
+      });
+      var client = stubs.createClient({ updateProcessor: td });
       await client.waitForInitialization();
-      var result = await client.variation(flag.key, defaultUser, 'default');
+      var result = await client.variation('flagkey', defaultUser, 'default');
       expect(result).toEqual('default');
     });
 
@@ -117,18 +100,11 @@ describe('LDClient', () => {
 
   describe('variationDetail()', () => {
     it('evaluates an existing flag', async () => {
-      var flag = {
-        key: 'flagkey',
-        version: 1,
-        on: true,
-        targets: [],
-        fallthrough: { variation: 1 },
-        variations: ['a', 'b'],
-        trackEvents: true
-      };
-      var client = stubs.createClient({}, { flagkey: flag });
+      const td = TestData();
+      td.update(td.flag('flagkey').on(true).variations('a', 'b').fallthroughVariation(1));
+      var client = stubs.createClient({ updateProcessor: td });
       await client.waitForInitialization();
-      var result = await client.variationDetail(flag.key, defaultUser, 'c');
+      var result = await client.variationDetail('flagkey', defaultUser, 'c');
       expect(result).toMatchObject({ value: 'b', variationIndex: 1, reason: { kind: 'FALLTHROUGH' } });
     });
 
@@ -141,6 +117,7 @@ describe('LDClient', () => {
     });
 
     it('returns default if client is offline', async () => {
+      // Can't use TestData to set up this condition, because the data source isn't used in offline mode
       var flag = {
         key: 'flagkey',
         version: 1,
@@ -158,6 +135,7 @@ describe('LDClient', () => {
     });
 
     it('returns default if client and store are not initialized', async () => {
+      // Can't use TestData to set up this condition, because it always initializes successfully
       var flag = {
         key: 'flagkey',
         version: 1,
@@ -165,24 +143,26 @@ describe('LDClient', () => {
         offVariation: 0,
         variations: ['value']
       };
-      var client = createClientWithFlagsInUninitializedStore({ flagkey: flag });
+      const featureStore = stubs.uninitializedStoreWithFlags(flag);
+      var client = stubs.createClient({ featureStore });
       var result = await client.variationDetail('flagkey', defaultUser, 'default');
       expect(result).toMatchObject({ value: 'default', variationIndex: null,
         reason: { kind: 'ERROR', errorKind: 'CLIENT_NOT_READY' } });
     });
 
     it('returns value from store if store is initialized but client is not', async () => {
-      var flag = {
+      // Can't use TestData to set up this condition, because it always initializes successfully
+      var featureStore = stubs.initializedStoreWithFlags({
         key: 'flagkey',
         version: 1,
         on: false,
         offVariation: 0,
         variations: ['value']
-      };
+      });
       var logger = stubs.stubLogger();
       var updateProcessor = stubs.stubUpdateProcessor();
       updateProcessor.shouldInitialize = false;
-      var client = stubs.createClient({ updateProcessor: updateProcessor, logger: logger }, { flagkey: flag });
+      var client = stubs.createClient({ updateProcessor, featureStore, logger });
       var result = await client.variationDetail('flagkey', defaultUser, 'default');
       expect(result).toMatchObject({ value: 'value', variationIndex: 0, reason: { kind: 'OFF' }})
       expect(logger.warn).toHaveBeenCalled();
@@ -197,14 +177,15 @@ describe('LDClient', () => {
     });
 
     it('returns default for flag that evaluates to null', async () => {
-      var flag = {
+      const td = TestData();
+      td.usePreconfiguredFlag({ // TestData normally won't construct a flag with offVariation: null
         key: 'flagkey',
         on: false,
         offVariation: null
-      };
-      var client = stubs.createClient({}, { flagkey: flag });
+      });
+      var client = stubs.createClient({ updateProcessor: td });
       await client.waitForInitialization();
-      var result = await client.variationDetail(flag.key, defaultUser, 'default');
+      var result = await client.variationDetail('flagkey', defaultUser, 'default');
       expect(result).toMatchObject({ value: 'default', variationIndex: null, reason: { kind: 'OFF' } });
     });
 

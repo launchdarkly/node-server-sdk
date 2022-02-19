@@ -435,7 +435,7 @@ const newClient = function (sdkKey, originalConfig) {
 module.exports = {
   init: newClient,
   basicLogger: basicLogger,
-  FileDataSource: FileDataSource,
+  FileDataSource: FileDataSource, // deprecated entry point - should use integrations module now
   errors: errors,
 };
 

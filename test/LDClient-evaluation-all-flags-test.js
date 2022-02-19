@@ -1,3 +1,4 @@
+const { TestData } = require('../integrations');
 const stubs = require('./stubs');
 
 describe('LDClient.allFlagsState', () => {
@@ -31,8 +32,12 @@ describe('LDClient.allFlagsState', () => {
       trackEvents: false,
       trackEventsFallthrough: true
     };
+    const td = TestData();
+    td.usePreconfiguredFlag(flag1);
+    td.usePreconfiguredFlag(flag2);
+    td.usePreconfiguredFlag(flag3);
 
-    const client = stubs.createClient({}, { [flag1.key]: flag1, [flag2.key]: flag2, [flag3.key]: flag3 });
+    const client = stubs.createClient({ updateProcessor: td });
     await client.waitForInitialization();
     const state = await client.allFlagsState(defaultUser);
     expect(state.valid).toEqual(true);
@@ -66,13 +71,12 @@ describe('LDClient.allFlagsState', () => {
   });
 
   it('can filter for only client-side flags', async () => {
-    const flag1 = { key: 'server-side-1', on: false, offVariation: 0, variations: ['a'], clientSide: false };
-    const flag2 = { key: 'server-side-2', on: false, offVariation: 0, variations: ['b'], clientSide: false };
-    const flag3 = { key: 'client-side-1', on: false, offVariation: 0, variations: ['value1'], clientSide: true };
-    const flag4 = { key: 'client-side-2', on: false, offVariation: 0, variations: ['value2'], clientSide: true };
-    const client = stubs.createClient({}, {
-      'server-side-1': flag1, 'server-side-2': flag2, 'client-side-1': flag3, 'client-side-2': flag4
-    });
+    const td = TestData();
+    td.usePreconfiguredFlag({ key: 'server-side-1', on: false, offVariation: 0, variations: ['a'], clientSide: false });
+    td.usePreconfiguredFlag({ key: 'server-side-2', on: false, offVariation: 0, variations: ['b'], clientSide: false });
+    td.usePreconfiguredFlag({ key: 'client-side-1', on: false, offVariation: 0, variations: ['value1'], clientSide: true });
+    td.usePreconfiguredFlag({ key: 'client-side-2', on: false, offVariation: 0, variations: ['value2'], clientSide: true });
+    const client = stubs.createClient({ updateProcessor: td });
     await client.waitForInitialization();
     const state = await client.allFlagsState(defaultUser, { clientSideOnly: true });
     expect(state.valid).toEqual(true);
@@ -80,15 +84,16 @@ describe('LDClient.allFlagsState', () => {
   });
 
   it('can include reasons', async () => {
-    const flag = {
+    const td = TestData();
+    td.usePreconfiguredFlag({
       key: 'feature',
       version: 100,
       offVariation: 1,
       variations: ['a', 'b'],
       trackEvents: true,
       debugEventsUntilDate: 1000
-    };
-    const client = stubs.createClient({}, { feature: flag });
+    });
+    const client = stubs.createClient({ updateProcessor: td });
     await client.waitForInitialization();
     const state = await client.allFlagsState(defaultUser, { withReasons: true });
     expect(state.valid).toEqual(true);
@@ -130,9 +135,12 @@ describe('LDClient.allFlagsState', () => {
       variations: ['value3'],
       debugEventsUntilDate: 1000
     };
+    const td = TestData();
+    td.usePreconfiguredFlag(flag1);
+    td.usePreconfiguredFlag(flag2);
+    td.usePreconfiguredFlag(flag3);
     
-    const client = stubs.createClient({}, { flag1: flag1, flag2: flag2, flag3: flag3 });
-    const user = { key: 'user' };
+    const client = stubs.createClient({ updateProcessor: td });
     await client.waitForInitialization();
     const state = await client.allFlagsState(defaultUser, { withReasons: true, detailsOnlyForTrackedFlags: true });
     expect(state.valid).toEqual(true);
@@ -169,8 +177,10 @@ describe('LDClient.allFlagsState', () => {
       on: false,
       offVariation: null
     };
+    const td = TestData();
+    td.usePreconfiguredFlag(flag);
     const logger = stubs.stubLogger();
-    const client = stubs.createClient({ offline: true, logger: logger }, { flagkey: flag });
+    const client = stubs.createClient({ offline: true, logger: logger, updateProcessor: td });
     await client.waitForInitialization();
     const state = await client.allFlagsState(defaultUser);
     expect(state.valid).toEqual(false);
@@ -180,17 +190,15 @@ describe('LDClient.allFlagsState', () => {
 
   it('does not overflow the call stack when evaluating a huge number of flags', async () => {
     const flagCount = 5000;
-    const flags = {};
+    const td = TestData();
     for (let i = 0; i < flagCount; i++) {
-      const key = 'feature' + i;
-      const flag = {
-        key: key,
+      td.usePreconfiguredFlag({
+        key: 'feature' + i,
         version: 1,
         on: false
-      };
-      flags[key] = flag;
+      });
     }
-    const client = stubs.createClient({}, flags);
+    const client = stubs.createClient({ updateProcessor: td });
     await client.waitForInitialization();
     const state = await client.allFlagsState(defaultUser);
     expect(Object.keys(state.allValues()).length).toEqual(flagCount);

@@ -7,7 +7,7 @@ env:
   es6: true
   node: true
 parserOptions:
-  ecmaVersion: 2017 # allows us to use async/await, now that our Node version is always >= 8
+  ecmaVersion: 2018
 plugins:
   #- babel
   - prettier
