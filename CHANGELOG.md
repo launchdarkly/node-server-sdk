@@ -2,6 +2,14 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [6.3.0] - 2022-02-18
+### Added:
+- `TestData`, in the new module `launchdarkly-node-server-sdk/integrations`, is a new way to inject feature flag data programmatically into the SDK for testing—either with fixed values for each flag, or with targets and/or rules that can return different values for different users. Unlike the file data source, this mechanism does not use any external resources, only the data that your test code has provided.
+- `launchdarkly-node-server-sdk/integrations` is the new preferred module for importing `FileDataSource` and the `FileDataSourceOptions` type.
+
+### Deprecated:
+- The `FileDataSource` and `FileDataSourceOptions` exports from the main module are now deprecated.
+
 ## [6.2.3] - 2022-02-04
 ### Fixed:
 - When using `allFlagsState` to produce bootstrap data for the JavaScript SDK, the Node SDK was not returning the correct metadata for evaluations that involved an experiment. As a result, the analytics events produced by the JavaScript SDK did not correctly reflect experimentation results.
