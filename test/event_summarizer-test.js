@@ -44,15 +44,24 @@ describe('EventSummarizer', function() {
       variation: 1, value: 100, default: 111 };
     var event5 = { kind: 'feature', creationDate: 1000, key: 'badkey', user: user,
       value: 333, default: 333 };
+    var event6 = { kind: 'feature', creationDate: 1000, key: 'zero-version', version: 0, user: user,
+    variation: 1, value: 100, default: 444 };
     es.summarizeEvent(event1);
     es.summarizeEvent(event2);
     es.summarizeEvent(event3);
     es.summarizeEvent(event4);
     es.summarizeEvent(event5);
+    es.summarizeEvent(event6);
     var data = es.getSummary();
 
     data.features.key1.counters.sort(function(a, b) { return a.value - b.value; });
     var expectedFeatures = {
+      'zero-version': {
+        default: 444,
+        counters: [
+          { variation: 1, value: 100, version: 0, count: 1}
+        ]
+      },
       key1: {
         default: 111,
         counters: [
@@ -67,7 +76,7 @@ describe('EventSummarizer', function() {
       badkey: {
         default: 333,
         counters: [ { value: 333, unknown: true, count: 1 }]
-      }
+      },
     };
     expect(data.features).toEqual(expectedFeatures);
   });
