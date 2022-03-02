@@ -528,6 +528,110 @@ declare module 'launchdarkly-node-server-sdk' {
   }
 
   /**
+   * 
+   * TODO: U2C We will need some uniform description for this.
+   * 
+   * Meta attributes are used to control behavioral aspects of the Context.
+   * They cannot be addressed in targetting rules.
+   */
+  export interface LDContextMeta {
+    /**
+     * If true, the context will _not_ appear on the Contexts page in the LaunchDarkly dashboard.
+     */
+    transient?: boolean;
+
+    /**
+     * An optional secondary key for a context.
+     *
+     * TODO: U2C Update with new URL when available.
+     * 
+     * This affects [feature flag targeting](https://docs.launchdarkly.com/home/flags/targeting-users#targeting-rules-based-on-user-attributes) 
+     * as follows: if you have chosen to bucket context by a specific attribute, the secondary key (if set)
+     * is used to further distinguish between contexts which are otherwise identical according to that attribute.
+     */
+    secondary?: string;
+
+    /**
+     * 
+     * TODO: U2C Link to the pointer-like syntax and maybe a name for it?
+     * 
+     * Specifies a list of attribute names (either built-in or custom) which should be
+     * marked as private, and not sent to LaunchDarkly in analytics events. This is in
+     * addition to any private attributes designated in the global configuration
+     * with [[LDOptions.privateAttributeNames]] or [[LDOptions.allAttributesPrivate]].
+     */
+    privateAttributeNames?: string[];
+  }
+
+  interface LDContextCommon {
+      /**
+       * A unique string identifying a context.
+       */
+      key: string;
+
+      /**
+       * The context's name.
+       *
+       * You can search for contexts on the Contexts page by name.
+       */
+      name?: string;
+
+      /**
+       * 
+       * TODO: U2C We will need some uniform description for this.
+       * 
+       * Meta attributes are used to control behavioral aspects of the Context.
+       * They cannot be addressed in targetting rules.
+       */
+      _meta?: LDContextMeta;
+
+      /**
+       * Any additional attributes associated with the context.
+       */
+      [attribute: string]: any;
+  }
+
+
+  /**
+   * 
+   * TODO: U2C How do we want to describe this?
+   * 
+   * A single-kind context.
+   */
+  interface LDSingleKindContext extends LDContextCommon {
+      /**
+       * The kind of the context.
+       */
+      kind: string;
+  }
+
+  /**
+   * 
+   * TODO: U2C How do we want to describe this?
+   * 
+   * A multi-kind context.
+   */
+  interface LDMultiKindContext {
+      /**
+       * The kind of the context.
+       */
+      kind: "multi",
+
+      /**
+       * The contexts which compose this multi-kind context.
+       * 
+       * These should be of type LDContextCommon. "multi" is to allow
+       * for the top level "kind" attribute.
+       */
+      [kind: string]: "multi" | LDContextCommon;
+  }
+
+  /**
+   * A LaunchDarkly context object.
+   */
+  export type LDContext = LDSingleKindContext | LDMultiKindContext;
+
+  /**
    * A LaunchDarkly user object.
    */
   export interface LDUser {
