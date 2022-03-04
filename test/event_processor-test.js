@@ -182,6 +182,21 @@ describe('EventProcessor', () => {
     });
   }));
 
+  it('handles the version being 0', eventsServerTest(async s => {
+    await withEventProcessor(defaultConfig, s, async ep => {
+      const e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
+        version: 0, variation: 1, value: 'value', trackEvents: true };
+      ep.sendEvent(e);
+      await ep.flush();
+
+      const output = await getJsonRequest(s);
+      expect(output.length).toEqual(3);
+      checkIndexEvent(output[0], e, user);
+      checkFeatureEvent(output[1], e, false);
+      checkSummaryEvent(output[2]);
+    });
+  }));
+
   it('queues individual feature event with index event for anonymous user', eventsServerTest(async s => {
     await withEventProcessor(defaultConfig, s, async ep => {
       const e = { kind: 'feature', creationDate: 1000, user: anonUser, key: 'flagkey',
