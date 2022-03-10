@@ -22,6 +22,12 @@ function makeSdkConfig(options, tag) {
     cf.inlineUsersInEvents = options.events.inlineUsers;
     cf.privateAttributeNames = options.events.globalPrivateAttributes;
   }
+  if (options.tags) {
+    cf.application = {
+      id: options.tags.applicationId,
+      version: options.tags.applicationVersion,
+    };
+  }
   return cf;
 }
 

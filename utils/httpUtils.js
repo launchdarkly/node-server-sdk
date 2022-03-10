@@ -1,6 +1,7 @@
 const http = require('http');
 const https = require('https');
 const url = require('url');
+const configuration = require('../configuration');
 
 const packageJson = require('../package.json');
 
@@ -17,6 +18,16 @@ function getDefaultHeaders(sdkKey, config) {
     ret['x-launchdarkly-wrapper'] = config.wrapperVersion
       ? config.wrapperName + '/' + config.wrapperVersion
       : config.wrapperName;
+  }
+  const tags = configuration.getTags(config);
+  const tagKeys = Object.keys(tags);
+  if (tagKeys.length) {
+    ret['x-launchdarkly-tags'] = tagKeys
+      .sort()
+      .flatMap(key =>
+        Array.isArray(tags[key]) ? tags[key].sort().map(value => `${key}/${value}`) : [`${key}/${tags[key]}`]
+      )
+      .join(' ');
   }
   return ret;
 }

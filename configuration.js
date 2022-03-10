@@ -31,7 +31,7 @@ module.exports = (function () {
   const typesForPropertiesWithNoDefault = {
     // Add a value here if we add a configuration property whose type cannot be determined by looking
     // in baseDefaults (for instance, the default is null but if the value isn't null it should be a
-    // string). The allowable values are 'boolean', 'string', 'number', 'object', 'function', or
+    // string). The allowable values are 'boolean', 'string', 'number', 'object', 'function', 'array' or
     // 'factory' (the last one means it can be either a function or an object).
     bigSegments: 'object',
     eventProcessor: 'object',
@@ -46,6 +46,42 @@ module.exports = (function () {
     updateProcessor: 'factory', // gets special handling in validation
     wrapperName: 'string',
     wrapperVersion: 'string',
+  };
+
+  /**
+   * Expression to validate characters that are allowed in tag keys and values.
+   */
+  const allowedTagCharacters = /^(\w|\.|-)+$/;
+
+  /**
+   * Verify that a value meets the requirements for a tag value.
+   * @param {Object} config
+   * @param {string} tagValue
+   */
+  function validateTagValue(name, config, tagValue) {
+    if (typeof tagValue !== 'string' || !tagValue.match(allowedTagCharacters)) {
+      config.logger.warn(messages.invalidTagValue(name));
+      return undefined;
+    }
+    return tagValue;
+  }
+
+  const optionsWithValidatorsOrConversions = {
+    // Add a value here if we add a configuration property which requires custom validation
+    // and/or type conversion.
+    // The validator should log a message for any validation issues encountered.
+    // The validator should return undefined, or the validated value.
+
+    application: (name, config, value) => {
+      const validated = {};
+      if (value.id) {
+        validated.id = validateTagValue(`${name}.id`, config, value.id);
+      }
+      if (value.version) {
+        validated.version = validateTagValue(`${name}.version`, config, value.version);
+      }
+      return validated;
+    },
   };
 
   /* eslint-disable camelcase */
@@ -102,8 +138,16 @@ module.exports = (function () {
       if (value !== null && value !== undefined) {
         const defaultValue = defaultConfig[name];
         const typeDesc = typesForPropertiesWithNoDefault[name];
-        if (defaultValue === undefined && typeDesc === undefined) {
+        const validator = optionsWithValidatorsOrConversions[name];
+        if (defaultValue === undefined && typeDesc === undefined && validator === undefined) {
           config.logger.warn(messages.unknownOption(name));
+        } else if (validator !== undefined) {
+          const validated = validator(name, config, config[name]);
+          if (validated !== undefined) {
+            config[name] = validated;
+          } else {
+            delete config[name];
+          }
         } else {
           const expectedType = typeDesc || typeDescForValue(defaultValue);
           const actualType = typeDescForValue(value);
@@ -156,8 +200,29 @@ module.exports = (function () {
     return config;
   }
 
+  /**
+   * Get tags for the specified configuration.
+   *
+   * If any additional tags are added to the configuration, then the tags from
+   * this method should be extended with those.
+   * @param {Object} config The already valiated configuration.
+   * @returns {Object} The tag configuration.
+   */
+  function getTags(config) {
+    const tags = {};
+    if (config.application && config.application.id !== undefined && config.application.id !== null) {
+      tags['application-id'] = [config.application.id];
+    }
+    if (config.application && config.application.version !== undefined && config.application.id !== null) {
+      tags['application-version'] = [config.application.version];
+    }
+
+    return tags;
+  }
+
   return {
-    validate: validate,
-    defaults: defaults,
+    validate,
+    defaults,
+    getTags,
   };
 })();

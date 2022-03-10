@@ -24,6 +24,7 @@ app.get('/', (req, res) => {
       'all-flags-client-side-only',
       'all-flags-details-only-for-tracked-flags',
       'all-flags-with-reasons',
+      'tags',
     ],
   });
 });

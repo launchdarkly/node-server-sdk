@@ -40,7 +40,11 @@ var allOptions: ld.LDOptions = {
   diagnosticOptOut: true,
   diagnosticRecordingInterval: 100,
   wrapperName: 'x',
-  wrapperVersion: 'y'
+  wrapperVersion: 'y',
+  application: {
+    id: 'test-id',
+    version: 'test-version'
+  }
 };
 var userWithKeyOnly: ld.LDUser = { key: 'user' };
 var anonymousUser: ld.LDUser = { key: 'anon-user', anonymous: true };
