@@ -53,7 +53,7 @@ function EventSummarizer() {
       if (c.variation !== undefined && c.variation !== null) {
         counterOut.variation = c.variation;
       }
-      if (c.version) {
+      if (c.version !== undefined && c.version !== null) {
         counterOut.version = c.version;
       } else {
         counterOut.unknown = true;

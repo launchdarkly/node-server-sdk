@@ -41,6 +41,9 @@ jobs:
         default: false
       docker-image:
         type: string
+      run-contract-tests:
+        type: boolean
+        default: true
     docker:
       - image: <<parameters.docker-image>>
     steps:
@@ -56,6 +59,14 @@ jobs:
           condition: <<parameters.run-lint>>
           steps:
             - run: npm run lint
+      - when:
+          condition: <<parameters.run-contract-tests>>
+          steps:
+            - run:
+                command: npm run contract-test-service
+                background: true
+            - run: mkdir -p reports/junit
+            - run: TEST_HARNESS_PARAMS="-junit reports/junit/contract-test-results.xml -skip-from contract-tests/testharness-suppressions.txt" npm run contract-test-harness
       - run:
           name: dependency audit
           command: ./scripts/better-audit.sh

@@ -76,7 +76,7 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
         if (event.variation !== undefined && event.variation !== null) {
           out.variation = event.variation;
         }
-        if (event.version) {
+        if (event.version !== undefined && event.version !== null) {
           out.version = event.version;
         }
         if (event.reason) {

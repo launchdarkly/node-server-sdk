@@ -182,4 +182,35 @@ describe('configuration', function() {
       expect(() => configuration.validate(configIn)).toThrow(/Provided logger instance must support .* method/);
     });
   });
+
+  it('handles a valid application id', () => {
+    const configIn = emptyConfigWithMockLogger();
+    configIn.application = {id: 'test-application'};
+    expect(configuration.validate(configIn).application.id).toEqual('test-application');
+  });
+
+  it('logs a warning with an invalid application id', () => {
+    const configIn = emptyConfigWithMockLogger();
+    configIn.application = {id: 'test #$#$#'};
+    expect(configuration.validate(configIn).application.id).toBeUndefined();
+    expect(configIn.logger.warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('handles a valid application version', () => {
+    const configIn = emptyConfigWithMockLogger();
+    configIn.application = {version: 'test-version'};
+    expect(configuration.validate(configIn).application.version).toEqual('test-version');
+  });
+
+  it('logs a warning with an invalid application version', () => {
+    const configIn = emptyConfigWithMockLogger();
+    configIn.application = {version: 'test #$#$#'};
+    expect(configuration.validate(configIn).application.version).toBeUndefined();
+    expect(configIn.logger.warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('includes application id and version in tags when present', () => {
+    expect(configuration.getTags({application: {id: 'test-id', version: 'test-version'}}))
+      .toEqual({'application-id': ['test-id'], 'application-version': ['test-version']});
+  });
 });
