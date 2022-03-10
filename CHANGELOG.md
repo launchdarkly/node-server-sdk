@@ -2,6 +2,10 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [6.3.1] - 2022-03-10
+### Fixed:
+- Removed a transitive dependency on the package `url-parse`, which was flagged in [CVE-2022-0686](https://nvd.nist.gov/vuln/detail/CVE-2022-0686).
+
 ## [6.3.0] - 2022-02-18
 ### Added:
 - `TestData`, in the new module `launchdarkly-node-server-sdk/integrations`, is a new way to inject feature flag data programmatically into the SDK for testing—either with fixed values for each flag, or with targets and/or rules that can return different values for different users. Unlike the file data source, this mechanism does not use any external resources, only the data that your test code has provided.
