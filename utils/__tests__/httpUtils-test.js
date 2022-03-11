@@ -25,3 +25,15 @@ it('sets wrapper header with name and version', () => {
   const h = httpUtils.getDefaultHeaders('my-sdk-key', { wrapperName: 'my-wrapper', wrapperVersion: '2.0' });
   expect(h).toMatchObject({ 'x-launchdarkly-wrapper': 'my-wrapper/2.0' });
 });
+
+it('sets the X-LaunchDarkly-Tags header with valid tags.', () => {
+  const h = httpUtils.getDefaultHeaders('my-sdk-key', {
+    application: {
+      id: 'test-application',
+      version: 'test-version',
+    },
+  });
+  expect(h).toMatchObject({
+    'x-launchdarkly-tags': 'application-id/test-application application-version/test-version',
+  });
+});

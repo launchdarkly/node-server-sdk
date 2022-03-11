@@ -1,6 +1,6 @@
 {
   "name": "launchdarkly-node-server-sdk",
-  "version": "6.3.0",
+  "version": "6.3.1",
   "description": "LaunchDarkly Server-Side SDK for Node.js",
   "main": "index.js",
   "scripts": {
@@ -28,7 +28,7 @@
   "homepage": "https://github.com/launchdarkly/node-server-sdk",
   "dependencies": {
     "async": "^3.1.0",
-    "launchdarkly-eventsource": "1.4.2",
+    "launchdarkly-eventsource": "1.4.4",
     "lru-cache": "^6.0.0",
     "node-cache": "^5.1.0",
     "semver": "^7.3.0",
