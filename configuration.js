@@ -194,7 +194,13 @@ module.exports = (function () {
     config.streamUri = canonicalizeUri(config.streamUri);
     config.eventsUri = canonicalizeUri(config.eventsUri);
 
-    enforceMinimum(config, 'pollInterval', 30);
+    // Only enforce minimum polling interval if talking to the official server
+    // This enables shorter poll intervals in scenarios where LD is replaced with a stub server for testing
+    let minPollInterval = 30;
+    if ( config.baseUri !== defaultConfig.baseUri ) {
+      minPollInterval = 1;
+    }
+    enforceMinimum(config, 'pollInterval', minPollInterval);
     enforceMinimum(config, 'diagnosticRecordingInterval', 60);
 
     return config;
