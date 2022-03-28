@@ -2,6 +2,11 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.14.6] - 2022-03-28
+This release contains no changes to SDK functionality. It differs from 5.14.5 only in that the NPM lockfile `package-lock.json` has been removed from source control (a change that was already made in 6.x, but had not been backported to the 5.x maintenance branch util now).
+
+The lockfile does not affect the dependencies that are loaded when an application uses the SDK, because NPM only pays attention to the lockfile of the root project (the application). Running a security scan on the `node-server-sdk` project produced false results, since the scanner would look at the dependency versions that _were_ current at the time the lockfile was generated-- not the versions that would now be used if an application installed the SDK.
+
 ## [5.14.5] - 2021-06-10
 ### Fixed:
 - Updated transitive dependency on the package `url-parse` due to a [vulnerability warning](https://github.com/advisories/GHSA-9m6j-fcg5-2442).
