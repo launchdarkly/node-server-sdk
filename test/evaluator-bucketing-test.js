@@ -215,6 +215,16 @@ describe('rollout', () => {
       expect(detail.variationIndex).toEqual(0);
       expect(detail.reason.inExperiment).toBe(undefined);
     });
+
+    it('does not use bucketBy for experiments', async () => {
+      const user = { key: 'userKeyA', kind: 'user', mimic: 'userKeyC' };
+      const bucketByFlag = JSON.parse(JSON.stringify(flag));
+      bucketByFlag.fallthrough.rollout.bucketBy = "mimic";
+      const [err, detail, events] = await asyncEvaluate(Evaluator(), bucketByFlag, user, eventFactory);
+      expect(err).toEqual(null);
+      expect(detail.variationIndex).toEqual(0);
+      expect(detail.reason.inExperiment).toBe(true);
+    });
   });
 });
 

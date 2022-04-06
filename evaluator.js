@@ -634,7 +634,7 @@ function variationForUser(r, context, flag) {
     if (variations && variations.length > 0) {
       // This represents a percentage rollout. Assume
       // we're rolling out by key
-      const bucketBy = rollout.bucketBy || 'key';
+      const bucketBy = isExperiment ? 'key' : rollout.bucketBy || 'key';
       const { invalid, refAttr } = validateReference(!rollout.contextKind, bucketBy);
       if (invalid) {
         return [
