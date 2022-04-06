@@ -141,22 +141,22 @@ describe('configuration', function() {
   checkUriProperty('streamUri');
   checkUriProperty('eventsUri');
 
-  it('enforces array value for privateAttributeNames', () => {
+  it('enforces array value for privateAttributes', () => {
     const configIn0 = emptyConfigWithMockLogger();
     const config0 = configuration.validate(configIn0);
-    expect(config0.privateAttributeNames).toEqual([]);
+    expect(config0.privateAttributes).toEqual([]);
     expect(configIn0.logger.warn).not.toHaveBeenCalled();
 
     const configIn1 = emptyConfigWithMockLogger();
-    configIn1.privateAttributeNames = [ 'a' ];
+    configIn1.privateAttributes = [ 'a' ];
     const config1 = configuration.validate(configIn1);
-    expect(config1.privateAttributeNames).toEqual([ 'a' ]);
+    expect(config1.privateAttributes).toEqual([ 'a' ]);
     expect(configIn1.logger.warn).not.toHaveBeenCalled();
 
     const configIn2 = emptyConfigWithMockLogger();
-    configIn2.privateAttributeNames = 'no';
+    configIn2.privateAttributes = 'no';
     const config2 = configuration.validate(configIn2);
-    expect(config2.privateAttributeNames).toEqual([]);
+    expect(config2.privateAttributes).toEqual([]);
     expect(configIn2.logger.warn).toHaveBeenCalledTimes(1);
   });
 

@@ -43,7 +43,7 @@ jobs:
         type: string
       run-contract-tests:
         type: boolean
-        default: true
+        default: false #TODO: U2C re-enable once the harness supports it.
     docker:
       - image: <<parameters.docker-image>>
     steps:

@@ -136,7 +136,7 @@ describe('when filtering attributes by reference', () => {
       ' ': ' ',
       'null': null
     });
-    expect(excluded).toEqual(['ld']);
+    expect(excluded).toEqual(['/ld']);
   });
 
   it('should be able to exclude a nested value', () => {
@@ -150,7 +150,7 @@ describe('when filtering attributes by reference', () => {
       'm~n': 2,
       ' ': ' ',
       'null': null
-    }, ['launchdarkly/u2c']);
+    }, ['/launchdarkly/u2c']);
     expect(cloned).toEqual({
       'launchdarkly': {
       },
@@ -161,7 +161,7 @@ describe('when filtering attributes by reference', () => {
       ' ': ' ',
       'null': null
     });
-    expect(excluded).toEqual(['launchdarkly/u2c']);
+    expect(excluded).toEqual(['/launchdarkly/u2c']);
   });
 
   it('sould be able to exclude an object', () => {
@@ -184,7 +184,7 @@ describe('when filtering attributes by reference', () => {
       ' ': ' ',
       'null': null
     });
-    expect(excluded).toEqual(['launchdarkly']);
+    expect(excluded).toEqual(['/launchdarkly']);
   });
 
   it('sould be able to exclude an array', () => {
@@ -209,7 +209,7 @@ describe('when filtering attributes by reference', () => {
       ' ': ' ',
       'null': null
     });
-    expect(excluded).toEqual(['foo']);
+    expect(excluded).toEqual(['/foo']);
   });
 
   it('should not allow exclude an array index', () => {
@@ -299,7 +299,7 @@ describe('when filtering attributes by reference', () => {
       'm~n': 2,
       ' ': ' ',
     });
-    expect(excluded).toEqual(['null']);
+    expect(excluded).toEqual(['/null']);
   });
 
   it('should not allow exclude a value inside null', () => {
@@ -358,7 +358,7 @@ describe('when filtering attributes by reference', () => {
     const objToClone = { undefined: undefined };
     const { cloned, excluded } = AttributeReference.cloneExcluding(objToClone, ['undefined']);
     expect(cloned).toEqual({});
-    expect(excluded).toEqual(['undefined']);
+    expect(excluded).toEqual(['/undefined']);
   });
 
   it('should allow removing references with escape characters', () => {
@@ -423,7 +423,7 @@ describe('when filtering attributes by reference', () => {
       item: {},
       name: 'test',
     });
-    expect(excluded).toEqual(['remove']);
+    expect(excluded).toEqual(['/remove']);
   });
 
   it('should allow non-circular reference and should treat them independently for filtering', () => {
@@ -434,13 +434,13 @@ describe('when filtering attributes by reference', () => {
       third: item,
       fourth: item
     };
-    const { cloned, excluded } = AttributeReference.cloneExcluding(objWithSharedPeer, ['third', 'second/value']);
+    const { cloned, excluded } = AttributeReference.cloneExcluding(objWithSharedPeer, ['third', '/second/value']);
     expect(cloned).toEqual({
       item: { value: 'value' },
       second: {},
       fourth: { value: 'value' },
     });
-    expect(excluded).toEqual(['second/value', 'third']);
+    expect(excluded).toEqual(['/second/value', '/third']);
   });
 
   it('should allow for an empty reference list', () => {

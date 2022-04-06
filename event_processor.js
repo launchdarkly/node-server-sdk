@@ -2,30 +2,17 @@ const LRUCache = require('lru-cache');
 const { v4: uuidv4 } = require('uuid');
 
 const EventSummarizer = require('./event_summarizer');
-const UserFilter = require('./user_filter');
+const ContextFilter = require('./context_filter');
 const errors = require('./errors');
 const httpUtils = require('./utils/httpUtils');
 const messages = require('./messages');
-const stringifyAttrs = require('./utils/stringifyAttrs');
 const wrapPromiseCallback = require('./utils/wrapPromiseCallback');
-
-const userAttrsToStringifyForEvents = [
-  'key',
-  'secondary',
-  'ip',
-  'country',
-  'email',
-  'firstName',
-  'lastName',
-  'avatar',
-  'name',
-];
 
 function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
   const ep = {};
 
-  const userFilter = UserFilter(config),
-    summarizer = EventSummarizer(config),
+  const userFilter = ContextFilter(config),
+    summarizer = EventSummarizer(),
     userKeysCache = new LRUCache({ max: config.userKeysCapacity }),
     mainEventsUri = config.eventsUri + '/bulk',
     diagnosticEventsUri = config.eventsUri + '/diagnostic';
@@ -127,8 +114,7 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
   }
 
   function processUser(event) {
-    const filtered = userFilter.filterUser(event.user);
-    return stringifyAttrs(filtered, userAttrsToStringifyForEvents);
+    return userFilter.filter(event.user);
   }
 
   function getUserKey(event) {

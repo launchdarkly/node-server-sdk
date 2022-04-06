@@ -23,7 +23,7 @@ var allOptions: ld.LDOptions = {
   streamInitialReconnectDelay: 1.5,
   sendEvents: true,
   allAttributesPrivate: true,
-  privateAttributeNames: [ 'x' ],
+  privateAttributes: [ 'x' ],
   inlineUsersInEvents: true,
   capacity: 100,
   flushInterval: 1,

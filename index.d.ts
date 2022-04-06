@@ -362,7 +362,7 @@ declare module 'launchdarkly-node-server-sdk' {
      * The names of any user attributes that should be marked as private, and not sent
      * to LaunchDarkly.
      */
-    privateAttributeNames?: Array<string>;
+    privateAttributes?: Array<string>;
 
     /**
      * Whether to include full user details in every analytics event.
@@ -583,9 +583,9 @@ declare module 'launchdarkly-node-server-sdk' {
      * Specifies a list of attribute names (either built-in or custom) which should be
      * marked as private, and not sent to LaunchDarkly in analytics events. This is in
      * addition to any private attributes designated in the global configuration
-     * with [[LDOptions.privateAttributeNames]] or [[LDOptions.allAttributesPrivate]].
+     * with [[LDOptions.privateAttributes]] or [[LDOptions.allAttributesPrivate]].
      */
-    privateAttributeNames?: string[];
+    privateAttributes?: string[];
   }
 
   interface LDContextCommon {

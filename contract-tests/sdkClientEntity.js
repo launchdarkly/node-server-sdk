@@ -19,8 +19,7 @@ function makeSdkConfig(options, tag) {
     cf.capacity = options.events.capacity;
     cf.diagnosticOptOut = !options.events.enableDiagnostics;
     cf.flushInterval = maybeTime(options.events.flushIntervalMs);
-    cf.inlineUsersInEvents = options.events.inlineUsers;
-    cf.privateAttributeNames = options.events.globalPrivateAttributes;
+    cf.privateAttributes = options.events.globalPrivateAttributes;
   }
   if (options.tags) {
     cf.application = {
@@ -91,10 +90,6 @@ async function newSdkClientEntity(options) {
         client.track(pce.eventKey, pce.user, pce.data, pce.metricValue);
         return undefined;
       }
-
-      case 'aliasEvent':
-        client.alias(params.aliasEvent.user, params.aliasEvent.previousUser);
-        return undefined;
 
       case 'flushEvents':
         client.flush();

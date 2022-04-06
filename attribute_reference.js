@@ -62,7 +62,12 @@ function get(target, reference) {
   const components = getComponents(reference);
   let current = target;
   for (const component of components) {
-    if (current !== null && current !== undefined && Object.prototype.hasOwnProperty.call(current, component)) {
+    if (
+      current !== null &&
+      current !== undefined &&
+      Object.prototype.hasOwnProperty.call(current, component) &&
+      typeof current === 'object'
+    ) {
       current = current[component];
     } else {
       return undefined;
@@ -121,17 +126,6 @@ function literalToReference(literal) {
 }
 
 /**
- * Check if a key will need conversion to a reference
- * for reference/literal comparisons.
- * If the top level keys of an object contain characters which
- * need escaped, then they need this conversion.
- * @param {string} key The key to check.
- */
-function keyRequiresConversion(key) {
-  return key.includes('/') || key.includes('~');
-}
-
-/**
  * Clone an object excluding the values referenced by a list of references.
  * @param {Object} target The object to clone.
  * @param {string[]} references A list of references from the cloned object.
@@ -145,7 +139,7 @@ function cloneExcluding(target, references) {
   stack.push(
     ...Object.keys(target).map(key => ({
       key,
-      ptr: keyRequiresConversion(key) ? literalToReference(key) : key,
+      ptr: literalToReference(key),
       source: target,
       parent: cloned,
       visited: [target],

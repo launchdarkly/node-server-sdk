@@ -6,3 +6,4 @@ junit.xml
 npm-debug.log
 test-types.js
 .vscode
+coverage/
