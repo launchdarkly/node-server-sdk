@@ -12,10 +12,10 @@ function processEscapeCharacters(key) {
  * @returns {string[]} The components of the reference. Escape characters will be converted to their representative values.
  */
 function getComponents(reference) {
-  return reference
-    .replace(/^\//g, '')
+  const referenceWithoutPrefix = reference.startsWith('/') ? reference.substring(1) : reference;
+  return referenceWithoutPrefix
     .split('/')
-    .map(component => component.replace(/~1/g, '/').replace(/~0/g, '~'));
+    .map(component => (component.indexOf('~') >= 0 ? component.replace(/~1/g, '/').replace(/~0/g, '~') : component));
 }
 
 /**
