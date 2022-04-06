@@ -1,4 +1,4 @@
-const { Evaluator, bucketUser } = require('../evaluator');
+const { Evaluator } = require('../evaluator');
 const {
   basicUser,
   eventFactory,
@@ -250,182 +250,203 @@ describe('Evaluator - basic flag behavior', () => {
       expect(detail).toMatchObject({ value: 'c', variationIndex: 2, reason: { kind: 'TARGET_MATCH' } });
       expect(events).toBeUndefined();
     });
-  });
 
-  describe('rollout', () => {
-    it('selects bucket', async () => {
-      const user = { key: 'userkey' };
-      const flagKey = 'flagkey';
-      const salt = 'salt';
-
-      // First verify that with our test inputs, the bucket value will be greater than zero and less than 100000,
-      // so we can construct a rollout whose second bucket just barely contains that value
-      const bucketValue = Math.floor(bucketUser(user, flagKey, 'key', salt) * 100000);
-      expect(bucketValue).toBeGreaterThan(0);
-      expect(bucketValue).toBeLessThan(100000);
-
-      const badVariationA = 0, matchedVariation = 1, badVariationB = 2;
-      const rollout = {
-        variations: [
-          { variation: badVariationA, weight: bucketValue }, // end of bucket range is not inclusive, so it will *not* match the target value
-          { variation: matchedVariation, weight: 1 }, // size of this bucket is 1, so it only matches that specific value
-          { variation: badVariationB, weight: 100000 - (bucketValue + 1) }
-        ]
-      };
+    it('does not break when there are no values in a target', async () => {
       const flag = {
-        key: flagKey,
-        salt: salt,
+        key: 'feature0',
         on: true,
-        fallthrough: { rollout: rollout },
-        variations: [ null, null, null ]
-      };
-      const [ err, detail, events ] = await asyncEvaluate(Evaluator(), flag, user, eventFactory);
-      expect(err).toEqual(null);
-      expect(detail.variationIndex).toEqual(matchedVariation);
-    });
-
-    it('uses last bucket if bucket value is equal to total weight', async () => {
-      const user = { key: 'userkey' };
-      const flagKey = 'flagkey';
-      const salt = 'salt';
-
-      // We'll construct a list of variations that stops right at the target bucket value
-      const bucketValue = Math.floor(bucketUser(user, flagKey, 'key', salt) * 100000);
-      
-      const rollout = {
-        variations: [ { variation: 0, weight: bucketValue }]
-      };
-      const flag = {
-        key: flagKey,
-        salt: salt,
-        on: true,
-        fallthrough: { rollout: rollout },
-        variations: [ null, null, null ]
-      };
-      const [ err, detail, events ] = await asyncEvaluate(Evaluator(), flag, user, eventFactory);
-      expect(err).toEqual(null);
-      expect(detail.variationIndex).toEqual(0);
-    });
-
-    describe('with seed', () => {
-      const seed = 61;
-      const flagKey = 'flagkey';
-      const salt = 'salt';
-      const rollout = {
-        kind: 'experiment',
-        seed,
-        variations: [
-          { variation: 0, weight: 10000 },
-          { variation: 1, weight: 20000 },
-          { variation: 0, weight: 70000, untracked: true },
+        rules: [],
+        targets: [
+          {
+            variation: 2,
+          }
         ],
+        fallthrough: { variation: 0 },
+        offVariation: 1,
+        variations: ['a', 'b', 'c']
       };
+      const user = { key: 'userkey' };
+      const [ err, detail, events ] = await asyncEvaluate(Evaluator(), flag, user, eventFactory);
+      expect(detail).toMatchObject({ value: 'a', variationIndex: 0, reason: { kind: 'FALLTHROUGH' } });
+      expect(events).toBeUndefined();
+    });
+    
+    it('matches single kind user from targets', async () => {
       const flag = {
-        key: flagKey,
-        salt: salt,
+        key: 'feature0',
         on: true,
-        fallthrough: { rollout: rollout },
-        variations: [null, null, null],
+        rules: [],
+        targets: [
+          {
+            variation: 2,
+            values: ['some', 'userkey', 'or', 'other']
+          }
+        ],
+        fallthrough: { variation: 0 },
+        offVariation: 1,
+        variations: ['a', 'b', 'c']
+      };
+      const context = { kind: 'user', key: 'userkey' };
+      const [ err, detail, events ] = await asyncEvaluate(Evaluator(), flag, context, eventFactory);
+      expect(detail).toMatchObject({ value: 'c', variationIndex: 2, reason: { kind: 'TARGET_MATCH' } });
+      expect(events).toBeUndefined();
+    });
+
+    it('matches single kind non-user from contextTargets', async () => {
+      const flag = {
+        key: 'feature0',
+        on: true,
+        rules: [],
+        contextTargets: [
+          {
+            variation: 2,
+            values: ['some', 'nonUserkey', 'or', 'other'],
+            contextKind: 'non-user'
+          }
+        ],
+        fallthrough: { variation: 0 },
+        offVariation: 1,
+        variations: ['a', 'b', 'c']
+      };
+      const context = { kind: 'non-user', key: 'nonUserkey' };
+      const [ err, detail, events ] = await asyncEvaluate(Evaluator(), flag, context, eventFactory);
+      expect(detail).toMatchObject({ value: 'c', variationIndex: 2, reason: { kind: 'TARGET_MATCH' } });
+      expect(events).toBeUndefined();
+    });
+
+    it('matches multi-kind context with user from targets', async () => {
+      const flag = {
+        key: 'feature0',
+        on: true,
+        rules: [],
+        targets: [
+          {
+            variation: 2,
+            values: ['some', 'userkey', 'or', 'other']
+          }
+        ],
+        fallthrough: { variation: 0 },
+        offVariation: 1,
+        variations: ['a', 'b', 'c']
+      };
+      const context = { kind: 'multi', user: {key: 'userkey' }};
+      const [ err, detail, events ] = await asyncEvaluate(Evaluator(), flag, context, eventFactory);
+      expect(detail).toMatchObject({ value: 'c', variationIndex: 2, reason: { kind: 'TARGET_MATCH' } });
+      expect(events).toBeUndefined();
+    });
+
+    it('matches a user in a multi-kind context with contextTargets order', async () => {
+      const flag = {
+        key: 'feature0',
+        on: true,
+        rules: [],
+        targets: [
+          {
+            variation: 2,
+            values: ['some', 'userkey', 'or', 'other']
+          }
+        ],
+        contextTargets: [{
+          variation: 2,
+          contextKind: 'user',
+          values: []
+        },{
+          variation: 1,
+          contextKind: 'farm',
+          values: ['cat']
+        }],
+        fallthrough: { variation: 0},
+        offVariation: 0,
+        variations: ['a', 'b', 'c']
       };
 
-      it('buckets user into first variant of the experiment', async () => {
-        var user = { key: 'userKeyA' };
-        const [ err, detail, events ] = await asyncEvaluate(Evaluator(), flag, user, eventFactory);
-        expect(err).toEqual(null);
-        expect(detail.variationIndex).toEqual(0);
-        expect(detail.reason.inExperiment).toBe(true);
-      });
-
-      it('uses seed to bucket user into second variant of the experiment', async () => {
-        var user = { key: 'userKeyB' };
-        const [ err, detail, events ] = await asyncEvaluate(Evaluator(), flag, user, eventFactory);
-        expect(err).toEqual(null);
-        expect(detail.variationIndex).toEqual(1);
-        expect(detail.reason.inExperiment).toBe(true);
-      });
-
-      it('buckets user outside of the experiment', async () => {
-        var user = { key: 'userKeyC' };
-        const [ err, detail, events ] = await asyncEvaluate(Evaluator(), flag, user, eventFactory);
-        expect(err).toEqual(null);
-        expect(detail.variationIndex).toEqual(0);
-        expect(detail.reason.inExperiment).toBe(undefined);
-      });
-    });
-  });
-});
-
-describe('bucketUser', () => {
-  it('gets expected bucket values for specific keys', () => {
-    var user = { key: 'userKeyA' };
-    var bucket = bucketUser(user, 'hashKey', 'key', 'saltyA');
-    expect(bucket).toBeCloseTo(0.42157587, 7);
-
-    user = { key: 'userKeyB' };
-    bucket = bucketUser(user, 'hashKey', 'key', 'saltyA');
-    expect(bucket).toBeCloseTo(0.6708485, 7);
-
-    user = { key: 'userKeyC' };
-    bucket = bucketUser(user, 'hashKey', 'key', 'saltyA');
-    expect(bucket).toBeCloseTo(0.10343106, 7);
-  });
-
-  it('can bucket by int value (equivalent to string)', () => {
-    var user = {
-      key: 'userKey',
-      custom: {
-        intAttr: 33333,
-        stringAttr: '33333'
-      }
-    };
-    var bucket = bucketUser(user, 'hashKey', 'intAttr', 'saltyA');
-    var bucket2 = bucketUser(user, 'hashKey', 'stringAttr', 'saltyA');
-    expect(bucket).toBeCloseTo(0.54771423, 7);
-    expect(bucket2).toBe(bucket);
-  });
-
-  it('cannot bucket by float value', () => {
-    var user = {
-      key: 'userKey',
-      custom: {
-        floatAttr: 33.5
-      }
-    };
-    var bucket = bucketUser(user, 'hashKey', 'floatAttr', 'saltyA');
-    expect(bucket).toBe(0);
-  });
-
-  describe('when seed is present', () => {
-    const seed = 61;
-    it('gets expected bucket values for specific keys', () => {
-      var user = { key: 'userKeyA' };
-      var bucket = bucketUser(user, 'hashKey', 'key', 'saltyA', seed);
-      expect(bucket).toBeCloseTo(0.09801207, 7);
-
-      user = { key: 'userKeyB' };
-      bucket = bucketUser(user, 'hashKey', 'key', 'saltyA', seed);
-      expect(bucket).toBeCloseTo(0.14483777, 7);
-
-      user = { key: 'userKeyC' };
-      bucket = bucketUser(user, 'hashKey', 'key', 'saltyA', seed);
-      expect(bucket).toBeCloseTo(0.9242641, 7);
+      const context = { kind: 'multi', farm: {key: 'cat' }, user: {key: 'userkey' }};
+      const [ err, detail, events ] = await asyncEvaluate(Evaluator(), flag, context, eventFactory);
+      expect(detail).toMatchObject({ value: 'c', variationIndex: 2, reason: { kind: 'TARGET_MATCH' } });
+      expect(events).toBeUndefined();
     });
 
-    it('should not generate a different bucket when hashKey or salt are changed', () => {
-      let user = { key: 'userKeyA' };
-      let bucket = bucketUser(user, 'hashKey', 'key', 'saltyA', seed);
-      let bucketDifferentHashKey = bucketUser(user, 'otherHashKey', 'key', 'saltyA', seed);
-      let bucketDifferentSalt = bucketUser(user, 'hashKey', 'key', 'otherSaltyA', seed);
+    it('does not match a user in a multi-kind context with contextTargets order if key is not present', async () => {
+      const flag = {
+        key: 'feature0',
+        on: true,
+        rules: [],
+        targets: [
+          {
+            variation: 2,
+            values: ['some', 'userkey', 'or', 'other']
+          }
+        ],
+        contextTargets: [{
+          variation: 2,
+          contextKind: 'user',
+          values: []
+        },{
+          variation: 1,
+          contextKind: 'farm',
+          values: ['cat']
+        }],
+        fallthrough: { variation: 0},
+        offVariation: 0,
+        variations: ['a', 'b', 'c']
+      };
 
-      expect(bucketDifferentHashKey).toBeCloseTo(bucket, 7);
-      expect(bucketDifferentSalt).toBeCloseTo(bucket, 7);
+      const context = { kind: 'multi', farm: {key: 'dog' }, user: {key: 'cat' }};
+      const [ err, detail, events ] = await asyncEvaluate(Evaluator(), flag, context, eventFactory);
+      expect(detail).toMatchObject({ value: 'a', variationIndex: 0, reason: { kind: 'FALLTHROUGH' } });
+      expect(events).toBeUndefined();
     });
 
-    it('should generate a new bucket if the seed changes', () => {
-      const otherSeed = 60;
-      var user = { key: 'userKeyA' };
-      var bucket = bucketUser(user, 'hashKey', 'key', 'saltyA', otherSeed);
-      expect(bucket).toBeCloseTo(0.7008816, 7);
+    it('matches contextTargets order with a non-user match ahead of a user.', async () => {
+      const flag = {
+        key: 'feature0',
+        on: true,
+        rules: [],
+        targets: [
+          {
+            variation: 2,
+            values: ['some', 'userkey', 'or', 'other']
+          }
+        ],
+        contextTargets: [{
+          variation: 1,
+          contextKind: 'farm',
+          values: ['cat']
+        }, {
+          variation: 2,
+          contextKind: 'user',
+          values: []
+        }],
+        fallthrough: { variation: 0},
+        offVariation: 0,
+        variations: ['a', 'b', 'c']
+      };
+
+      const context = { kind: 'multi', farm: {key: 'cat' }, user: {key: 'userkey' }};
+      const [ err, detail, events ] = await asyncEvaluate(Evaluator(), flag, context, eventFactory);
+      expect(detail).toMatchObject({ value: 'b', variationIndex: 1, reason: { kind: 'TARGET_MATCH' } });
+      expect(events).toBeUndefined();
+    });
+
+    it('matches a context in a multi-kind context with a contextTarget', async () => {
+      const flag = {
+        key: 'feature0',
+        on: true,
+        rules: [],
+        contextTargets: [{
+          variation: 1,
+          contextKind: 'farm',
+          values: ['cat']
+        }],
+        fallthrough: { variation: 0},
+        offVariation: 0,
+        variations: ['a', 'b', 'c']
+      };
+
+      const context = { kind: 'multi', farm: {key: 'cat' }};
+      const [ err, detail, events ] = await asyncEvaluate(Evaluator(), flag, context, eventFactory);
+      expect(detail).toMatchObject({ value: 'b', variationIndex: 1, reason: { kind: 'TARGET_MATCH' } });
+      expect(events).toBeUndefined();
     });
   });
 });

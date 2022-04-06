@@ -4,7 +4,7 @@
  * @returns {string} The processed key.
  */
 function processEscapeCharacters(key) {
-  return key.replace('~', '~0').replace('/', '~1');
+  return key.replace(/~/g, '~0').replace(/\//g, '~1');
 }
 
 /**
@@ -15,7 +15,7 @@ function getComponents(reference) {
   return reference
     .replace(/^\//g, '')
     .split('/')
-    .map(component => component.replace('~1', '/').replace('~0', '~'));
+    .map(component => component.replace(/~1/g, '/').replace(/~0/g, '~'));
 }
 
 /**
@@ -187,9 +187,14 @@ function cloneExcluding(target, references) {
   return { cloned, excluded: excluded.sort() };
 }
 
+function isValidReference(reference) {
+  return !reference.match(/\/\/|(^\/.*~[^0|^1])/);
+}
+
 module.exports = {
   cloneExcluding,
   compare,
   get,
+  isValidReference,
   literalToReference,
 };

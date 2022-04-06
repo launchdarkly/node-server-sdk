@@ -1,9 +1,22 @@
+const { getContextKinds } = require('./context');
+
+function getKinds(event) {
+  if (event.context) {
+    return getContextKinds(event.context);
+  }
+  if (event.contextKeys) {
+    return Object.keys(event.contextKeys);
+  }
+  return [];
+}
+
 function EventSummarizer() {
   const es = {};
 
   let startDate = 0,
     endDate = 0,
-    counters = {};
+    counters = {},
+    contextKinds = {};
 
   es.summarizeEvent = event => {
     if (event.kind === 'feature') {
@@ -14,6 +27,13 @@ function EventSummarizer() {
         ':' +
         (event.version !== null && event.version !== undefined ? event.version : '');
       const counterVal = counters[counterKey];
+      let kinds = contextKinds[event.key];
+      if (!kinds) {
+        kinds = new Set();
+        contextKinds[event.key] = kinds;
+      }
+      getKinds(event).forEach(kind => kinds.add(kind));
+
       if (counterVal) {
         counterVal.count = counterVal.count + 1;
       } else {
@@ -43,6 +63,7 @@ function EventSummarizer() {
         flag = {
           default: c.default,
           counters: [],
+          contextKinds: [...contextKinds[c.key]],
         };
         flagsOut[c.key] = flag;
       }
@@ -71,6 +92,7 @@ function EventSummarizer() {
     startDate = 0;
     endDate = 0;
     counters = {};
+    contextKinds = {};
   };
 
   return es;

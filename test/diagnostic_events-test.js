@@ -78,8 +78,8 @@ describe('DiagnosticsManager', () => {
       reconnectTimeMillis: 1000,
       socketTimeoutMillis: 5000,
       streamingDisabled: false,
-      userKeysCapacity: 1000,
-      userKeysFlushIntervalMillis: 300000,
+      contextKeysCapacity: 1000,
+      contextKeysFlushIntervalMillis: 300000,
       usingProxy: false,
       usingProxyAuthenticator: false,
       usingRelayDaemon: false,
@@ -109,8 +109,8 @@ describe('DiagnosticsManager', () => {
     verifyConfig({ flushInterval: 33 }, { eventsFlushIntervalMillis: 33000 });
     verifyConfig({ stream: false }, { streamingDisabled: true });
     verifyConfig({ streamInitialReconnectDelay: 33 }, { reconnectTimeMillis: 33000 });
-    verifyConfig({ userKeysCapacity: 111 }, { userKeysCapacity: 111 });
-    verifyConfig({ userKeysFlushInterval: 33 }, { userKeysFlushIntervalMillis: 33000 });
+    verifyConfig({ contextKeysCapacity: 111 }, { contextKeysCapacity: 111 });
+    verifyConfig({ contextKeysFlushInterval: 33 }, { contextKeysFlushIntervalMillis: 33000 });
     verifyConfig({ useLdd: true }, { usingRelayDaemon: true });
 
     const fakeProxy = {};

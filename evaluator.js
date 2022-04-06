@@ -4,11 +4,55 @@ const operators = require('./operators');
 const util = require('util');
 const stringifyAttrs = require('./utils/stringifyAttrs');
 const { safeAsyncEachSeries } = require('./utils/asyncUtils');
+const AttributeReference = require('./attribute_reference');
+const { checkContext } = require('./context');
 
 const builtins = ['key', 'secondary', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name', 'anonymous'];
-const userAttrsToStringifyForEvaluation = ['key', 'secondary'];
-// Currently we are not stringifying the rest of the built-in attributes prior to evaluation, only for events.
-// This is because it could affect evaluation results for existing users (ch35206).
+const legacyStringAttributes = ['key', 'secondary'];
+const metaStringAttributes = ['secondary'];
+
+const bigSegementsStatusPriority = {
+  HEALTHY: 1,
+  STALE: 2,
+  STORE_ERROR: 3,
+  NOT_CONFIGURED: 4,
+};
+
+function stringifyContextAttrs(context) {
+  if (context.kind === undefined) {
+    return stringifyAttrs(context, legacyStringAttributes);
+  }
+
+  const withStringAttrs = {};
+  const keys = Object.keys(context);
+
+  keys.forEach(key => {
+    if (context.kind !== 'multi') {
+      if (key === '_meta') {
+        withStringAttrs[key] = stringifyAttrs(context._meta, metaStringAttributes);
+      } else {
+        withStringAttrs[key] = key === 'key' ? String(context[key]) : context[key];
+      }
+    } else {
+      if (key === 'kind') {
+        withStringAttrs[key] = context[key];
+      } else {
+        withStringAttrs[key] = {};
+        const keysInContext = Object.keys(context[key]);
+        keysInContext.forEach(keyInContext => {
+          if (keyInContext === '_meta') {
+            withStringAttrs[key][keyInContext] = stringifyAttrs(context[key]._meta, metaStringAttributes);
+          } else {
+            withStringAttrs[key][keyInContext] =
+              keyInContext === 'key' ? String(context[key][keyInContext]) : context[key][keyInContext];
+          }
+        });
+      }
+    }
+  });
+
+  return withStringAttrs;
+}
 
 const noop = () => {};
 
@@ -22,8 +66,8 @@ const noop = () => {};
 function Evaluator(queries) {
   const ret = {};
 
-  ret.evaluate = (flag, user, eventFactory, maybeCallback) => {
-    evaluate(flag, user, queries, eventFactory, maybeCallback);
+  ret.evaluate = (flag, context, eventFactory, maybeCallback) => {
+    evaluate(flag, context, queries, eventFactory, maybeCallback);
   };
 
   return ret;
@@ -31,9 +75,9 @@ function Evaluator(queries) {
 
 // Callback receives (err, detail, events) where detail has the properties "value", "variationIndex", and "reason";
 // detail will never be null even if there's an error; events is either an array or undefined.
-function evaluate(flag, user, queries, eventFactory, maybeCallback) {
+function evaluate(flag, context, queries, eventFactory, maybeCallback) {
   const cb = maybeCallback || noop;
-  if (!user || user.key === null || user.key === undefined) {
+  if (!checkContext(context, true)) {
     cb(null, errorResult('USER_NOT_SPECIFIED'), []);
     return;
   }
@@ -43,9 +87,10 @@ function evaluate(flag, user, queries, eventFactory, maybeCallback) {
     return;
   }
 
-  const sanitizedUser = stringifyAttrs(user, userAttrsToStringifyForEvaluation);
+  const sanitizedContext = stringifyContextAttrs(context);
+
   const stateOut = {};
-  evalInternal(flag, sanitizedUser, queries, stateOut, eventFactory, (err, detail) => {
+  evalInternal(flag, sanitizedContext, queries, stateOut, eventFactory, (err, detail) => {
     const result = detail;
     if (stateOut.bigSegmentsStatus) {
       result.reason.bigSegmentsStatus = stateOut.bigSegmentsStatus;
@@ -54,24 +99,24 @@ function evaluate(flag, user, queries, eventFactory, maybeCallback) {
   });
 }
 
-function evalInternal(flag, user, queries, stateOut, eventFactory, cb) {
+function evalInternal(flag, context, queries, stateOut, eventFactory, cb) {
   // If flag is off, return the off variation
   if (!flag.on) {
     getOffResult(flag, { kind: 'OFF' }, cb);
     return;
   }
 
-  checkPrerequisites(flag, user, queries, stateOut, eventFactory, (err, failureReason) => {
+  checkPrerequisites(flag, context, queries, stateOut, eventFactory, (err, failureReason) => {
     if (err || failureReason) {
       getOffResult(flag, failureReason, cb);
     } else {
-      evalRules(flag, user, queries, stateOut, cb);
+      evalRules(flag, context, queries, stateOut, cb);
     }
   });
 }
 
 // Callback receives (err, reason) where reason is null if successful, or a "prerequisite failed" reason
-function checkPrerequisites(flag, user, queries, stateOut, eventFactory, cb) {
+function checkPrerequisites(flag, context, queries, stateOut, eventFactory, cb) {
   if (flag.prerequisites && flag.prerequisites.length) {
     safeAsyncEachSeries(
       flag.prerequisites,
@@ -86,11 +131,11 @@ function checkPrerequisites(flag, user, queries, stateOut, eventFactory, cb) {
             });
             return;
           }
-          evalInternal(prereqFlag, user, queries, stateOut, eventFactory, (err, detail) => {
+          evalInternal(prereqFlag, context, queries, stateOut, eventFactory, (err, detail) => {
             // If there was an error, the value is null, the variation index is out of range,
             // or the value does not match the indexed variation the prerequisite is not satisfied
             stateOut.events = stateOut.events || []; // eslint-disable-line no-param-reassign
-            stateOut.events.push(eventFactory.newEvalEvent(prereqFlag, user, detail, null, flag));
+            stateOut.events.push(eventFactory.newEvalEvent(prereqFlag, context, detail, null, flag));
             if (err) {
               callback({ key: prereq.key, err: err });
             } else if (!prereqFlag.on || detail.variationIndex !== prereq.variation) {
@@ -120,34 +165,34 @@ function checkPrerequisites(flag, user, queries, stateOut, eventFactory, cb) {
   }
 }
 
-// Callback receives (err, detail)
-function evalRules(flag, user, queries, stateOut, cb) {
-  // Check target matches
-  for (let i = 0; i < (flag.targets || []).length; i++) {
-    const target = flag.targets[i];
-
-    if (!target.values) {
-      continue;
-    }
-
-    for (let j = 0; j < target.values.length; j++) {
-      if (user.key === target.values[j]) {
-        getVariation(flag, target.variation, { kind: 'TARGET_MATCH' }, cb);
-        return;
-      }
-    }
+function evalRules(flag, context, queries, stateOut, cb) {
+  if (evalTargets(flag, context, cb)) {
+    return;
   }
 
   safeAsyncEachSeries(
     flag.rules,
     (rule, callback) => {
-      ruleMatchUser(rule, user, queries, stateOut, matched => {
-        // We raise an "error" on the first rule that *does* match, to stop evaluating more rules
-        callback(matched ? rule : null);
-      });
+      ruleMatchContext(
+        rule,
+        context,
+        queries,
+        stateOut,
+        matched => {
+          // We raise an "error" on the first rule that *does* match, to stop evaluating more rules
+          callback(matched ? rule : null);
+        },
+        []
+      );
     },
     // The following function executes once all of the rules have been checked
     err => {
+      // If there was an error processing the rules, then it will
+      // have been populated into stateOut.error.
+      if (stateOut.error) {
+        return cb(...stateOut.error);
+      }
+
       // we use the "error" value to indicate that a rule was successfully matched (since we only care
       // about the first match, and eachSeries terminates on the first "error")
       if (err) {
@@ -159,16 +204,56 @@ function evalRules(flag, user, queries, stateOut, cb) {
             break;
           }
         }
-        getResultForVariationOrRollout(rule, user, flag, reason, cb);
+        getResultForVariationOrRollout(rule, context, flag, reason, cb);
       } else {
         // no rule matched; check the fallthrough
-        getResultForVariationOrRollout(flag.fallthrough, user, flag, { kind: 'FALLTHROUGH' }, cb);
+        getResultForVariationOrRollout(flag.fallthrough, context, flag, { kind: 'FALLTHROUGH' }, cb);
       }
     }
   );
 }
 
-function ruleMatchUser(r, user, queries, stateOut, cb) {
+function evalTarget(flag, target, context, cb) {
+  if (!target.values) {
+    return false;
+  }
+  const matchContext = getContextForKind(context, target.contextKind);
+  if (!matchContext) {
+    return false;
+  }
+  const matchKey = matchContext.key;
+  return target.values.some(key => {
+    if (key === matchKey) {
+      getVariation(flag, target.variation, { kind: 'TARGET_MATCH' }, cb);
+      return true;
+    }
+    return false;
+  });
+}
+
+function evalTargets(flag, context, cb) {
+  if (!flag.contextTargets || !flag.contextTargets.length) {
+    return (
+      flag.targets &&
+      flag.targets.some(target =>
+        // We can call evalTarget with this just like we could with a target from contextTargets: it does not
+        // have a contextKind property, but our default behavior is to treat that as a contextKind of "user".
+        evalTarget(flag, target, context, cb)
+      )
+    );
+  }
+
+  return flag.contextTargets.some(target => {
+    if (!target.contextKind || target.contextKind === 'user') {
+      const userTarget = (flag.targets || []).find(ut => ut.variation === target.variation);
+      return userTarget && evalTarget(flag, userTarget, context, cb);
+    } else {
+      return evalTarget(flag, target, context, cb);
+    }
+  });
+}
+
+function ruleMatchContext(r, context, queries, stateOut, cb, segmentsVisited) {
   if (!r.clauses) {
     cb(false);
     return;
@@ -178,10 +263,17 @@ function ruleMatchUser(r, user, queries, stateOut, cb) {
   safeAsyncEachSeries(
     r.clauses,
     (clause, callback) => {
-      clauseMatchUser(clause, user, queries, stateOut, matched => {
-        // on the first clause that does *not* match, we raise an "error" to stop the loop
-        callback(matched ? null : clause);
-      });
+      clauseMatchContext(
+        clause,
+        context,
+        queries,
+        stateOut,
+        matched => {
+          // on the first clause that does *not* match, we raise an "error" to stop the loop
+          callback(matched ? null : clause);
+        },
+        segmentsVisited
+      );
     },
     err => {
       cb(!err);
@@ -189,64 +281,109 @@ function ruleMatchUser(r, user, queries, stateOut, cb) {
   );
 }
 
-function clauseMatchUser(c, user, queries, stateOut, cb) {
+function clauseMatchContext(c, context, queries, stateOut, matchedCb, segmentsVisited) {
   if (c.op === 'segmentMatch') {
     safeAsyncEachSeries(
       c.values,
       (value, seriesCallback) => {
         queries.getSegment(value, segment => {
           if (segment) {
-            segmentMatchUser(segment, user, queries, stateOut, result => {
-              // On the first segment that matches, we call seriesCallback with an
-              // arbitrary non-null value, which safeAsyncEachSeries interprets as an
-              // "error", causing it to skip the rest of the series.
-              seriesCallback(result ? segment : null);
-            });
+            if (segmentsVisited.indexOf(segment.key) >= 0) {
+              return seriesCallback(null);
+            }
+            const newVisited = [...segmentsVisited, segment.key];
+            segmentMatchContext(
+              segment,
+              context,
+              queries,
+              stateOut,
+              result =>
+                // On the first segment that matches, we call seriesCallback with an
+                // arbitrary non-null value, which safeAsyncEachSeries interprets as an
+                // "error", causing it to skip the rest of the series.
+                seriesCallback(result ? segment : null),
+              newVisited
+            );
           } else {
-            seriesCallback(null);
+            return seriesCallback(null);
           }
         });
       },
       // The following function executes once all of the clauses have been checked
       err => {
         // an "error" indicates that a segment *did* match
-        cb(maybeNegate(c, !!err));
+        matchedCb(maybeNegate(c, !!err));
       }
     );
   } else {
-    cb(clauseMatchUserNoSegments(c, user));
+    matchedCb(clauseMatchContextNoSegments(c, context, stateOut));
   }
 }
 
-function clauseMatchUserNoSegments(c, user) {
-  const uValue = userValue(user, c.attribute);
+function getContextValueForClause(c, context) {
+  const kind = c.contextKind || 'user';
+  const isKindRule = c.attribute === 'kind';
 
-  if (uValue === null || uValue === undefined) {
+  if (isKindRule && context.kind !== 'multi') {
+    return [true, context.kind || 'user'];
+  } else if (isKindRule) {
+    return [true, Object.keys(context).filter(key => key !== 'kind')];
+  }
+
+  return contextValue(context, kind, c.attribute, !c.contextKind);
+}
+
+function clauseMatchContextNoSegments(c, context, stateOut) {
+  const matchFn = operators.fn(c.op);
+  const [validReference, cValue] = getContextValueForClause(c, context);
+
+  if (!validReference) {
+    stateOut.error = [new Error('Invalid attribute reference in clause'), errorResult('MALFORMED_FLAG')]; // eslint-disable-line no-param-reassign
     return false;
   }
 
-  const matchFn = operators.fn(c.op);
+  if (cValue === null || cValue === undefined) {
+    return false;
+  }
 
-  // The user's value is an array
-  if (Array === uValue.constructor) {
-    for (let i = 0; i < uValue.length; i++) {
-      if (matchAny(matchFn, uValue[i], c.values)) {
+  // The contexts's value is an array
+  if (Array.isArray(cValue)) {
+    for (let i = 0; i < cValue.length; i++) {
+      if (matchAny(matchFn, cValue[i], c.values)) {
         return maybeNegate(c, true);
       }
     }
     return maybeNegate(c, false);
   }
 
-  return maybeNegate(c, matchAny(matchFn, uValue, c.values));
+  return maybeNegate(c, matchAny(matchFn, cValue, c.values));
 }
 
-function segmentMatchUser(segment, user, queries, stateOut, cb) {
-  if (!user.key) {
-    return cb(false);
-  }
+/**
+ * Get a priority for the given big segment status.
+ * @param {string} status
+ * @returns Integer representing the priority.
+ */
+function getBigSegmentsStatusPriority(status) {
+  return bigSegementsStatusPriority[status] || 0;
+}
 
+/**
+ * Given two big segment statuses return the one with the higher priority.
+ * @param {string} old
+ * @param {string} latest
+ * @returns The status with the higher priority.
+ */
+function computeUpdatedBigSegmentsStatus(old, latest) {
+  if (old !== undefined && getBigSegmentsStatusPriority(old) > getBigSegmentsStatusPriority(latest)) {
+    return old;
+  }
+  return latest;
+}
+
+function segmentMatchContext(segment, context, queries, stateOut, cb, segmentsVisited) {
   if (!segment.unbounded) {
-    return cb(simpleSegmentMatchUser(segment, user, true));
+    return simpleSegmentMatchContext(segment, context, true, queries, stateOut, cb, segmentsVisited);
   }
 
   if (!segment.generation) {
@@ -254,70 +391,176 @@ function segmentMatchUser(segment, user, queries, stateOut, cb) {
     // that probably means the data store was populated by an older SDK that doesn't know
     // about the generation property and therefore dropped it from the JSON data. We'll treat
     // that as a "not configured" condition.
-    stateOut.bigSegmentsStatus = 'NOT_CONFIGURED'; // eslint-disable-line no-param-reassign
+    stateOut.bigSegmentsStatus = computeUpdatedBigSegmentsStatus(stateOut.bigSegmentsStatus, 'NOT_CONFIGURED'); // eslint-disable-line no-param-reassign
     return cb(false);
   }
 
-  if (stateOut.bigSegmentsStatus) {
+  const bigSegmentKind = segment.unboundedContextKind || 'user';
+  const bigSegmentContext = getContextForKind(context, bigSegmentKind);
+
+  if (!bigSegmentContext) {
+    return cb(false);
+  }
+
+  if (stateOut.bigSegmentsMembership && stateOut.bigSegmentsMembership[bigSegmentContext.key]) {
     // We've already done the query at some point during the flag evaluation and stored
     // the result (if any) in stateOut.bigSegmentsMembership, so we don't need to do it
     // again. Even if multiple Big Segments are being referenced, the membership includes
     // *all* of the user's segment memberships.
-    return cb(bigSegmentMatchUser(stateOut.bigSegmentsMembership, segment, user));
+
+    return bigSegmentMatchContext(
+      stateOut.bigSegmentsMembership[bigSegmentContext.key],
+      segment,
+      bigSegmentContext,
+      queries,
+      stateOut,
+      cb
+    );
   }
 
-  queries.getBigSegmentsMembership(user.key, result => {
+  queries.getBigSegmentsMembership(bigSegmentContext.key, result => {
+    /* eslint-disable no-param-reassign */
+    stateOut.bigSegmentsMembership = stateOut.bigSegmentsMembership || {};
     if (result) {
-      stateOut.bigSegmentsMembership = result[0]; // eslint-disable-line no-param-reassign
-      stateOut.bigSegmentsStatus = result[1]; // eslint-disable-line no-param-reassign
+      stateOut.bigSegmentsMembership[bigSegmentContext.key] = result[0];
+      stateOut.bigSegmentsStatus = computeUpdatedBigSegmentsStatus(stateOut.bigSegmentsStatus, result[1]);
     } else {
-      stateOut.bigSegmentsStatus = 'NOT_CONFIGURED'; // eslint-disable-line no-param-reassign
+      stateOut.bigSegmentsStatus = computeUpdatedBigSegmentsStatus(stateOut.bigSegmentsStatus, 'NOT_CONFIGURED');
     }
-    return cb(bigSegmentMatchUser(stateOut.bigSegmentsMembership, segment, user));
+    /* eslint-enable no-param-reassign */
+    return bigSegmentMatchContext(
+      stateOut.bigSegmentsMembership[bigSegmentContext.key],
+      segment,
+      bigSegmentContext,
+      queries,
+      stateOut,
+      cb
+    );
   });
 }
 
-function bigSegmentMatchUser(membership, segment, user) {
+function bigSegmentMatchContext(membership, segment, context, queries, stateOut, cb) {
   const segmentRef = makeBigSegmentRef(segment);
   const included = membership && membership[segmentRef];
   if (included !== undefined) {
-    return included;
+    return cb(included);
   }
-  return simpleSegmentMatchUser(segment, user, false);
+  return simpleSegmentMatchContext(segment, context, false, queries, stateOut, cb);
 }
 
-function simpleSegmentMatchUser(segment, user, useIncludesAndExcludes) {
+function getContextForKind(context, inKind) {
+  const kind = inKind || 'user';
+  if (context.kind === 'multi') {
+    return context[kind];
+  } else if (context.kind === kind || (context.kind === undefined && kind === 'user')) {
+    return context;
+  }
+  return undefined;
+}
+
+/**
+ * Search the given contextTargets and userTargets. If a match is made, then
+ * return `[true, true]`. If a match is not made then return `[false, _]`.
+ * If there was an error which prevents matching, then return `[true, false]`.
+ * @param {{kind: string, values: string[]}[]} contextTargets
+ * @param {string[]} userTargets
+ * @param {Object} context
+ * @returns {[boolean, boolean]} Pair of booleans where the first indicates
+ * if the return value should be used, and the second indicates if there
+ * was a match.
+ */
+function segmentSearch(contextTargets, userTargets, context) {
+  const contextKind = context.kind || 'user';
+  for (const { kind, values } of contextTargets) {
+    const contextForKind = getContextForKind(context, kind);
+    if (contextForKind) {
+      if (values.indexOf(contextForKind.key) >= 0) {
+        return [true, true];
+      }
+    }
+  }
+
+  const userContext = contextKind === 'user' ? context : context['user'];
+  if (userContext) {
+    if (userTargets.indexOf(userContext.key) >= 0) {
+      return [true, true];
+    }
+  }
+  return [false, false];
+}
+
+function simpleSegmentMatchContext(segment, context, useIncludesAndExcludes, queries, stateOut, cb, segmentsVisited) {
   if (useIncludesAndExcludes) {
-    if ((segment.included || []).indexOf(user.key) >= 0) {
-      return true;
+    const includedRes = segmentSearch(segment.includedContexts || [], segment.included || [], context);
+    if (includedRes[0]) {
+      return cb(includedRes[1]);
     }
-    if ((segment.excluded || []).indexOf(user.key) >= 0) {
-      return false;
-    }
-  }
-  for (let i = 0; i < (segment.rules || []).length; i++) {
-    if (segmentRuleMatchUser(segment.rules[i], user, segment.key, segment.salt)) {
-      return true;
+    const excludedRes = segmentSearch(segment.excludedContexts || [], segment.excluded || [], context);
+    if (excludedRes[0]) {
+      // The match was an exclusion, so it should be negated.
+      return cb(!excludedRes[1]);
     }
   }
+
+  safeAsyncEachSeries(
+    segment.rules || [],
+    (rule, callback) => {
+      segmentRuleMatchContext(
+        rule,
+        context,
+        segment.key,
+        segment.salt,
+        queries,
+        stateOut,
+        res => {
+          // on the first rule that does match, we raise an "error" to stop the loop
+          callback(res ? res : null);
+        },
+        segmentsVisited
+      );
+    },
+    err => {
+      cb(err);
+    }
+  );
 }
 
-function segmentRuleMatchUser(rule, user, segmentKey, salt) {
-  for (let i = 0; i < (rule.clauses || []).length; i++) {
-    if (!clauseMatchUserNoSegments(rule.clauses[i], user)) {
-      return false;
+function segmentRuleMatchContext(rule, context, segmentKey, salt, queries, stateOut, cb, segmentsVisited) {
+  safeAsyncEachSeries(
+    rule.clauses,
+    (clause, callback) => {
+      clauseMatchContext(
+        clause,
+        context,
+        queries,
+        stateOut,
+        matched => {
+          // on the first clause that does *not* match, we raise an "error" to stop the loop
+          callback(matched ? null : clause);
+        },
+        segmentsVisited
+      );
+    },
+    err => {
+      if (err) {
+        return cb(false);
+      }
+      // If the weight is absent, this rule matches
+      if (rule.weight === undefined || rule.weight === null) {
+        return cb(true);
+      }
+
+      // All of the clauses are met. See if the user buckets in
+      const { invalid, refAttr } = validateReference(!rule.contextKind, rule.bucketBy || 'key');
+      if (invalid) {
+        stateOut.error = [new Error('Invalid attribute reference in rule.'), errorResult('MALFORMED_FLAG')]; // eslint-disable-line no-param-reassign
+        return cb(false);
+      }
+      const bucket = bucketContext(context, segmentKey, refAttr, salt, rule.contextKind);
+      const weight = rule.weight / 100000.0;
+      return cb(bucket < weight);
     }
-  }
-
-  // If the weight is absent, this rule matches
-  if (rule.weight === undefined || rule.weight === null) {
-    return true;
-  }
-
-  // All of the clauses are met. See if the user buckets in
-  const bucket = bucketUser(user, segmentKey, rule.bucketBy || 'key', salt);
-  const weight = rule.weight / 100000.0;
-  return bucket < weight;
+  );
 }
 
 function maybeNegate(c, b) {
@@ -354,12 +597,14 @@ function getOffResult(flag, reason, cb) {
   }
 }
 
-function getResultForVariationOrRollout(r, user, flag, reason, cb) {
+function getResultForVariationOrRollout(r, context, flag, reason, cb) {
   if (!r) {
     cb(new Error('Fallthrough variation undefined'), errorResult('MALFORMED_FLAG'));
   } else {
-    const [index, inExperiment] = variationForUser(r, user, flag);
-    if (index === null || index === undefined) {
+    const [index, inExperiment, errorData] = variationForUser(r, context, flag);
+    if (errorData !== undefined) {
+      cb(...errorData);
+    } else if (index === null || index === undefined) {
       cb(new Error('Variation/rollout object with no variation or rollout'), errorResult('MALFORMED_FLAG'));
     } else {
       const transformedReason = reason;
@@ -375,12 +620,12 @@ function errorResult(errorKind) {
   return { value: null, variationIndex: null, reason: { kind: 'ERROR', errorKind: errorKind } };
 }
 
-// Given a variation or rollout 'r', select the variation for the given user.
+// Given a variation or rollout 'r', select the variation for the given context.
 // Returns an array of the form [variationIndex, inExperiment].
-function variationForUser(r, user, flag) {
+function variationForUser(r, context, flag) {
   if (r.variation !== null && r.variation !== undefined) {
     // This represets a fixed variation; return it
-    return [r.variation, false];
+    return [r.variation, false, undefined];
   }
   const rollout = r.rollout;
   if (rollout) {
@@ -390,51 +635,142 @@ function variationForUser(r, user, flag) {
       // This represents a percentage rollout. Assume
       // we're rolling out by key
       const bucketBy = rollout.bucketBy || 'key';
-      const bucket = bucketUser(user, flag.key, bucketBy, flag.salt, rollout.seed);
+      const { invalid, refAttr } = validateReference(!rollout.contextKind, bucketBy);
+      if (invalid) {
+        return [
+          undefined,
+          undefined,
+          [new Error('Invalid attribute reference for bucketBy in rollout'), errorResult('MALFORMED_FLAG')],
+        ];
+      }
+      const bucket = bucketContext(context, flag.key, refAttr, flag.salt, rollout.seed, rollout.contextKind);
       let sum = 0;
       for (let i = 0; i < variations.length; i++) {
         const variate = variations[i];
         sum += variate.weight / 100000.0;
         if (bucket < sum) {
-          return [variate.variation, isExperiment && !variate.untracked];
+          return [variate.variation, isExperiment && !variate.untracked, undefined];
         }
       }
 
-      // The user's bucket value was greater than or equal to the end of the last bucket. This could happen due
+      // The context's bucket value was greater than or equal to the end of the last bucket. This could happen due
       // to a rounding error, or due to the fact that we are scaling to 100000 rather than 99999, or the flag
       // data could contain buckets that don't actually add up to 100000. Rather than returning an error in
       // this case (or changing the scaling, which would potentially change the results for *all* users), we
-      // will simply put the user in the last bucket.
+      // will simply put the context in the last bucket.
       const lastVariate = variations[variations.length - 1];
-      return [lastVariate.variation, isExperiment && !lastVariate.untracked];
+      return [lastVariate.variation, isExperiment && !lastVariate.untracked, undefined];
     }
   }
 
   return [null, false];
 }
 
-// Fetch an attribute value from a user object. Automatically
+// Fetch an attribute value from a context object. Automatically
 // navigates into the custom array when necessary
-function userValue(user, attr) {
-  if (builtins.indexOf(attr) >= 0 && Object.hasOwnProperty.call(user, attr)) {
-    return user[attr];
+function legacyUserValue(context, attr) {
+  if (builtins.some(builtIn => AttributeReference.compare(attr, builtIn))) {
+    return contextValueByReference(context, attr);
   }
-  if (user.custom && Object.hasOwnProperty.call(user.custom, attr)) {
-    return user.custom[attr];
+  if (context.custom) {
+    return contextValueByReference(context.custom, attr);
   }
   return null;
 }
 
-// Compute a percentile for a user
-function bucketUser(user, key, attr, salt, seed) {
-  let idHash = bucketableStringValue(userValue(user, attr));
+/**
+ * Get a value from the context by the specified reference.
+ * @param {Object} context
+ * @param {string} reference
+ * @returns The value from the context, or undefined. If the value
+ * would have been a non-array object, then undefined will be returned.
+ * Objects are not valid for clauses.
+ */
+function contextValueByReference(context, reference) {
+  const value = AttributeReference.get(context, reference);
+  // Rules cannot use objects as a value.
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    return undefined;
+  }
+  return value;
+}
+
+function legacyAttributeToReference(attr) {
+  return attr && attr.startsWith('/') ? AttributeReference.literalToReference(attr) : attr;
+}
+
+/**
+ * Get a value from the specified context that matches the kind and
+ * attribute reference.
+ * @param {Object} context The context to get a value from.
+ * @param {string} kind The kind that the value must be from.
+ * @param {string} attr An attribute reference to the value.
+ * @param {boolean} isLegacy Boolean flag indicating if the attribute is from
+ * a type which didn't specify a contextKind.
+ * @returns {[boolean, any]} A tuple where the first value indicates if the reference was valid and the second is the value
+ * of the attribute. The value will be undefined if the attribute does not exist, or if the type
+ * of the attribute is not suitable for evaluation (an object).
+ */
+function contextValue(context, kind, attr, isLegacy) {
+  //In the old format an attribute name could have started with a '/' but not
+  //been a reference. In this case these attributes need converted.
+  const { invalid, refAttr } = validateReference(isLegacy, attr);
+  if (invalid) {
+    return [!invalid, undefined];
+  }
+
+  // If transient is not defined, then it is considered false.
+  if (attr === 'transient') {
+    const forKind = getContextForKind(context, kind);
+    return [true, contextValueByReference(forKind, refAttr) || false];
+  }
+
+  if (!context.kind) {
+    if (kind === 'user') {
+      return [true, legacyUserValue(context, refAttr)];
+    }
+    return [true, undefined];
+  } else if (context.kind === 'multi') {
+    return [true, contextValueByReference(context[kind], refAttr)];
+  } else if (context.kind === kind) {
+    return [true, contextValueByReference(context, refAttr)];
+  }
+  return [true, undefined];
+}
+
+/**
+ * Validate an attribute and return an escaped version if needed.
+ * @param {boolean} isLegacy
+ * @param {string} attr
+ * @returns A pair where the first value indicates if the reference was valid,
+ * and the second value is the reference, possibly converted from a literal.
+ */
+function validateReference(isLegacy, attr) {
+  const refAttr = isLegacy ? legacyAttributeToReference(attr) : attr;
+
+  const invalid = attr === '' || (refAttr.startsWith('/') && !AttributeReference.isValidReference(refAttr));
+  return { invalid, refAttr };
+}
+
+// Compute a percentile for a context
+function bucketContext(context, key, attr, salt, seed, kindForRollout) {
+  const kindOrDefault = kindForRollout || 'user';
+  //Key pre-validated. So we can disregard the validation here.
+  const [, value] = contextValue(context, kindOrDefault, attr, kindForRollout === undefined);
+
+  let idHash = bucketableStringValue(value);
 
   if (idHash === null) {
     return 0;
   }
 
-  if (user.secondary) {
-    idHash += '.' + user.secondary;
+  const secondary = context.kind === undefined ? context.secondary : context._meta && context._meta.secondary;
+
+  if (secondary !== undefined) {
+    // Because secondary keys could be in any context, and we aren't processing
+    // the entire context before evaluation, we ensure here that the secondary
+    // attribute is a string.
+    idHash += '.' + String(secondary);
   }
 
   const prefix = seed ? util.format('%d.', seed) : util.format('%s.%s.', key, salt);
@@ -469,6 +805,6 @@ function makeBigSegmentRef(segment) {
 
 module.exports = {
   Evaluator,
-  bucketUser,
+  bucketContext,
   makeBigSegmentRef,
 };

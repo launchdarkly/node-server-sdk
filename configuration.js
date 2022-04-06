@@ -19,8 +19,8 @@ module.exports = (function () {
       useLdd: false,
       allAttributesPrivate: false,
       privateAttributes: [],
-      userKeysCapacity: 1000,
-      userKeysFlushInterval: 300,
+      contextKeysCapacity: 1000,
+      contextKeysFlushInterval: 300,
       diagnosticOptOut: false,
       diagnosticRecordingInterval: 900,
       featureStore: InMemoryFeatureStore(),
@@ -84,7 +84,10 @@ module.exports = (function () {
   };
 
   /* eslint-disable camelcase */
-  const deprecatedOptions = {};
+  const deprecatedOptions = {
+    userKeysCapacity: 'contextKeysCapacity',
+    userKeysFlushInterval: 'contextKeysFlushInterval',
+  };
   /* eslint-enable camelcase */
 
   function checkDeprecatedOptions(configIn) {
@@ -132,6 +135,7 @@ module.exports = (function () {
       }
       return 'object';
     };
+
     Object.keys(config).forEach(name => {
       const value = config[name];
       if (value !== null && value !== undefined) {

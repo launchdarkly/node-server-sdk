@@ -7,13 +7,14 @@ const errors = require('./errors');
 const httpUtils = require('./utils/httpUtils');
 const messages = require('./messages');
 const wrapPromiseCallback = require('./utils/wrapPromiseCallback');
+const { getCanonicalKey } = require('./context');
 
 function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
   const ep = {};
 
   const contextFilter = ContextFilter(config),
     summarizer = EventSummarizer(),
-    contextKeysCache = new LRUCache({ max: config.userKeysCapacity }),
+    contextKeysCache = new LRUCache({ max: config.contextKeysCapacity }),
     mainEventsUri = config.eventsUri + '/bulk',
     diagnosticEventsUri = config.eventsUri + '/diagnostic';
 
@@ -111,19 +112,7 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
 
   function getCacheKey(event) {
     const context = event.context;
-    if (context !== undefined) {
-      if (context.kind === undefined && context.key) {
-        return `user:${encodeURIComponent(context.key)}`;
-      } else if (context.kind !== 'multi' && context.key) {
-        return `${context.kind}:${encodeURIComponent(context.key)}`;
-      } else if (context.kind === 'multi') {
-        return Object.keys(context)
-          .sort()
-          .filter(key => key !== 'kind')
-          .map(key => `${key}:${encodeURIComponent(context[key].key)}`)
-          .join(':');
-      }
-    }
+    return getCanonicalKey(context);
   }
 
   function getContextKeys(event) {
@@ -301,7 +290,7 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
 
   const flushUsersTimer = setInterval(() => {
     contextKeysCache.reset();
-  }, config.userKeysFlushInterval * 1000);
+  }, config.contextKeysFlushInterval * 1000);
 
   ep.close = () => {
     clearInterval(flushTimer);

@@ -110,6 +110,10 @@ describe('when getting attributes by reference', () => {
     expect(AttributeReference.get({ '  /': 'a' }, '  /')).toEqual('a');
     expect(AttributeReference.get({ '  /': 'a' }, '/  ~1')).toEqual('a');
   });
+
+  it('should not allow indexing into string', () => {
+    expect(AttributeReference.get({attr: 'string'}, '/attr/0')).toBeUndefined();
+  });
 });
 
 describe('when filtering attributes by reference', () => {

@@ -113,9 +113,9 @@ declare module 'launchdarkly-node-server-sdk' {
      * The general category of the reason:
      *
      * - `'OFF'`: The flag was off and therefore returned its configured off value.
-     * - `'FALLTHROUGH'`: The flag was on but the user did not match any targets or rules.
-     * - `'TARGET_MATCH'`: The user key was specifically targeted for this flag.
-     * - `'RULE_MATCH'`: the user matched one of the flag's rules.
+     * - `'FALLTHROUGH'`: The flag was on but the context did not match any targets or rules.
+     * - `'TARGET_MATCH'`: The context key was specifically targeted for this flag.
+     * - `'RULE_MATCH'`: the context matched one of the flag's rules.
      * - `'PREREQUISITE_FAILED'`: The flag was considered off because it had at least one
      *   prerequisite flag that either was off or did not return the desired variation.
      * - `'ERROR'`: The flag could not be evaluated, e.g. because it does not exist or due
@@ -351,7 +351,7 @@ declare module 'launchdarkly-node-server-sdk' {
     sendEvents?: boolean;
 
     /**
-     * Whether all user attributes (except the user key) should be marked as private, and
+     * Whether all context attributes (except the contexy key) should be marked as private, and
      * not sent to LaunchDarkly.
      *
      * By default, this is false.
@@ -359,16 +359,34 @@ declare module 'launchdarkly-node-server-sdk' {
     allAttributesPrivate?: boolean;
 
     /**
-     * The names of any user attributes that should be marked as private, and not sent
+     * The names of any context attributes that should be marked as private, and not sent
      * to LaunchDarkly.
      */
     privateAttributes?: Array<string>;
+
+    /**
+     * The number of context keys that the event processor can remember at any one time,
+     * so that duplicate context details will not be sent in analytics events.
+     *
+     * Defaults to 1000.
+     */
+    contextKeysCapacity?: number;
+
+    /**
+     * The interval (in seconds) at which the event processor will reset its set of
+     * known context keys.
+     *
+     * Defaults to 300.
+     */
+    contextKeysFlushInterval?: number;
 
     /**
      * The number of user keys that the event processor can remember at any one time,
      * so that duplicate user details will not be sent in analytics events.
      *
      * Defaults to 1000.
+     * 
+     * @deprecated Use contextKeysCapacity instead.
      */
     userKeysCapacity?: number;
 
@@ -377,6 +395,8 @@ declare module 'launchdarkly-node-server-sdk' {
      * known user keys.
      *
      * Defaults to 300.
+     * 
+     * @deprecated Use contextKeysFlushInterval instead.
      */
     userKeysFlushInterval?: number;
 
@@ -646,7 +666,7 @@ declare module 'launchdarkly-node-server-sdk' {
   /**
    * A LaunchDarkly context object.
    */
-  export type LDContext = LDSingleKindContext | LDMultiKindContext;
+  export type LDContext = LDUser | LDSingleKindContext | LDMultiKindContext;
 
   /**
    * A LaunchDarkly user object.
@@ -1032,13 +1052,13 @@ declare module 'launchdarkly-node-server-sdk' {
     waitForInitialization(): Promise<LDClient>;
 
     /**
-     * Determines the variation of a feature flag for a user.
+     * Determines the variation of a feature flag for a context.
      *
      * @param key
      *   The unique key of the feature flag.
-     * @param user
-     *   The end user requesting the flag. The client will generate an analytics event to register
-     *   this user with LaunchDarkly if the user does not already exist.
+     * @param context
+     *   The context requesting the flag. The client will generate an analytics event to register
+     *   this context with LaunchDarkly if the context does not already exist.
      * @param defaultValue
      *   The default value of the flag, to be used if the value is not available from LaunchDarkly.
      * @param callback
@@ -1049,13 +1069,13 @@ declare module 'launchdarkly-node-server-sdk' {
      */
     variation(
       key: string,
-      user: LDUser,
+      context: LDContext,
       defaultValue: LDFlagValue,
       callback?: (err: any, res: LDFlagValue) => void
     ): Promise<LDFlagValue>;
 
     /**
-     * Determines the variation of a feature flag for a user, along with information about how it was
+     * Determines the variation of a feature flag for a context, along with information about how it was
      * calculated.
      *
      * The `reason` property of the result will also be included in analytics events, if you are
@@ -1065,9 +1085,9 @@ declare module 'launchdarkly-node-server-sdk' {
      *
      * @param key
      *   The unique key of the feature flag.
-     * @param user
-     *   The end user requesting the flag. The client will generate an analytics event to register
-     *   this user with LaunchDarkly if the user does not already exist.
+     * @param context
+     *   The context requesting the flag. The client will generate an analytics event to register
+     *   this context with LaunchDarkly if the context does not already exist.
      * @param defaultValue
      *   The default value of the flag, to be used if the value is not available from LaunchDarkly.
      * @param callback
@@ -1079,13 +1099,13 @@ declare module 'launchdarkly-node-server-sdk' {
      */
     variationDetail(
       key: string,
-      user: LDUser,
+      context: LDContext,
       defaultValue: LDFlagValue,
       callback?: (err: any, res: LDEvaluationDetail) => void
     ): Promise<LDEvaluationDetail>;
 
     /**
-     * Builds an object that encapsulates the state of all feature flags for a given user.
+     * Builds an object that encapsulates the state of all feature flags for a given context.
      * This includes the flag values and also metadata that can be used on the front end. This
      * method does not send analytics events back to LaunchDarkly.
      *
@@ -1093,8 +1113,8 @@ declare module 'launchdarkly-node-server-sdk' {
      * feature flags from a back-end service. Call the `toJSON()` method of the returned object
      * to convert it to the data structure used by the client-side SDK.
      *
-     * @param user
-     *   The end user requesting the feature flags.
+     * @param context
+     *   The context requesting the feature flags.
      * @param options
      *   Optional [[LDFlagsStateOptions]] to determine how the state is computed.
      * @param callback
@@ -1105,24 +1125,24 @@ declare module 'launchdarkly-node-server-sdk' {
      *   with the result as an [[LDFlagsState]].
      */
     allFlagsState(
-      user: LDUser,
+      context: LDContext,
       options?: LDFlagsStateOptions,
       callback?: (err: Error, res: LDFlagsState) => void
     ): Promise<LDFlagsState>;
 
     /**
-     * Computes an HMAC signature of a user signed with the client's SDK key.
+     * Computes an HMAC signature of a context signed with the client's SDK key.
      *
      * For more information, see the JavaScript SDK Reference Guide on
      * [Secure mode](https://github.com/launchdarkly/js-client#secure-mode).
      *
-     * @param user
-     *   The user properties.
+     * @param context
+     *   The context properties.
      *
      * @returns
      *   The hash string.
      */
-    secureModeHash(user: LDUser): string;
+    secureModeHash(context: LDContext): string;
 
     /**
      * Discards all network connections, background tasks, and other resources held by the client.
@@ -1140,7 +1160,7 @@ declare module 'launchdarkly-node-server-sdk' {
     isOffline(): boolean;
 
     /**
-     * Tracks that a user performed an event.
+     * Tracks that a context performed an event.
      *
      * LaunchDarkly automatically tracks pageviews and clicks that are specified in the Goals
      * section of the dashboard. This can be used to track custom goals or other events that do
@@ -1149,12 +1169,12 @@ declare module 'launchdarkly-node-server-sdk' {
      * Note that event delivery is asynchronous, so the event may not actually be sent until later;
      * see [[flush]].
      *
-     * If the user is omitted or has no key, the client will log a warning and will not send an event.
+     * If the context is omitted or has no key, the client will log a warning and will not send an event.
      *
      * @param key
      *   The name of the event, which may correspond to a goal in A/B tests.
-     * @param user
-     *   The user to track.
+     * @param context
+     *   The context to track.
      * @param data
      *   Optional additional information to associate with the event.
      * @param metricValue
@@ -1162,22 +1182,22 @@ declare module 'launchdarkly-node-server-sdk' {
      *   be omitted if this event is used by only non-numeric metrics. This field will also be returned
      *   as part of the custom event for Data Export.
      */
-    track(key: string, user: LDUser, data?: any, metricValue?: number): void;
+    track(key: string, context: LDContext, data?: any, metricValue?: number): void;
 
     /**
-     * Identifies a user to LaunchDarkly.
+     * Identifies a context to LaunchDarkly.
      *
      * This simply creates an analytics event that will transmit the given user properties to
-     * LaunchDarkly, so that the user will be visible on your dashboard even if you have not
+     * LaunchDarkly, so that the context will be visible on your dashboard even if you have not
      * evaluated any flags for that user. It has no other effect.
      *
-     * If the user is omitted or has no key, the client will log a warning
+     * If the context is omitted or has no key, the client will log a warning
      * and will not send an event.
      *
-     * @param user
-     *   The user properties. Must contain at least the `key` property.
+     * @param context
+     *   The context properties. Must contain at least the `key` property.
      */
-    identify(user: LDUser): void;
+    identify(context: LDContext): void;
 
     /**
      * Flushes all pending analytics events.
@@ -1223,7 +1243,7 @@ declare module 'launchdarkly-node-server-sdk' {
      * (such as a network error).
      * - `"update"`: The client has received a change to a feature flag. The event parameter is an object
      * containing a single property, `key`, the flag key. Note that this does not necessarily mean the flag's
-     * value has changed for any particular user, only that some part of the flag configuration was changed.
+     * value has changed for any particular context, only that some part of the flag configuration was changed.
      * - `"update:KEY"`: The client has received a change to the feature flag whose key is KEY. This is the
      * same as `"update"` but allows you to listen for a specific flag.
      *
