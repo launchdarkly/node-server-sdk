@@ -24,7 +24,6 @@ var allOptions: ld.LDOptions = {
   sendEvents: true,
   allAttributesPrivate: true,
   privateAttributes: [ 'x' ],
-  inlineUsersInEvents: true,
   capacity: 100,
   flushInterval: 1,
   userKeysCapacity: 100,
@@ -75,8 +74,6 @@ client.identify(user);
 client.track('key', user);
 client.track('key', user, { ok: 1 });
 client.track('key', user, null, 1.5);
-
-client.alias(user, anonymousUser);
 
 // evaluation methods with callbacks
 client.variation('key', user, false, (value: ld.LDFlagValue) => { });

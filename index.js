@@ -384,14 +384,6 @@ const newClient = function (sdkKey, originalConfig) {
 
   client.isOffline = () => config.offline;
 
-  client.alias = (user, previousUser) => {
-    if (!user || !previousUser) {
-      return;
-    }
-
-    eventProcessor.sendEvent(eventFactoryDefault.newAliasEvent(user, previousUser));
-  };
-
   client.track = (eventName, user, data, metricValue) => {
     if (!userExistsAndHasKey(user)) {
       config.logger.warn(messages.missingUserKeyNoEvent());

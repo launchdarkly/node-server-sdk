@@ -73,7 +73,6 @@ describe('DiagnosticsManager', () => {
       diagnosticRecordingIntervalMillis: 900000,
       eventsCapacity: 10000,
       eventsFlushIntervalMillis: 5000,
-      inlineUsersInEvents: false,
       offline: false,
       pollingIntervalMillis: 30000,
       reconnectTimeMillis: 1000,

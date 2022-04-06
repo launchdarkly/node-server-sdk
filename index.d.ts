@@ -365,14 +365,6 @@ declare module 'launchdarkly-node-server-sdk' {
     privateAttributes?: Array<string>;
 
     /**
-     * Whether to include full user details in every analytics event.
-     *
-     * The default is `false`: events will only include the user key, except for one "index" event
-     * that provides the full details for the user.
-     */
-    inlineUsersInEvents?: boolean;
-
-    /**
      * The number of user keys that the event processor can remember at any one time,
      * so that duplicate user details will not be sent in analytics events.
      *
@@ -1171,21 +1163,6 @@ declare module 'launchdarkly-node-server-sdk' {
      *   as part of the custom event for Data Export.
      */
     track(key: string, user: LDUser, data?: any, metricValue?: number): void;
-
-    /**
-     * Associates two users for analytics purposes.
-     *
-     * This can be helpful in the situation where a person is represented by multiple
-     * LaunchDarkly users. This may happen, for example, when a person initially logs into
-     * an application-- the person might be represented by an anonymous user prior to logging
-     * in and a different user after logging in, as denoted by a different user key.
-     *
-     * @param user
-     *   The newly identified user.
-     * @param previousUser
-     *   The previously identified user.
-     */
-    alias(user: LDUser, previousUser: LDUser): void;
 
     /**
      * Identifies a user to LaunchDarkly.

@@ -28,7 +28,7 @@ describe('LDClient - analytics events', () => {
         kind: 'feature',
         key: 'flagkey',
         version: 1,
-        user: defaultUser,
+        context: defaultUser,
         variation: 1,
         value: 'b',
         default: 'c'
@@ -48,7 +48,7 @@ describe('LDClient - analytics events', () => {
         kind: 'feature',
         key: 'flagkey',
         version: 1,
-        user: anonymousUser,
+        context: anonymousUser,
         variation: 1,
         value: 'b',
         default: 'c'
@@ -68,7 +68,7 @@ describe('LDClient - analytics events', () => {
         kind: 'feature',
         key: 'flagkey',
         version: 1,
-        user: defaultUser,
+        context: defaultUser,
         variation: 1,
         value: 'b',
         default: 'c',
@@ -105,7 +105,7 @@ describe('LDClient - analytics events', () => {
         creationDate: e.creationDate,
         key: 'flagkey',
         version: 1,
-        user: defaultUser,
+        context: defaultUser,
         variation: 0,
         value: 'a',
         default: 'c',
@@ -142,7 +142,7 @@ describe('LDClient - analytics events', () => {
         creationDate: e.creationDate,
         key: 'flagkey',
         version: 1,
-        user: defaultUser,
+        context: defaultUser,
         variation: 0,
         value: 'a',
         default: 'c'
@@ -172,7 +172,7 @@ describe('LDClient - analytics events', () => {
         creationDate: e.creationDate,
         key: 'flagkey',
         version: 1,
-        user: defaultUser,
+        context: defaultUser,
         variation: 1,
         value: 'b',
         default: 'c',
@@ -213,7 +213,7 @@ describe('LDClient - analytics events', () => {
         creationDate: e.creationDate,
         key: 'flagkey',
         version: 1,
-        user: defaultUser,
+        context: defaultUser,
         variation: 1,
         value: 'b',
         default: 'c',
@@ -255,7 +255,7 @@ describe('LDClient - analytics events', () => {
         creationDate: e.creationDate,
         key: 'flagkey',
         version: 1,
-        user: defaultUser,
+        context: defaultUser,
         variation: 1,
         value: 'b',
         default: 'c',
@@ -276,7 +276,7 @@ describe('LDClient - analytics events', () => {
         creationDate: e.creationDate,
         key: 'flagkey',
         version: 1,
-        user: defaultUser,
+        context: defaultUser,
         variation: 1,
         value: 'b',
         default: 'c'
@@ -293,7 +293,7 @@ describe('LDClient - analytics events', () => {
       expect(e).toMatchObject({
         kind: 'feature',
         key: 'flagkey',
-        user: defaultUser,
+        context: defaultUser,
         value: 'c',
         default: 'c'
       });
@@ -309,7 +309,7 @@ describe('LDClient - analytics events', () => {
       expect(e).toMatchObject({
         kind: 'feature',
         key: 'flagkey',
-        user: anonymousUser,
+        context: anonymousUser,
         value: 'c',
         default: 'c'
       });
@@ -329,7 +329,7 @@ describe('LDClient - analytics events', () => {
         kind: 'feature',
         key: 'flagkey',
         version: 1,
-        user: badUser,
+        context: badUser,
         variation: null,
         value: 'c',
         default: 'c'
@@ -349,7 +349,7 @@ describe('LDClient - analytics events', () => {
         kind: 'feature',
         key: 'flagkey',
         version: 1,
-        user: null,
+        context: null,
         value: 'c',
         default: 'c'
       });
@@ -367,8 +367,7 @@ describe('LDClient - analytics events', () => {
       var e = eventProcessor.events[0];
       expect(e).toMatchObject({
         kind: 'identify',
-        key: defaultUser.key,
-        user: defaultUser
+        context: defaultUser
       });
       expect(logger.warn).not.toHaveBeenCalled();
     });
@@ -417,7 +416,7 @@ describe('LDClient - analytics events', () => {
       expect(e).toMatchObject({
         kind: 'custom',
         key: 'eventkey',
-        user: defaultUser,
+        context: defaultUser,
         data: data
       });
       expect(logger.warn).not.toHaveBeenCalled();
@@ -434,7 +433,7 @@ describe('LDClient - analytics events', () => {
       expect(e).toMatchObject({
         kind: 'custom',
         key: 'eventkey',
-        user: defaultUser
+        context: defaultUser
       });
       expect(e.metricValue).not.toBe(expect.anything());
       expect(logger.warn).not.toHaveBeenCalled();
@@ -453,7 +452,7 @@ describe('LDClient - analytics events', () => {
       expect(e).toMatchObject({
         kind: 'custom',
         key: 'eventkey',
-        user: defaultUser,
+        context: defaultUser,
         data: data,
         metricValue: metricValue
       });
@@ -472,7 +471,7 @@ describe('LDClient - analytics events', () => {
       expect(e).toMatchObject({
         kind: 'custom',
         key: 'eventkey',
-        user: anonymousUser,
+        context: anonymousUser,
         data: data
       });
       expect(logger.warn).not.toHaveBeenCalled();
@@ -506,74 +505,6 @@ describe('LDClient - analytics events', () => {
       client.track('eventkey', userWithEmptyKey);
       expect(eventProcessor.events).toHaveLength(0);
       expect(logger.warn).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe('alias', () => {
-    it('generates an event for aliasing anonymous to known', async () => {
-      var client = stubs.createClient({ eventProcessor: eventProcessor }, {});
-      await client.waitForInitialization();
-
-      client.alias(defaultUser, anonymousUser);
-      expect(eventProcessor.events).toHaveLength(1);
-      var e = eventProcessor.events[0];
-      expect(e).toMatchObject({
-        kind: 'alias',
-        key: 'user',
-        previousKey: 'anon-user',
-        contextKind: 'user',
-        previousContextKind: 'anonymousUser'
-      });
-    });
-
-    it('generates an event for aliasing known to known', async () => {
-      var anotherUser = { key: 'another-user' };
-      var client = stubs.createClient({ eventProcessor: eventProcessor }, {});
-      await client.waitForInitialization();
-
-      client.alias(defaultUser, anotherUser);
-      expect(eventProcessor.events).toHaveLength(1);
-      var e = eventProcessor.events[0];
-      expect(e).toMatchObject({
-        kind: 'alias',
-        key: 'user',
-        previousKey: 'another-user',
-        contextKind: 'user',
-        previousContextKind: 'user'
-      });
-    });
-
-    it('generates an event for aliasing anonymous to anonymous', async () => {
-      var anotherAnonymousUser = { key: 'another-anon-user', anonymous: true };
-      var client = stubs.createClient({ eventProcessor: eventProcessor }, {});
-      await client.waitForInitialization();
-
-      client.alias(anonymousUser, anotherAnonymousUser);
-      expect(eventProcessor.events).toHaveLength(1);
-      var e = eventProcessor.events[0];
-      expect(e).toMatchObject({
-        kind: 'alias',
-        key: 'anon-user',
-        previousKey: 'another-anon-user',
-        contextKind: 'anonymousUser',
-        previousContextKind: 'anonymousUser'
-      });
-    });
-
-    it('generates an event for aliasing known to anonymous', async () => {
-      var client = stubs.createClient({ eventProcessor: eventProcessor }, {});
-      await client.waitForInitialization();
-
-      client.alias(anonymousUser, defaultUser);
-      expect(eventProcessor.events).toHaveLength(1);
-      var e = eventProcessor.events[0];
-      expect(e).toMatchObject({
-        kind: 'alias',
-        key: 'anon-user',
-        previousKey: 'user',
-        contextKind: 'anonymousUser',
-        previousContextKind: 'user'
-      });
     });
   });
 });

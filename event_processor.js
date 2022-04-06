@@ -11,9 +11,9 @@ const wrapPromiseCallback = require('./utils/wrapPromiseCallback');
 function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
   const ep = {};
 
-  const userFilter = ContextFilter(config),
+  const contextFilter = ContextFilter(config),
     summarizer = EventSummarizer(),
-    userKeysCache = new LRUCache({ max: config.userKeysCapacity }),
+    contextKeysCache = new LRUCache({ max: config.userKeysCapacity }),
     mainEventsUri = config.eventsUri + '/bulk',
     diagnosticEventsUri = config.eventsUri + '/diagnostic';
 
@@ -69,13 +69,10 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
         if (event.reason) {
           out.reason = event.reason;
         }
-        if (config.inlineUsersInEvents || debug) {
-          out.user = processUser(event);
+        if (debug) {
+          out.context = processContext(event);
         } else {
-          out.userKey = getUserKey(event);
-        }
-        if (event.user && event.user.anonymous) {
-          out.contextKind = 'anonymousUser';
+          out.contextKeys = getContextKeys(event);
         }
         return out;
       }
@@ -83,8 +80,7 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
         return {
           kind: 'identify',
           creationDate: event.creationDate,
-          key: getUserKey(event),
-          user: processUser(event),
+          context: processContext(event),
         };
       case 'custom': {
         const out = {
@@ -92,20 +88,16 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
           creationDate: event.creationDate,
           key: event.key,
         };
-        if (config.inlineUsersInEvents) {
-          out.user = processUser(event);
-        } else {
-          out.userKey = getUserKey(event);
-        }
+
+        out.contextKeys = getContextKeys(event);
+
         if (event.data !== null && event.data !== undefined) {
           out.data = event.data;
         }
         if (event.metricValue !== null && event.metricValue !== undefined) {
           out.metricValue = event.metricValue;
         }
-        if (event.user && event.user.anonymous) {
-          out.contextKind = 'anonymousUser';
-        }
+
         return out;
       }
       default:
@@ -113,12 +105,47 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
     }
   }
 
-  function processUser(event) {
-    return userFilter.filter(event.user);
+  function processContext(event) {
+    return contextFilter.filter(event.context);
   }
 
-  function getUserKey(event) {
-    return event.user && String(event.user.key);
+  function getCacheKey(event) {
+    const context = event.context;
+    if (context !== undefined) {
+      if (context.kind === undefined && context.key) {
+        return `user:${encodeURIComponent(context.key)}`;
+      } else if (context.kind !== 'multi' && context.key) {
+        return `${context.kind}:${encodeURIComponent(context.key)}`;
+      } else if (context.kind === 'multi') {
+        return Object.keys(context)
+          .sort()
+          .filter(key => key !== 'kind')
+          .map(key => `${key}:${encodeURIComponent(context[key].key)}`)
+          .join(':');
+      }
+    }
+  }
+
+  function getContextKeys(event) {
+    const keys = {};
+    const context = event.context;
+    if (context !== undefined) {
+      if (context.kind === undefined && context.key) {
+        keys.user = String(context.key);
+      } else if (context.kind !== 'multi') {
+        keys[context.kind] = String(context.key);
+      } else if (context.kind === 'multi') {
+        Object.keys(context)
+          .filter(key => key !== 'kind')
+          .forEach(key => {
+            if (context[key] !== undefined && context[key].key !== undefined) {
+              keys[key] = context[key].key;
+            }
+          });
+      }
+      return keys;
+    }
+    return undefined;
   }
 
   ep.sendEvent = event => {
@@ -144,18 +171,16 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
 
     // For each user we haven't seen before, we add an index event - unless this is already
     // an identify event for that user.
-    if (!addFullEvent || !config.inlineUsersInEvents) {
-      if (event.user) {
-        const isIdentify = event.kind === 'identify';
-        if (userKeysCache.get(event.user.key)) {
-          if (!isIdentify) {
-            deduplicatedUsers++;
-          }
-        } else {
-          userKeysCache.set(event.user.key, true);
-          if (!isIdentify) {
-            addIndexEvent = true;
-          }
+    if (event.context) {
+      const isIdentify = event.kind === 'identify';
+      if (contextKeysCache.get(getCacheKey(event))) {
+        if (!isIdentify) {
+          deduplicatedUsers++;
+        }
+      } else {
+        contextKeysCache.set(getCacheKey(event), true);
+        if (!isIdentify) {
+          addIndexEvent = true;
         }
       }
     }
@@ -164,7 +189,7 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
       enqueue({
         kind: 'index',
         creationDate: event.creationDate,
-        user: processUser(event),
+        context: processContext(event),
       });
     }
     if (addFullEvent) {
@@ -275,7 +300,7 @@ function EventProcessor(sdkKey, config, errorReporter, diagnosticsManager) {
   }, config.flushInterval * 1000);
 
   const flushUsersTimer = setInterval(() => {
-    userKeysCache.reset();
+    contextKeysCache.reset();
   }, config.userKeysFlushInterval * 1000);
 
   ep.close = () => {

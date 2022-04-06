@@ -19,7 +19,6 @@ module.exports = (function () {
       useLdd: false,
       allAttributesPrivate: false,
       privateAttributes: [],
-      inlineUsersInEvents: false,
       userKeysCapacity: 1000,
       userKeysFlushInterval: 300,
       diagnosticOptOut: false,
