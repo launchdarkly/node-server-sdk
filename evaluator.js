@@ -289,7 +289,18 @@ function clauseMatchContext(c, context, queries, stateOut, matchedCb, segmentsVi
         queries.getSegment(value, segment => {
           if (segment) {
             if (segmentsVisited.indexOf(segment.key) >= 0) {
-              return seriesCallback(null);
+              /* eslint-disable no-param-reassign */
+              stateOut.error = [
+                new Error(
+                  `Segment rule referencing segment ${segment.key} caused a circular reference. ` +
+                    'This is probably a temporary condition due to an incomplete update'
+                ),
+                errorResult('MALFORMED_FLAG'),
+              ];
+              /* eslint-enable no-param-reassign */
+
+              //The return needs to be non-null in order to skip the rest of the series.
+              return seriesCallback(true);
             }
             const newVisited = [...segmentsVisited, segment.key];
             segmentMatchContext(

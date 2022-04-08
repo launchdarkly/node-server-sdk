@@ -240,7 +240,8 @@ describe('Evaluator - segment match for non-user contexts', () => {
     const e = Evaluator(prepareQueries({ segments: [segment] }));
     const flag = makeFlagWithSegmentMatch(segment);
     const [ err, detail, events ] = await asyncEvaluate(e, flag, singleKind, eventFactory);
-    expect(detail.value).toBe(false);
+    expect(detail.reason).toEqual({ kind: 'ERROR', errorKind: 'MALFORMED_FLAG' });
+    expect(detail.value).toBe(null);
   });
 
   it('allows for the same segment to be references in multiple clauses', async () => {
