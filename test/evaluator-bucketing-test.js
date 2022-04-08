@@ -36,6 +36,22 @@ describe('rollout', () => {
     expect(detail.variationIndex).toEqual(matchedVariation);
   });
 
+  it('uses the secondary key', async () => {
+    const userWithSecondary = { key: 'userkey', secondary: 'secondary' };
+    const userWithoutSecondary = { key: 'userkey' };
+    const flagKey = 'flagkey';
+    const salt = 'salt';
+
+    //We want to verify that we bucketed it in the range, and that the bucket is different than it would have been
+    //without the secondary key.
+    const bucketValueWithSecondary = Math.floor(bucketContext(userWithSecondary, flagKey, 'key', salt, null, 'user') * 100000);
+    const bucketValueWithoutSecondary = Math.floor(bucketContext(userWithoutSecondary, flagKey, 'key', salt, null, 'user') * 100000);
+    expect(bucketValueWithSecondary).toBeGreaterThan(0);
+    expect(bucketValueWithSecondary).toBeLessThan(100000);
+    // 78120 being the bucket value without the secondary key.
+    expect(bucketValueWithSecondary).not.toEqual(bucketValueWithoutSecondary);
+  });
+
   it('handles an invalid bucketBy', async () => {
     const user = { key: 'userkey' };
     const flagKey = 'flagkey';
@@ -221,6 +237,14 @@ describe('rollout', () => {
       const bucketByFlag = JSON.parse(JSON.stringify(flag));
       bucketByFlag.fallthrough.rollout.bucketBy = "mimic";
       const [err, detail, events] = await asyncEvaluate(Evaluator(), bucketByFlag, user, eventFactory);
+      expect(err).toEqual(null);
+      expect(detail.variationIndex).toEqual(0);
+      expect(detail.reason.inExperiment).toBe(true);
+    });
+
+    it('does not use the secondary key for experiments', async () => {
+      var user = { key: 'userKeyA', secondary: 'secondary' };
+      const [err, detail, events] = await asyncEvaluate(Evaluator(), flag, user, eventFactory);
       expect(err).toEqual(null);
       expect(detail.variationIndex).toEqual(0);
       expect(detail.reason.inExperiment).toBe(true);

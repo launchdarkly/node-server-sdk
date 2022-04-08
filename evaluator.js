@@ -567,7 +567,7 @@ function segmentRuleMatchContext(rule, context, segmentKey, salt, queries, state
         stateOut.error = [new Error('Invalid attribute reference in rule.'), errorResult('MALFORMED_FLAG')]; // eslint-disable-line no-param-reassign
         return cb(false);
       }
-      const bucket = bucketContext(context, segmentKey, refAttr, salt, rule.contextKind);
+      const bucket = bucketContext(context, segmentKey, refAttr, salt, rule.contextKind, false);
       const weight = rule.weight / 100000.0;
       return cb(bucket < weight);
     }
@@ -654,7 +654,15 @@ function variationForUser(r, context, flag) {
           [new Error('Invalid attribute reference for bucketBy in rollout'), errorResult('MALFORMED_FLAG')],
         ];
       }
-      const bucket = bucketContext(context, flag.key, refAttr, flag.salt, rollout.seed, rollout.contextKind);
+      const bucket = bucketContext(
+        context,
+        flag.key,
+        refAttr,
+        flag.salt,
+        rollout.seed,
+        rollout.contextKind,
+        isExperiment
+      );
       let sum = 0;
       for (let i = 0; i < variations.length; i++) {
         const variate = variations[i];
@@ -764,7 +772,7 @@ function validateReference(isLegacy, attr) {
 }
 
 // Compute a percentile for a context
-function bucketContext(context, key, attr, salt, seed, kindForRollout) {
+function bucketContext(context, key, attr, salt, seed, kindForRollout, isExperiment) {
   const kindOrDefault = kindForRollout || 'user';
   //Key pre-validated. So we can disregard the validation here.
   const [, value] = contextValue(context, kindOrDefault, attr, kindForRollout === undefined);
@@ -775,9 +783,11 @@ function bucketContext(context, key, attr, salt, seed, kindForRollout) {
     return 0;
   }
 
-  const secondary = context.kind === undefined ? context.secondary : context._meta && context._meta.secondary;
+  const secondary =
+    context.kind === undefined || context.kind === null ? context.secondary : context._meta && context._meta.secondary;
 
-  if (secondary !== undefined) {
+  // The secondary key should not be used for experiments.
+  if (secondary !== undefined && secondary !== null && !isExperiment) {
     // Because secondary keys could be in any context, and we aren't processing
     // the entire context before evaluation, we ensure here that the secondary
     // attribute is a string.
