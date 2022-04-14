@@ -188,7 +188,7 @@ function cloneExcluding(target, references) {
 }
 
 function isValidReference(reference) {
-  return !reference.match(/\/\/|(^\/.*~[^0|^1])/);
+  return !reference.match(/\/\/|(^\/.*~[^0|^1])|~$/);
 }
 
 module.exports = {

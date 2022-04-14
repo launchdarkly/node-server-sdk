@@ -90,7 +90,7 @@ function evaluate(flag, context, queries, eventFactory, maybeCallback) {
   const sanitizedContext = stringifyContextAttrs(context);
 
   const stateOut = {};
-  evalInternal(flag, sanitizedContext, queries, stateOut, eventFactory, (err, detail) => {
+  evalInternal(flag, sanitizedContext, queries, stateOut, eventFactory, [flag.key], (err, detail) => {
     const result = detail;
     if (stateOut.bigSegmentsStatus) {
       result.reason.bigSegmentsStatus = stateOut.bigSegmentsStatus;
@@ -99,14 +99,18 @@ function evaluate(flag, context, queries, eventFactory, maybeCallback) {
   });
 }
 
-function evalInternal(flag, context, queries, stateOut, eventFactory, cb) {
+function evalInternal(flag, context, queries, stateOut, eventFactory, visitedFlags, cb) {
   // If flag is off, return the off variation
   if (!flag.on) {
     getOffResult(flag, { kind: 'OFF' }, cb);
     return;
   }
 
-  checkPrerequisites(flag, context, queries, stateOut, eventFactory, (err, failureReason) => {
+  checkPrerequisites(flag, context, queries, stateOut, eventFactory, visitedFlags, (err, failureReason) => {
+    if (stateOut.error) {
+      cb(...stateOut.error);
+      return;
+    }
     if (err || failureReason) {
       getOffResult(flag, failureReason, cb);
     } else {
@@ -116,11 +120,25 @@ function evalInternal(flag, context, queries, stateOut, eventFactory, cb) {
 }
 
 // Callback receives (err, reason) where reason is null if successful, or a "prerequisite failed" reason
-function checkPrerequisites(flag, context, queries, stateOut, eventFactory, cb) {
+function checkPrerequisites(flag, context, queries, stateOut, eventFactory, visitedFlags, cb) {
   if (flag.prerequisites && flag.prerequisites.length) {
     safeAsyncEachSeries(
       flag.prerequisites,
       (prereq, callback) => {
+        if (visitedFlags.indexOf(prereq.key) !== -1) {
+          /* eslint-disable no-param-reassign */
+          stateOut.error = [
+            new Error(
+              `Prerequisite of ${flag.key} causing a circular reference.` +
+                ' This is probably a temporary condition due to an incomplete update.'
+            ),
+            errorResult('MALFORMED_FLAG'),
+          ];
+          /* eslint-enable no-param-reassign */
+          callback(null);
+          return;
+        }
+        const updatedVisitedFlags = [...visitedFlags, prereq.key];
         queries.getFlag(prereq.key, prereqFlag => {
           // If the flag does not exist in the store or is not on, the prerequisite
           // is not satisfied
@@ -131,7 +149,7 @@ function checkPrerequisites(flag, context, queries, stateOut, eventFactory, cb) 
             });
             return;
           }
-          evalInternal(prereqFlag, context, queries, stateOut, eventFactory, (err, detail) => {
+          evalInternal(prereqFlag, context, queries, stateOut, eventFactory, updatedVisitedFlags, (err, detail) => {
             // If there was an error, the value is null, the variation index is out of range,
             // or the value does not match the indexed variation the prerequisite is not satisfied
             stateOut.events = stateOut.events || []; // eslint-disable-line no-param-reassign
@@ -473,7 +491,7 @@ function getContextForKind(context, inKind) {
  * Search the given contextTargets and userTargets. If a match is made, then
  * return `[true, true]`. If a match is not made then return `[false, _]`.
  * If there was an error which prevents matching, then return `[true, false]`.
- * @param {{kind: string, values: string[]}[]} contextTargets
+ * @param {{contextKind: string, values: string[]}[]} contextTargets
  * @param {string[]} userTargets
  * @param {Object} context
  * @returns {[boolean, boolean]} Pair of booleans where the first indicates
@@ -482,7 +500,7 @@ function getContextForKind(context, inKind) {
  */
 function segmentSearch(contextTargets, userTargets, context) {
   const contextKind = context.kind || 'user';
-  for (const { kind, values } of contextTargets) {
+  for (const { contextKind: kind, values } of contextTargets) {
     const contextForKind = getContextForKind(context, kind);
     if (contextForKind) {
       if (values.indexOf(contextForKind.key) >= 0) {

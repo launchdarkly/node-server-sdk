@@ -194,7 +194,7 @@ describe('Evaluator - segment match for non-user contexts', () => {
   ('matches segment with explicitly included context', async (context) => {
     const segment = {
       key: 'test',
-      includedContexts: [ {kind: 'org', values: [singleKind.key]} ],
+      includedContexts: [ {contextKind: 'org', values: [singleKind.key]} ],
       version: 1
     };
     const e = Evaluator(prepareQueries({ segments: [segment] }));
@@ -207,7 +207,7 @@ describe('Evaluator - segment match for non-user contexts', () => {
   ('matches nested segments', async (context) => {
     const segment1 = {
       key: 'segment1',
-      includedContexts: [ {kind: 'org', values: [singleKind.key]} ],
+      includedContexts: [ {contextKind: 'org', values: [singleKind.key]} ],
       version: 1
     };
     const segment2 = {
@@ -247,7 +247,7 @@ describe('Evaluator - segment match for non-user contexts', () => {
   it('allows for the same segment to be references in multiple clauses', async () => {
     const segment1 = {
       key: 'segment1',
-      includedContexts: [ {kind: 'org', values: [singleKind.key]} ],
+      includedContexts: [ {contextKind: 'org', values: [singleKind.key]} ],
       version: 1
     };
     const segment2 = {
