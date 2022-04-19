@@ -337,11 +337,12 @@ declare module 'launchdarkly-node-server-sdk' {
     streamInitialReconnectDelay?: number;
 
     /**
-     * Whether you are using the LaunchDarkly relay proxy in daemon mode.
+     * Whether you are using the LaunchDarkly Relay Proxy in daemon mode.
      *
      * In this configuration, the client will not connect to LaunchDarkly to get feature flags,
      * but will instead get feature state from a database (Redis or another supported feature
-     * store integration) that is populated by the relay. By default, this is false.
+     * store integration) that is populated by the Relay Proxy. By default, this is false.
+     * To learn more, read [Using daemon mode](https://docs.launchdarkly.com/home/relay-proxy/using#using-daemon-mode).
      */
     useLdd?: boolean;
 
