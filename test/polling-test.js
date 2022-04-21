@@ -1,8 +1,9 @@
 const InMemoryFeatureStore = require('../feature_store');
 const PollingProcessor = require('../polling');
 const dataKind = require('../versioned_data_kind');
-const { promisify, promisifySingle, sleepAsync } = require('launchdarkly-js-test-helpers');
+const { AsyncQueue, promisify, promisifySingle } = require('launchdarkly-js-test-helpers');
 const stubs = require('./stubs');
+const { failIfTimeout } = require('./test_helpers');
 
 describe('PollingProcessor', () => {
   const longInterval = 100000;
@@ -48,7 +49,8 @@ describe('PollingProcessor', () => {
     };
     processor = PollingProcessor(config, requestor);
 
-    await promisify(processor.start)(); // didn't throw -> success
+    const err = await new Promise(resolve => processor.start(resolve));
+    expect(err).not.toBe(expect.anything());
   });
 
   it('initializes feature store', async () => {
@@ -66,68 +68,90 @@ describe('PollingProcessor', () => {
   });
 
   it('polls repeatedly', async() => {
+    const calls = new AsyncQueue();
     const requestor = {
-      requestAllData: jest.fn(cb => cb(null, jsonData))
+      requestAllData: cb => {
+        calls.add();
+        cb(null, jsonData);
+      }
     };
-    config.pollInterval = 0.1;  // note, pollInterval is in seconds
+    config.pollInterval = 0.05;  // note, pollInterval is in seconds
     processor = PollingProcessor(config, requestor);
 
     processor.start(() => {});
-    await sleepAsync(500);
-
-    expect(requestor.requestAllData.mock.calls.length).toBeGreaterThanOrEqual(4);
+    const startTime = new Date().getTime();
+    for (let i = 0; i < 4; i++) {
+      await failIfTimeout(calls.take(), 500);
+    }
+    expect(new Date().getTime() - startTime).toBeLessThanOrEqual(500);
   });
 
   async function testRecoverableError(err) {
+    const calls = new AsyncQueue();
+    let count = 0;
     const requestor = {
-      requestAllData: jest.fn(cb => cb(err))
+      // The first two calls will return the error; the third will succeed.
+      requestAllData: cb => {
+        calls.add();
+        count++;
+        if (count > 2) {
+          cb(null, jsonData);
+        } else {
+          cb(err);
+        }
+      }
     };
-    config.pollInterval = 0.1;
+    config.pollInterval = 0.05;
     processor = PollingProcessor(config, requestor);
 
     let errReceived;
     processor.start(e => { errReceived = e; });
-    await sleepAsync(300);
 
-    expect(requestor.requestAllData.mock.calls.length).toBeGreaterThanOrEqual(2);
+    await failIfTimeout(calls.take(), 500);
+    await failIfTimeout(calls.take(), 500);
+    await failIfTimeout(calls.take(), 500);
+
     expect(config.logger.error).not.toHaveBeenCalled();
     expect(errReceived).toBeUndefined();
   }
   
-  function testRecoverableHttpError(status) {
-    const err = new Error('sorry');
-    err.status = status;
-    it('continues polling after error ' + status, async () => await testRecoverableError(err));
-  }
-
-  testRecoverableHttpError(400);
-  testRecoverableHttpError(408);
-  testRecoverableHttpError(429);
-  testRecoverableHttpError(500);
-  testRecoverableHttpError(503);
+  it.each([400, 408, 429, 500, 503])(
+    'continues polling after error %d',
+    async (status) => {
+      const err = new Error('sorry');
+      err.status = status;
+      await testRecoverableError(err);
+    }
+  );
 
   it('continues polling after I/O error', async () => await testRecoverableError(new Error('sorry')));
 
-  function testUnrecoverableHttpError(status) {
-    it('stops polling after error ' + status, async () => {
-      const err = new Error('sorry');
-      err.status = status;
-      const requestor = {
-        requestAllData: jest.fn(cb => cb(err))
-      };
-      config.pollInterval = 0.1;
-      processor = PollingProcessor(config, requestor);
+  async function testUnrecoverableError(status) {
+    const err = new Error('sorry');
+    err.status = status;
 
-      let errReceived;
-      processor.start(e => { errReceived = e; });
-      await sleepAsync(300);
+    const calls = new AsyncQueue();
+    const requestor = {
+      requestAllData: cb => {
+        calls.add();
+        cb(err);
+      }
+    };
+    config.pollInterval = 0.05;
+    processor = PollingProcessor(config, requestor);
 
-      expect(requestor.requestAllData.mock.calls.length).toEqual(1);
-      expect(config.logger.error).toHaveBeenCalledTimes(1);
-      expect(errReceived).not.toBeUndefined();
-    });
+    const result = new AsyncQueue();
+    processor.start(e => result.add(e));
+
+    const errReceived = await failIfTimeout(result.take(), 1000);
+    expect(errReceived.message).toMatch(new RegExp('error ' + status + '.*giving up permanently'));
+
+    expect(calls.length()).toEqual(1);
+    expect(config.logger.error).toHaveBeenCalledTimes(1);
   }
-
-  testUnrecoverableHttpError(401);
-  testUnrecoverableHttpError(403);
+  
+  it.each([401, 403])(
+    'stops polling after error %d',
+    testUnrecoverableError
+  );  
 });
