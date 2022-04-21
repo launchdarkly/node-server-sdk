@@ -7,6 +7,8 @@ function PollingProcessor(config, requestor) {
     featureStore = config.featureStore;
   let stopped = false;
 
+  let timer;
+
   function poll(maybeCallback) {
     const cb = maybeCallback || function () {};
 
@@ -28,7 +30,7 @@ function PollingProcessor(config, requestor) {
         } else {
           config.logger.warn(messages.httpErrorMessage(err, 'polling request', 'will retry'));
           // Recursively call poll after the appropriate delay
-          setTimeout(() => {
+          timer = setTimeout(() => {
             poll(cb);
           }, sleepFor);
         }
@@ -41,13 +43,13 @@ function PollingProcessor(config, requestor) {
           featureStore.init(initData, () => {
             cb();
             // Recursively call poll after the appropriate delay
-            setTimeout(() => {
+            timer = setTimeout(() => {
               poll(cb);
             }, sleepFor);
           });
         } else {
           // There wasn't an error but there wasn't any new data either, so just keep polling
-          setTimeout(() => {
+          timer = setTimeout(() => {
             poll(cb);
           }, sleepFor);
         }
@@ -61,6 +63,9 @@ function PollingProcessor(config, requestor) {
 
   processor.stop = () => {
     stopped = true;
+    if (timer) {
+      clearTimeout(timer);
+    }
   };
 
   processor.close = () => {
