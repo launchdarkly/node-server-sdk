@@ -45,13 +45,6 @@ function asyncLogCapture() {
       logCapture.all.add({ level: level, message: message });
     }
   }
-  const failOnTimeout = (promise, timeout) => {
-    if (!timeout) {
-      return promise;
-    }
-    return Promise.race(promise,
-      new Promise((resolve, reject) => setTimeout(() => { reject('timed out waiting for message'); }, timeout)));
-  };
   logCapture.logger = logger;
   return logCapture;
 }
