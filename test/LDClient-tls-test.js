@@ -4,10 +4,10 @@ import {
   AsyncQueue,
   TestHttpHandlers,
   TestHttpServer,
+  failOnTimeout,
   withCloseable
 } from 'launchdarkly-js-test-helpers';
 import * as stubs from './stubs';
-import { failIfTimeout } from './test_helpers';
 
 describe('LDClient TLS configuration', () => {
   const sdkKey = 'secret';
@@ -46,9 +46,9 @@ describe('LDClient TLS configuration', () => {
       };
 
       await withCloseable(LDClient.init(sdkKey, config), async client => {
-        const message1 = await failIfTimeout(logCapture.warn.take(), 1000);
+        const message1 = await failOnTimeout(logCapture.warn.take(), 1000, 'timed out waiting for log message');
         expect(message1).toMatch(/only disable the streaming API/); // irrelevant message due to our use of polling mode
-        const message2 = await failIfTimeout(logCapture.warn.take(), 1000);
+        const message2 = await failOnTimeout(logCapture.warn.take(), 1000, 'timed out waiting for log message');
         expect(message2).toMatch(/self.signed/);
       });
     });

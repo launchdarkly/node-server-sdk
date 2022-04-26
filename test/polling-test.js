@@ -1,9 +1,8 @@
 const InMemoryFeatureStore = require('../feature_store');
 const PollingProcessor = require('../polling');
 const dataKind = require('../versioned_data_kind');
-const { AsyncQueue, promisify, promisifySingle } = require('launchdarkly-js-test-helpers');
+const { AsyncQueue, failOnResolve, failOnTimeout, promisify, promisifySingle } = require('launchdarkly-js-test-helpers');
 const stubs = require('./stubs');
-const { failIfTimeout } = require('./test_helpers');
 
 describe('PollingProcessor', () => {
   const longInterval = 100000;
@@ -81,7 +80,7 @@ describe('PollingProcessor', () => {
     processor.start(() => {});
     const startTime = new Date().getTime();
     for (let i = 0; i < 4; i++) {
-      await failIfTimeout(calls.take(), 500);
+      await failOnTimeout(calls.take(), 500, 'timed out waiting for poll request');
     }
     expect(new Date().getTime() - startTime).toBeLessThanOrEqual(500);
   });
@@ -107,9 +106,9 @@ describe('PollingProcessor', () => {
     let errReceived;
     processor.start(e => { errReceived = e; });
 
-    await failIfTimeout(calls.take(), 500);
-    await failIfTimeout(calls.take(), 500);
-    await failIfTimeout(calls.take(), 500);
+    await failOnTimeout(calls.take(), 500, 'timed out waiting for poll request');
+    await failOnTimeout(calls.take(), 500, 'timed out waiting for poll request');
+    await failOnTimeout(calls.take(), 500, 'timed out waiting for poll request');
 
     expect(config.logger.error).not.toHaveBeenCalled();
     expect(errReceived).toBeUndefined();
@@ -143,10 +142,11 @@ describe('PollingProcessor', () => {
     const result = new AsyncQueue();
     processor.start(e => result.add(e));
 
-    const errReceived = await failIfTimeout(result.take(), 1000);
+    const errReceived = await failOnTimeout(result.take(), 1000, 'timed out waiting for initialization to complete');
     expect(errReceived.message).toMatch(new RegExp('error ' + status + '.*giving up permanently'));
 
-    expect(calls.length()).toEqual(1);
+    await failOnTimeout(calls.take(), 10, 'expected initial poll request but did not see one');
+    await failOnResolve(calls.take(), 100, 'received unexpected second poll request');
     expect(config.logger.error).toHaveBeenCalledTimes(1);
   }
   
