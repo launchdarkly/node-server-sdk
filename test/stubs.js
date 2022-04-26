@@ -3,6 +3,10 @@ var InMemoryFeatureStore = require('../feature_store');
 var LDClient = require('../index.js');
 var dataKind = require('../versioned_data_kind');
 
+import { AsyncQueue } from 'launchdarkly-js-test-helpers';
+
+import { format } from 'util';
+
 function stubEventProcessor() {
   var eventProcessor = {
     events: [],
@@ -28,6 +32,21 @@ function stubLogger() {
     warn: jest.fn(),
     error: jest.fn()
   };
+}
+
+function asyncLogCapture() {
+  const logCapture = {all: new AsyncQueue()};
+  const logger = {};
+  for (const level of ['debug', 'info', 'warn', 'error']) {
+    logCapture[level] = new AsyncQueue();
+    logger[level] = function(fmt, ...args) {
+      const message = format(fmt, ...args);
+      logCapture[level].add(message);
+      logCapture.all.add({ level: level, message: message });
+    }
+  }
+  logCapture.logger = logger;
+  return logCapture;
 }
 
 function stubUpdateProcessor() {
@@ -77,6 +96,7 @@ function uninitializedStoreWithFlags(...flags) {
 }
 
 module.exports = {
+  asyncLogCapture,
   createClient,
   initializedStoreWithFlags,
   stubEventProcessor,
