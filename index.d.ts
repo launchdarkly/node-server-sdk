@@ -1454,12 +1454,12 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
    *     const { TestData } = require('launchdarkly-node-server-sdk/interfaces');
    * 
    *     const td = TestData();
-   *     testData.update(td.flag("flag-key-1").booleanFlag().variationForAllUsers(true));
+   *     testData.update(td.flag("flag-key-1").booleanFlag().variationForAll(true));
    *     const client = new LDClient(sdkKey, { updateProcessor: td });
    *
    *     // flags can be updated at any time:
    *     td.update(td.flag("flag-key-2")
-   *         .variationForUser("some-user-key", true)
+   *         .variationForContext("user", "some-user-key", true)
    *         .fallthroughVariation(false));
    */
   export function TestData(): TestData;
@@ -1475,12 +1475,12 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
    *     const { TestData } = require('launchdarkly-node-server-sdk/interfaces');
    * 
    *     const td = TestData();
-   *     testData.update(td.flag("flag-key-1").booleanFlag().variationForAllUsers(true));
+   *     testData.update(td.flag("flag-key-1").booleanFlag().variationForAll(true));
    *     const client = new LDClient(sdkKey, { updateProcessor: td });
    *
    *     // flags can be updated at any time:
    *     td.update(td.flag("flag-key-2")
-   *         .variationForUser("some-user-key", true)
+   *         .variationForContext("user", "some-user-key", true)
    *         .fallthroughVariation(false));
    *
    * The above example uses a simple boolean flag, but more complex configurations are possible using
@@ -1555,15 +1555,15 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
     usePreconfiguredFlag(flagConfig: any): Promise<any>;
 
     /**
-     * Copies a full user segment data model object into the test data.
+     * Copies a full segment data model object into the test data.
      *
      * It immediately propagates the change to any [[LDClient]] instance(s) that you have already
      * configured to use this `TestData`. If no [[LDClient]] has been started yet, it simply adds
      * this segment to the test data which will be provided to any LDClient that you subsequently
      * configure.
      *
-     * This method is currently the only way to inject user segment data, since there is no builder
-     * API for segments. It is mainly intended for the SDK's own tests of user segment functionality,
+     * This method is currently the only way to inject segment data, since there is no builder
+     * API for segments. It is mainly intended for the SDK's own tests of segment functionality,
      * since application tests that need to produce a desired evaluation state could do so more easily
      * by just setting flag values.
      * 
@@ -1645,7 +1645,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
     offVariation(variation: boolean|number): TestDataFlagBuilder;
 
     /**
-     * Sets the flag to always return the specified variation for all users.
+     * Sets the flag to always return the specified variation for all contexts.
      *
      * Targeting is switched on, any existing targets or rules are removed,
      * and the fallthrough variation is set to the specified value. The off
@@ -1659,23 +1659,44 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *    0 for the first, 1 for the second, etc.
      * @return the flag builder
      */
-    variationForAllUsers(variation: boolean|number): TestDataFlagBuilder;
+    variationForAll(variation: boolean|number): TestDataFlagBuilder;
 
     /**
-     * Sets the flag to always return the specified variation value for all users.
+     * Sets the flag to always return the specified variation value for all contexts.
      *
      * The value may be of any valid JSON type. This method changes the flag to have
      * only a single variation, which is this value, and to return the same variation
      * regardless of whether targeting is on or off. Any existing targets or rules
      * are removed.
      *
-     * @param value The desired value to be returned for all users.
+     * @param value The desired value to be returned for all contexts.
      * @return the flag builder
      */
-    valueForAllUsers(value: any): TestDataFlagBuilder;
+    valueForAll(value: any): TestDataFlagBuilder;
 
     /**
-     * Sets the flag to return the specified variation for a specific user key
+     * Sets the flag to return the specified variation for a specific context key
+     * when targeting is on. The context kind for contexts created with this method
+     * will be 'user'.
+     *
+     * This has no effect when targeting is turned off for the flag.
+     *
+     * If the variation is a boolean value and the flag was not already a boolean
+     * flag, this also changes it to be a boolean flag.
+     *
+     * If the variation is an integer, it specifies a variation out of whatever
+     * variation values have already been defined.
+     *
+     * @param contextKey a context key
+     * @param variation
+     *    either `true` or `false` or the index of the desired variation:
+     *    0 for the first, 1 for the second, etc.
+     * @return the flag builder
+     */
+    variationForUser(contextKey: string, variation: boolean|number): TestDataFlagBuilder;
+
+    /**
+     * Sets the flag to return the specified variation for a specific context key
      * when targeting is on.
      *
      * This has no effect when targeting is turned off for the flag.
@@ -1686,13 +1707,14 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      * If the variation is an integer, it specifies a variation out of whatever
      * variation values have already been defined.
      *
-     * @param userKey a user key
+     * @param contextKind a context kind
+     * @param contextKey a context key
      * @param variation
      *    either `true` or `false` or the index of the desired variation:
      *    0 for the first, 1 for the second, etc.
      * @return the flag builder
      */
-    variationForUser(userKey: string, variation: boolean|number): TestDataFlagBuilder;
+    variationForContext(contextKind: string, contextKey: string, variation: boolean|number): TestDataFlagBuilder;
 
     /**
      * Removes any existing rules from the flag. This undoes the effect of methods
@@ -1703,12 +1725,12 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
     clearRules(): TestDataFlagBuilder;
 
     /**
-     * Removes any existing user targets from the flag. This undoes the effect of
-     * methods like [[variationForUser]].
+     * Removes any existing targets from the flag. This undoes the effect of
+     * methods like [[variationForContext]].
      *
      * @return the same flag builder
      */
-    clearUserTargets(): TestDataFlagBuilder;
+    clearAlltargets(): TestDataFlagBuilder;
 
     /**
      * Starts defining a flag rule using the "is one of" operator.
@@ -1717,16 +1739,17 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      * "Patsy" or "Edina":
      *
      *     testData.flag('flag')
-     *             .ifMatch('name', 'Patsy', 'Edina')
+     *             .ifMatch('user', name', 'Patsy', 'Edina')
      *             .thenReturn(true)
      *
-     * @param attribute the user attribute to match against
+     * @param contextKind the kind of the context
+     * @param attribute the context attribute to match against
      * @param values values to compare to
      * @return
      *    a flag rule builder; call `thenReturn` to finish the rule
      *    or add more tests with another method like `andMatch`
      */
-    ifMatch(userAttribute: string, ...values:any): TestDataRuleBuilder;
+    ifMatch(contextKind: string, attribute: string, ...values:any): TestDataRuleBuilder;
 
     /**
      * Starts defining a flag rule using the "is not one of" operator.
@@ -1735,16 +1758,17 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      * neither "Saffron" nor "Bubble":
      *
      *     testData.flag('flag')
-     *             .ifNotMatch('name', 'Saffron', 'Bubble')
+     *             .ifNotMatch('user', 'name', 'Saffron', 'Bubble')
      *             .thenReturn(true)
      *
+     * @param contextKind the kind of the context
      * @param attribute the user attribute to match against
      * @param values values to compare to
      * @return
      *    a flag rule builder; call `thenReturn` to finish the rule
      *    or add more tests with another method like `andNotMatch`
      */
-    ifNotMatch(userAttribute: string, ...values:any): TestDataRuleBuilder;
+    ifNotMatch(contextKind: string, attribute: string, ...values:any): TestDataRuleBuilder;
   }
 
   /**
@@ -1772,11 +1796,12 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *             .andMatch('country', 'gb')
      *             .thenReturn(true)
      *
+     * @param contextKind the kind of the context
      * @param attribute the user attribute to match against
      * @param values values to compare to
      * @return the flag rule builder
      */
-    andMatch(userAttribute: string, ...values:any): TestDataRuleBuilder;
+    andMatch(contextKind: string, attribute: string, ...values:any): TestDataRuleBuilder;
 
     /**
      * Adds another clause using the "is not one of" operator.
@@ -1789,11 +1814,12 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *             .andNotMatch('country', 'gb')
      *             .thenReturn(true)
      *
+     * @param contextKind the kind of the context
      * @param attribute the user attribute to match against
      * @param values values to compare to
      * @return the flag rule builder
      */
-    andNotMatch(userAttribute: string, ...values:any): TestDataRuleBuilder;
+    andNotMatch(contextKind: string, attribute: string, ...values:any): TestDataRuleBuilder;
 
     /**
      * Finishes defining the rule, specifying the result value as either a boolean or an index

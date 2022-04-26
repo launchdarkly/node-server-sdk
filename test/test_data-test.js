@@ -7,7 +7,7 @@ const { promisify, promisifySingle } = require('launchdarkly-js-test-helpers');
 describe('TestData', function() {
   it('initializes the datastore with flags configured before client is started', async function() {
     const td = TestData();
-    td.update(td.flag('new-flag').variationForAllUsers(true));
+    td.update(td.flag('new-flag').variationForAll(true));
 
     const store = InMemoryFeatureStore();
     const client = LDClient.init('sdk_key', { offline: true, featureStore: store, updateProcessor: td });
@@ -38,7 +38,7 @@ describe('TestData', function() {
     const res = await promisifySingle(store.all)(dataKind.features);
     expect(res).toEqual({});
 
-    await td.update(td.flag('new-flag').variationForAllUsers(true));
+    await td.update(td.flag('new-flag').variationForAll(true));
 
     const postUpdateRes = await promisifySingle(store.all)(dataKind.features);
     expect(postUpdateRes).toEqual({
@@ -111,7 +111,7 @@ describe('TestData', function() {
     expect(res).toEqual({});
 
     tds.stop();
-    await td.update(td.flag('new-flag').variationForAllUsers(true));
+    await td.update(td.flag('new-flag').variationForAll(true));
 
     const postUpdateRes = await promisifySingle(store.all)(dataKind.features);
     expect(postUpdateRes).toEqual({});
@@ -123,7 +123,7 @@ describe('TestData', function() {
     const tds = td({featureStore: store});
     await promisifySingle(tds.start)();
 
-    await td.update(td.flag('new-flag').variationForAllUsers(true));
+    await td.update(td.flag('new-flag').variationForAll(true));
     const res = await promisifySingle(store.all)(dataKind.features);
     expect(res).toEqual({
       'new-flag': {
@@ -138,7 +138,7 @@ describe('TestData', function() {
       }
     });
 
-    await td.update(td.flag('new-flag').variationForAllUsers(false));
+    await td.update(td.flag('new-flag').variationForAll(false));
     const res2 = await promisifySingle(store.all)(dataKind.features);
     expect(res2).toEqual({
       'new-flag': {
@@ -172,7 +172,7 @@ describe('TestData', function() {
     const td = TestData();
     const flag = td.flag('test-flag-booleanFlags');
     expect(flag.isBooleanFlag()).toBe(true)
-    const flag2 = td.flag('test-flag-notBooleanFlags').valueForAllUsers('yes');
+    const flag2 = td.flag('test-flag-notBooleanFlags').valueForAll('yes');
     expect(flag2.isBooleanFlag()).toBe(false)
   });
 
@@ -194,24 +194,28 @@ describe('TestData', function() {
     expect(offFlag.build(0).fallthrough).toEqual({variation: 0});
   });
 
-  it('can set boolean values for a specific user target', function() {
+  it.each([
+    ['variationForContext', ['user', 'ben', false]],
+    ['variationForUser', ['ben', false]]
+  ])('can set boolean values for a specific user target', function(method, params) {
     const td = TestData();
-    const flag = td.flag('test-flag').variationForUser('ben', false);
-    expect(flag.build(0).targets).toEqual([
-      { variation: 1,
+    const flag = td.flag('test-flag')[method](...params);
+    expect(flag.build(0).contextTargets).toEqual([
+      { 
+        contextKind: 'user',
+        variation: 1,
         values: ['ben']
       }
     ]);
-    const clearedFlag = flag.copy().clearUserTargets();
+    const clearedFlag = flag.copy().clearAllTargets();
     expect(clearedFlag.build(0)).not.toHaveProperty('targets');
-
   });
 
   it('can add and remove a rule', function() {
     const td = TestData();
     const flag = td.flag('test-flag')
-                   .ifMatch('name', 'ben', 'christian')
-                   .andNotMatch('country', 'fr')
+                   .ifMatch('user', 'name', 'ben', 'christian')
+                   .andNotMatch('user', 'country', 'fr')
                    .thenReturn(true);
 
     expect(flag.build().rules).toEqual([
@@ -221,6 +225,7 @@ describe('TestData', function() {
         "clauses":  [
           {
             "attribute": "name",
+            "contextKind": "user",
             "negate": false,
             "operator": "in",
             "values":  [
@@ -229,6 +234,7 @@ describe('TestData', function() {
             ],
           },
           {
+            "contextKind": "user",
             "attribute": "country",
             "negate": true,
             "operator": "in",
@@ -242,5 +248,65 @@ describe('TestData', function() {
 
     const clearedRulesFlag = flag.clearRules();
     expect(clearedRulesFlag.build(0)).not.toHaveProperty('rules');
+  });
+
+  it('can move a targeted context from one variation to another', () => {
+    const td = TestData();
+
+    const flag = td.flag('test-flag').variationForContext('user', 'ben', false).variationForContext('user', 'ben', true);
+    // Because there was only one target in the first variation there will be only
+    // a single variation after that target is removed.
+    expect(flag.build(1).contextTargets).toEqual([
+      { 
+        contextKind: 'user',
+        variation: 0,
+        values: ['ben']
+      }
+    ]);
+  });
+
+  it('if a targeted context is moved from one variation to another, then other targets remain for that variation', () => {
+    const td = TestData();
+
+    const flag = td.flag('test-flag')
+    .variationForContext('user', 'ben', false)
+    .variationForContext('user', 'joe', false)
+    .variationForContext('user', 'ben', true);
+
+    expect(flag.build(1).contextTargets).toEqual([
+      { 
+        contextKind: 'user',
+        variation: 1,
+        values: ['joe']
+      },
+      { 
+        contextKind: 'user',
+        variation: 0,
+        values: ['ben']
+      }
+    ]);
+  });
+
+  it('should allow targets from multiple contexts in the same variation', () => {
+    const td = TestData();
+
+    const flag = td.flag('test-flag')
+      .variationForContext('user', 'ben', false)
+      .variationForContext('potato', 'russet', false)
+      .variationForContext('potato', 'yukon', false);
+    // Because there was only one target in the first variation there will be only
+    // a single variation after that target is removed.
+    expect(flag.build(0).contextTargets).toEqual([
+      { 
+        contextKind: 'user',
+        variation: 1,
+        values: ['ben']
+      },
+      { 
+        contextKind: 'potato',
+        variation: 1,
+        values: ['russet', 'yukon']
+      }
+    ]);
   });
 });
