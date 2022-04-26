@@ -80,7 +80,7 @@ describe('PollingProcessor', () => {
     processor.start(() => {});
     const startTime = new Date().getTime();
     for (let i = 0; i < 4; i++) {
-      await failOnTimeout(calls.take(), 500, 'timed out waiting for poll request');
+      await failOnTimeout(calls.take(), 500, 'timed out waiting for poll request #' + (i + 1));
     }
     expect(new Date().getTime() - startTime).toBeLessThanOrEqual(500);
   });
@@ -106,9 +106,9 @@ describe('PollingProcessor', () => {
     let errReceived;
     processor.start(e => { errReceived = e; });
 
-    await failOnTimeout(calls.take(), 500, 'timed out waiting for poll request');
-    await failOnTimeout(calls.take(), 500, 'timed out waiting for poll request');
-    await failOnTimeout(calls.take(), 500, 'timed out waiting for poll request');
+    for (let i = 0; i < 3; i++) {
+      await failOnTimeout(calls.take(), 500, 'timed out waiting for poll request #' + (i + 1));
+    }
 
     expect(config.logger.error).not.toHaveBeenCalled();
     expect(errReceived).toBeUndefined();
