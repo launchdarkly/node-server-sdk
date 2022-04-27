@@ -38,6 +38,12 @@ To verify that the TypeScript declarations compile correctly (this involves comp
 npm run check-typescript
 ```
 
+To run the SDK contract test suite (see [`contract-tests/README.md`](./contract-tests/README.md)):
+
+```bash
+npm run contract-tests
+```
+
 ### Auditing package dependencies
 
 The `npm audit` tool compares all dependencies and transitive dependencies to a database of package versions with known vulnerabilities. However, the output of this tool includes both runtime and development dependencies.
