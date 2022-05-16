@@ -63,6 +63,10 @@ module.exports = (function () {
       config.logger.warn(messages.invalidTagValue(name));
       return undefined;
     }
+    if (tagValue.length > 64) {
+      config.logger.warn(messages.tagValueTooLong(name));
+      return undefined;
+    }
     return tagValue;
   }
 
