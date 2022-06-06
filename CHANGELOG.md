@@ -2,6 +2,10 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [6.4.2] - 2022-06-06
+### Changed:
+- Enforce a 64 character limit for `application.id` and `application.version` configuration options.
+
 ## [6.4.1] - 2022-04-26
 ### Fixed:
 - When using polling mode (`stream: false`), if the SDK was shut down with `close()`, a timer task could still remain active for up to 30 seconds (or whatever the polling interval was set to).
