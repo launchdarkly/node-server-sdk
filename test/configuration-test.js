@@ -196,6 +196,13 @@ describe('configuration', function() {
     expect(configIn.logger.warn).toHaveBeenCalledTimes(1);
   });
 
+  it('logs a warning when a tag value is too long', async () => {
+    const configIn = emptyConfigWithMockLogger();
+    configIn.application = { id: 'a'.repeat(65), version: 'b'.repeat(64) };
+    expect(configuration.validate(configIn).application.id).toBeUndefined();
+    expect(configIn.logger.warn).toHaveBeenCalledTimes(1);
+  });
+
   it('handles a valid application version', () => {
     const configIn = emptyConfigWithMockLogger();
     configIn.application = {version: 'test-version'};

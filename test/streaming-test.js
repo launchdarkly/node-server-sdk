@@ -2,10 +2,9 @@ const { DiagnosticId, DiagnosticsManager } = require('../diagnostic_events');
 const InMemoryFeatureStore = require('../feature_store');
 const StreamProcessor = require('../streaming');
 import * as httpUtils from '../utils/httpUtils';
-import { failIfResolves, failIfTimeout } from './test_helpers';
 const dataKind = require('../versioned_data_kind');
 
-const { promisifySingle } = require('launchdarkly-js-test-helpers');
+const { failOnResolve, failOnTimeout, promisifySingle } = require('launchdarkly-js-test-helpers');
 const stubs = require('./stubs');
 
 describe('StreamProcessor', () => {
@@ -258,10 +257,10 @@ describe('StreamProcessor', () => {
 
     es.instance.simulateError(err);
 
-    await failIfTimeout(logCapture.warn.take(), 1000);
+    await failOnTimeout(logCapture.warn.take(), 1000, 'timed out waiting for log message');
 
-    await failIfResolves(waitForStart, 50);
-    await failIfResolves(logCapture.error.take(), 50);
+    await failOnResolve(waitForStart, 50, 'initialization completed unexpectedly');
+    await failOnResolve(logCapture.error.take(), 50, 'got unexpected log error');
 
     expect(es.closed).not.toBeTruthy();
 
@@ -297,11 +296,11 @@ describe('StreamProcessor', () => {
 
     const waitForStart = promisifySingle(sp.start)();  
     es.instance.simulateError(err);
-    const errReceived = await failIfTimeout(waitForStart, 1000);
+    const errReceived = await failOnTimeout(waitForStart, 1000, 'timed out waiting for error result');
 
     expect(errReceived).toEqual(err);
 
-    await failIfTimeout(logCapture.error.take(), 50);
+    await failOnTimeout(logCapture.error.take(), 50, 'timed out waiting for log error');
 
     expect(es.closed).toBe(true);
 
