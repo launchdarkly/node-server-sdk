@@ -7,7 +7,7 @@ function ContextFilter(config) {
   const privateAttributes = config.privateAttributes || [];
 
   // These attributes cannot be removed via a private attribute.
-  const protectedAttributes = ['key', 'kind', '_meta', 'transient'];
+  const protectedAttributes = ['key', 'kind', '_meta', 'anonymous'];
 
   const legacyTopLevelCopyAttributes = ['name', 'ip', 'firstName', 'lastName', 'email', 'avatar', 'country'];
 
@@ -52,10 +52,10 @@ function ContextFilter(config) {
         delete cloned._meta;
       }
     }
-    // Make sure transient is boolean if present.
+    // Make sure anonymous is boolean if present.
     // Null counts as present, and would be falsy, which is the default.
-    if (cloned.transient !== undefined) {
-      cloned.transient = !!cloned.transient;
+    if (cloned.anonymous !== undefined) {
+      cloned.anonymous = !!cloned.anonymous;
     }
 
     return cloned;
@@ -103,7 +103,7 @@ function ContextFilter(config) {
     };
 
     if (user.anonymous !== undefined) {
-      filtered.transient = !!user.anonymous;
+      filtered.anonymous = !!user.anonymous;
     }
 
     // Copy top level keys and convert them to strings.

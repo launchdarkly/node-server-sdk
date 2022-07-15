@@ -756,8 +756,8 @@ function contextValue(context, kind, attr, isLegacy) {
     return [!invalid, undefined];
   }
 
-  // If transient is not defined, then it is considered false.
-  if (attr === 'transient') {
+  // If anonymous is not defined, then it is considered false.
+  if (attr === 'anonymous') {
     const forKind = getContextForKind(context, kind);
     return [true, contextValueByReference(forKind, refAttr) || false];
   }

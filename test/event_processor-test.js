@@ -21,7 +21,7 @@ describe('EventProcessor', () => {
   const user = { key: 'userKey', name: 'Red' };
   const singleKindUser = { ...user, kind: 'user' };
   const anonUser = { key: 'anon-user', name: 'Anon', anonymous: true };
-  const singleKindAnonUser = {key: 'anon-user', kind: 'user', name: 'Anon', transient: true };
+  const singleKindAnonUser = {key: 'anon-user', kind: 'user', name: 'Anon', anonymous: true };
   const filteredUser = { key: 'userKey', kind: 'user', _meta: { redactedAttributes: ['/name'] } };
   const numericUser = {
     key: 1, secondary: 2, ip: 3, country: 4, email: 5, firstName: 6, lastName: 7,
@@ -29,7 +29,7 @@ describe('EventProcessor', () => {
   };
   const stringifiedNumericUser = {
     kind: 'user', key: '1', ip: '3', country: '4', email: '5', firstName: '6',
-    lastName: '7', avatar: '8', name: '9', age: 99,  transient: false, _meta: { secondary: '2' }
+    lastName: '7', avatar: '8', name: '9', age: 99,  anonymous: false, _meta: { secondary: '2' }
   };
 
   function eventsServerTest(asyncCallback) {

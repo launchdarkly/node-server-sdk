@@ -83,7 +83,7 @@ describe('when handling legacy user contexts', () => {
   const anonUserWithAllAttrsHidden = {
     'kind': 'user',
     'key': 'abc',
-    'transient': true,
+    'anonymous': true,
     '_meta': {
       'redactedAttributes': ['/bizzle', '/dizzle']
     },
@@ -152,16 +152,16 @@ describe('when handling legacy user contexts', () => {
     expect(uf.filter(userWithUnknownTopLevelAttrs)).toEqual(userWithNothingHidden);
   });
 
-  it('converts "anonymous" to "transient"', () => {
+  it('anonymous persists in the conversion to a single kind context', () => {
     const uf = ContextFilter({ allAttributesPrivate: true });
     expect(uf.filter(anonUser)).toEqual(anonUserWithAllAttrsHidden);
   });
 
 
-  it('converts non-boolean "anonymous" to boolean "transient"', () => {
+  it('converts non-boolean "anonymous" to boolean "anonymous"', () => {
     const uf = ContextFilter({ allAttributesPrivate: true });
     expect(uf.filter({ key: "user", anonymous: "yes" }))
-      .toEqual({ key: "user", kind: "user", transient: true });
+      .toEqual({ key: "user", kind: "user", anonymous: true });
   });
 
   it('converts fields to string types when needed', () => {
@@ -211,10 +211,10 @@ describe('when handling single kind contexts', () => {
     }
   };
 
-  const transientContext = {
+  const anonymousContext = {
     'kind': 'organization',
     'key': 'abc',
-    'transient': true,
+    'anonymous': true,
     'bizzle': 'def',
     'dizzle': 'ghi'
   };
@@ -267,7 +267,7 @@ describe('when handling single kind contexts', () => {
   const contextWithAllAttrsHidden = {
     'kind': 'organization',
     'key': 'abc',
-    'transient': true,
+    'anonymous': true,
     '_meta': {
       'redactedAttributes': ['/bizzle', '/dizzle']
     },
@@ -311,9 +311,9 @@ describe('when handling single kind contexts', () => {
     expect(uf.filter(contextSpecifyingOwnPrivateAttr)).toEqual(userWithAllAttrsHidden);
   });
 
-  it('context remains transient even when all attributes are hidden', () => {
+  it('context remains anonymous even when all attributes are hidden', () => {
     var uf = ContextFilter({ allAttributesPrivate: true });
-    expect(uf.filter(transientContext)).toEqual(contextWithAllAttrsHidden);
+    expect(uf.filter(anonymousContext)).toEqual(contextWithAllAttrsHidden);
   });
 
   it('handles non-string key and secondary', () => {
@@ -326,13 +326,13 @@ describe('when handling single kind contexts', () => {
     expect(cf.filter(contextWithNullSecondary)).toEqual(contextWithNullSecondaryFiltered);
   });
 
-  it('converts non-boolean transient to boolean.', () => {
+  it('converts non-boolean anonymous to boolean.', () => {
     var uf = ContextFilter({});
-    expect(uf.filter({ kind: 'user', key: 'user', transient: "string" }))
-      .toEqual({ kind: 'user', key: 'user', transient: true });
+    expect(uf.filter({ kind: 'user', key: 'user', anonymous: "string" }))
+      .toEqual({ kind: 'user', key: 'user', anonymous: true });
 
-    expect(uf.filter({ kind: 'user', key: 'user', transient: null }))
-      .toEqual({ kind: 'user', key: 'user', transient: false });
+    expect(uf.filter({ kind: 'user', key: 'user', anonymous: null }))
+      .toEqual({ kind: 'user', key: 'user', anonymous: false });
   });
 });
 

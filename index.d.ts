@@ -573,11 +573,6 @@ declare module 'launchdarkly-node-server-sdk' {
    */
   export interface LDContextMeta {
     /**
-     * If true, the context will _not_ appear on the Contexts page in the LaunchDarkly dashboard.
-     */
-    transient?: boolean;
-
-    /**
      * An optional secondary key for a context.
      *
      * TODO: U2C Update with new URL when available.
@@ -601,6 +596,11 @@ declare module 'launchdarkly-node-server-sdk' {
   }
 
   interface LDContextCommon {
+      /**
+       * If true, the context will _not_ appear on the Contexts page in the LaunchDarkly dashboard.
+       */
+      anonymous?: boolean;
+
       /**
        * A unique string identifying a context.
        */
