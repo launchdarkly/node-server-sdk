@@ -97,7 +97,7 @@ TestDataFlagBuilder.prototype.copy = function () {
   to._on = this._on;
   to._fallthroughVariation = this._fallthroughVariation;
   to._targets = !this._targets ? null : new Map(this._targets);
-  to._rules = !this.rules ? null : this._rules.map(rule => rule.copy())
+  to._rules = !this.rules ? null : this._rules.map(rule => rule.copy());
   return to;
 };
 
@@ -297,7 +297,7 @@ TestDataRuleBuilder.prototype.build = function (id) {
 
 TestDataRuleBuilder.prototype.copy = function () {
   const flagRuleBuilder = new TestDataRuleBuilder(this);
-  flagRuleBuilder._clauses = JSON.parse(JSON.stringify(this._clauses))
+  flagRuleBuilder._clauses = JSON.parse(JSON.stringify(this._clauses));
   flagRuleBuilder._variation = this._variation;
   return flagRuleBuilder;
 };
