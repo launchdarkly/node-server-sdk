@@ -246,40 +246,11 @@ describe('TestData', function() {
 
   it('can update after adding a rule', function() {
     const td = TestData();
-    const flag = td.update(
-      td.flag('test-flag')
-        .ifMatch('name', 'ben', 'christian')
-        .andNotMatch('country', 'fr')
-        .thenReturn(true)
-      );
+    const flag = td.flag('test-flag')
+                   .ifMatch('name', 'ben', 'christian')
+                   .andNotMatch('country', 'fr')
+                   .thenReturn(true);
 
-    expect(flag.build().rules).toEqual([
-      {
-        "id": "rule0",
-        "variation": 0,
-        "clauses":  [
-          {
-            "attribute": "name",
-            "negate": false,
-            "op": "in",
-            "values":  [
-              "ben",
-              "christian",
-            ],
-          },
-          {
-            "attribute": "country",
-            "negate": true,
-            "op": "in",
-            "values":  [
-              "fr",
-            ],
-          },
-        ],
-      }
-    ]);
-
-    const clearedRulesFlag = flag.clearRules();
-    expect(clearedRulesFlag.build(0)).not.toHaveProperty('rules');
+    expect(() => td.update(flag)).not.toThrow()
   });
 });
