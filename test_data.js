@@ -302,5 +302,4 @@ TestDataRuleBuilder.prototype.copy = function () {
   return flagRuleBuilder;
 };
 
-
 module.exports = TestData;
