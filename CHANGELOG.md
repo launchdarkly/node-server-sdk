@@ -2,6 +2,10 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [6.4.3] - 2022-09-06
+### Fixed:
+- The `TestDataRuleBuilder` was using an incorrect field name for operators, which would prevent rules from working correctly with the `TestData` feature. (Thanks, [LiamMorrow](https://github.com/launchdarkly/node-server-sdk/issues/258)!)
+
 ## [6.4.2] - 2022-06-06
 ### Changed:
 - Enforce a 64 character limit for `application.id` and `application.version` configuration options.
