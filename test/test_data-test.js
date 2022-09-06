@@ -222,7 +222,7 @@ describe('TestData', function() {
           {
             "attribute": "name",
             "negate": false,
-            "operator": "in",
+            "op": "in",
             "values":  [
               "ben",
               "christian",
@@ -231,7 +231,7 @@ describe('TestData', function() {
           {
             "attribute": "country",
             "negate": true,
-            "operator": "in",
+            "op": "in",
             "values":  [
               "fr",
             ],
@@ -242,5 +242,34 @@ describe('TestData', function() {
 
     const clearedRulesFlag = flag.clearRules();
     expect(clearedRulesFlag.build(0)).not.toHaveProperty('rules');
+  });
+
+  it('can add evaluate a rule', async function() {
+    const td = TestData();
+    td.update(td.flag('test-flag')
+                   .fallthroughVariation(false)
+                   .ifMatch('name', 'ben', 'christian')
+                   .andNotMatch('country', 'fr')
+                   .thenReturn(true));
+
+    const store = InMemoryFeatureStore();
+    const client = LDClient.init('sdk_key', { featureStore: store, updateProcessor: td, sendEvents: false });
+
+
+    // User1 should pass because matching name and not matching country
+    const user1 = { 'key': 'user1', 'name': 'christian', 'country': 'us' };
+    const eval1 = await client.variationDetail('test-flag', user1, 'default' );
+
+    expect(eval1.value).toEqual(true);
+    expect(eval1.variationIndex).toEqual(0);
+    expect(eval1.reason.kind).toEqual('RULE_MATCH');
+
+    // User2 should NOT pass because matching name but incorrectly matching country
+    const user2 = { 'key': 'user2', 'name': 'ben', 'country': 'fr' };
+    const eval2 = await client.variationDetail('test-flag', user2, 'default' );
+
+    expect(eval2.value).toEqual(false);
+    expect(eval2.variationIndex).toEqual(1);
+    expect(eval2.reason.kind).toEqual('FALLTHROUGH');
   });
 });
