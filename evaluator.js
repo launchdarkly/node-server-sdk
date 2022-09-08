@@ -585,7 +585,7 @@ function segmentRuleMatchContext(rule, context, segmentKey, salt, queries, state
         stateOut.error = [new Error('Invalid attribute reference in rule.'), errorResult('MALFORMED_FLAG')]; // eslint-disable-line no-param-reassign
         return cb(false);
       }
-      const bucket = bucketContext(context, segmentKey, refAttr, salt, rule.contextKind, false);
+      const [bucket] = bucketContext(context, segmentKey, refAttr, salt, rule.contextKind, false);
       const weight = rule.weight / 100000.0;
       return cb(bucket < weight);
     }
@@ -650,7 +650,7 @@ function errorResult(errorKind) {
 }
 
 // Given a variation or rollout 'r', select the variation for the given context.
-// Returns an array of the form [variationIndex, inExperiment].
+// Returns an array of the form [variationIndex, inExperiment, Error].
 function variationForUser(r, context, flag) {
   if (r.variation !== null && r.variation !== undefined) {
     // This represets a fixed variation; return it
@@ -672,7 +672,7 @@ function variationForUser(r, context, flag) {
           [new Error('Invalid attribute reference for bucketBy in rollout'), errorResult('MALFORMED_FLAG')],
         ];
       }
-      const bucket = bucketContext(
+      const [bucket, hadContext] = bucketContext(
         context,
         flag.key,
         refAttr,
@@ -686,7 +686,7 @@ function variationForUser(r, context, flag) {
         const variate = variations[i];
         sum += variate.weight / 100000.0;
         if (bucket < sum) {
-          return [variate.variation, isExperiment && !variate.untracked, undefined];
+          return [variate.variation, isExperiment && hadContext && !variate.untracked, undefined];
         }
       }
 
@@ -789,7 +789,15 @@ function validateReference(isLegacy, attr) {
   return { invalid, refAttr };
 }
 
-// Compute a percentile for a context
+/**
+ * Compute a bucket value for use in a rollout or experiment. If an error condition prevents us from
+ * computing a valid bucket value, we return zero, which will cause the evaluation to use the first
+ * bucket.
+ *
+ * @returns {[number, boolean]} A tuple where the first value is the bucket, and the second value
+ * indicates if there was a context for the value specified by `kindForRollout`. If there was not
+ * a context for the specified kind, then the `inExperiment` attribute should be `false`.
+ */
 function bucketContext(context, key, attr, salt, seed, kindForRollout, isExperiment) {
   const kindOrDefault = kindForRollout || 'user';
   //Key pre-validated. So we can disregard the validation here.
@@ -798,7 +806,12 @@ function bucketContext(context, key, attr, salt, seed, kindForRollout, isExperim
   let idHash = bucketableStringValue(value);
 
   if (idHash === null) {
-    return 0;
+    // If we got a value, then we know there was a context, but if we didn't get a value, then
+    // it could either be there wasn't an attribute, the attribute was undefined/null, or there
+    // was not a context. So here check for the context.
+    const contextForKind = getContextForKind(context, kindForRollout);
+
+    return [0, !!contextForKind];
   }
 
   const secondary =
@@ -816,7 +829,7 @@ function bucketContext(context, key, attr, salt, seed, kindForRollout, isExperim
   const hashKey = prefix + idHash;
   const hashVal = parseInt(sha1Hex(hashKey).substring(0, 15), 16);
 
-  return hashVal / 0xfffffffffffffff;
+  return [hashVal / 0xfffffffffffffff, true];
 }
 
 function bucketableStringValue(value) {

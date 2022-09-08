@@ -49,6 +49,7 @@ describe('PollingProcessor', () => {
     processor = PollingProcessor(config, requestor);
 
     await promisify(processor.start)(); // didn't throw -> success
+    processor.stop();
   });
 
   it('initializes feature store', async () => {
@@ -63,6 +64,7 @@ describe('PollingProcessor', () => {
     expect(flags).toEqual(allData.flags);
     const segments = await promisifySingle(store.all)(dataKind.segments);
     expect(segments).toEqual(allData.segments);
+    processor.stop();
   });
 
   it('polls repeatedly', async() => {

@@ -1,3 +1,4 @@
+const { isExportDeclaration } = require('typescript');
 const { Evaluator, bucketContext } = require('../evaluator');
 const {
   eventFactory,
@@ -12,7 +13,7 @@ describe('rollout', () => {
 
     // First verify that with our test inputs, the bucket value will be greater than zero and less than 100000,
     // so we can construct a rollout whose second bucket just barely contains that value
-    const bucketValue = Math.floor(bucketContext(user, flagKey, 'key', salt, null, 'user') * 100000);
+    const bucketValue = Math.floor(bucketContext(user, flagKey, 'key', salt, null, 'user')[0] * 100000);
     expect(bucketValue).toBeGreaterThan(0);
     expect(bucketValue).toBeLessThan(100000);
 
@@ -44,8 +45,8 @@ describe('rollout', () => {
 
     //We want to verify that we bucketed it in the range, and that the bucket is different than it would have been
     //without the secondary key.
-    const bucketValueWithSecondary = Math.floor(bucketContext(userWithSecondary, flagKey, 'key', salt, null, 'user') * 100000);
-    const bucketValueWithoutSecondary = Math.floor(bucketContext(userWithoutSecondary, flagKey, 'key', salt, null, 'user') * 100000);
+    const bucketValueWithSecondary = Math.floor(bucketContext(userWithSecondary, flagKey, 'key', salt, null, 'user')[0] * 100000);
+    const bucketValueWithoutSecondary = Math.floor(bucketContext(userWithoutSecondary, flagKey, 'key', salt, null, 'user')[0] * 100000);
     expect(bucketValueWithSecondary).toBeGreaterThan(0);
     expect(bucketValueWithSecondary).toBeLessThan(100000);
     // 78120 being the bucket value without the secondary key.
@@ -82,9 +83,11 @@ describe('rollout', () => {
     const flagKey = 'flagkey';
     const salt = 'salt';
 
-    const bucketValue = Math.floor(bucketContext(context, flagKey, 'key', salt, null, 'user') * 100000);
+    const [bucket, hadContext] = bucketContext(context, flagKey, 'key', salt, null, 'user');
+    const bucketValue = Math.floor(bucket * 100000);
     expect(bucketValue).toBeGreaterThan(0);
     expect(bucketValue).toBeLessThan(100000);
+    expect(hadContext).toEqual(true);
 
     const badVariationA = 0, matchedVariation = 1, badVariationB = 2;
     const rollout = {
@@ -111,8 +114,10 @@ describe('rollout', () => {
     const flagKey = 'flagkey';
     const salt = 'salt';
 
-    const bucketValue = Math.floor(bucketContext(context, flagKey, 'key', salt, null, 'user') * 100000);
+    const [bucket, hadContext] = bucketContext(context, flagKey, 'key', salt, null, 'user')
+    const bucketValue = Math.floor(bucket * 100000);
     expect(bucketValue).toEqual(0);
+    expect(hadContext).toEqual(false);
 
     const rollout = {
       contextKind: 'user',
@@ -139,9 +144,11 @@ describe('rollout', () => {
     const flagKey = 'flagkey';
     const salt = 'salt';
 
-    const bucketValue = Math.floor(bucketContext(context, flagKey, 'key', salt, null, 'org') * 100000);
+    const [bucket, hadContext] = bucketContext(context, flagKey, 'key', salt, null, 'org');
+    const bucketValue = Math.floor(bucket * 100000);
     expect(bucketValue).toBeGreaterThan(0);
     expect(bucketValue).toBeLessThan(100000);
+    expect(hadContext).toEqual(true);
 
     const badVariationA = 0, matchedVariation = 1, badVariationB = 2;
     const rollout = {
@@ -170,7 +177,7 @@ describe('rollout', () => {
     const salt = 'salt';
 
     // We'll construct a list of variations that stops right at the target bucket value
-    const bucketValue = Math.floor(bucketContext(user, flagKey, 'key', salt) * 100000);
+    const bucketValue = Math.floor(bucketContext(user, flagKey, 'key', salt)[0] * 100000);
 
     const rollout = {
       variations: [{ variation: 0, weight: bucketValue }]
@@ -209,15 +216,23 @@ describe('rollout', () => {
     };
 
     it('buckets user into first variant of the experiment', async () => {
-      var user = { key: 'userKeyA' };
+      const user = { key: 'userKeyA' };
       const [err, detail, events] = await asyncEvaluate(Evaluator(), flag, user, eventFactory);
       expect(err).toEqual(null);
       expect(detail.variationIndex).toEqual(0);
       expect(detail.reason.inExperiment).toBe(true);
     });
 
+    it('inExperiment is not set when the context kind is not present', async () => {
+      const user = { kind: 'org', key: 'userKeyA' };
+      const [err, detail, events] = await asyncEvaluate(Evaluator(), flag, user, eventFactory);
+      expect(err).toEqual(null);
+      expect(detail.variationIndex).toEqual(0);
+      expect(detail.reason.inExperiment).toBeUndefined();
+    });
+
     it('uses seed to bucket user into second variant of the experiment', async () => {
-      var user = { key: 'userKeyB' };
+      const user = { key: 'userKeyB' };
       const [err, detail, events] = await asyncEvaluate(Evaluator(), flag, user, eventFactory);
       expect(err).toEqual(null);
       expect(detail.variationIndex).toEqual(1);
@@ -225,7 +240,7 @@ describe('rollout', () => {
     });
 
     it('buckets user outside of the experiment', async () => {
-      var user = { key: 'userKeyC' };
+      const user = { key: 'userKeyC' };
       const [err, detail, events] = await asyncEvaluate(Evaluator(), flag, user, eventFactory);
       expect(err).toEqual(null);
       expect(detail.variationIndex).toEqual(0);
@@ -243,7 +258,7 @@ describe('rollout', () => {
     });
 
     it('does not use the secondary key for experiments', async () => {
-      var user = { key: 'userKeyA', secondary: 'secondary' };
+      const user = { key: 'userKeyA', secondary: 'secondary' };
       const [err, detail, events] = await asyncEvaluate(Evaluator(), flag, user, eventFactory);
       expect(err).toEqual(null);
       expect(detail.variationIndex).toEqual(0);
@@ -254,41 +269,41 @@ describe('rollout', () => {
 
 describe('bucketContext', () => {
   it('gets expected bucket values for specific keys', () => {
-    var user = { key: 'userKeyA' };
-    var bucket = bucketContext(user, 'hashKey', 'key', 'saltyA', null, 'user');
+    let user = { key: 'userKeyA' };
+    let [bucket] = bucketContext(user, 'hashKey', 'key', 'saltyA', null, 'user');
     expect(bucket).toBeCloseTo(0.42157587, 7);
 
     user = { key: 'userKeyB' };
-    bucket = bucketContext(user, 'hashKey', 'key', 'saltyA', null, 'user');
+    [bucket] = bucketContext(user, 'hashKey', 'key', 'saltyA', null, 'user');
     expect(bucket).toBeCloseTo(0.6708485, 7);
 
     user = { key: 'userKeyC' };
-    bucket = bucketContext(user, 'hashKey', 'key', 'saltyA', null, 'user');
+    [bucket] = bucketContext(user, 'hashKey', 'key', 'saltyA', null, 'user');
     expect(bucket).toBeCloseTo(0.10343106, 7);
   });
 
   it('can bucket by int value (equivalent to string)', () => {
-    var user = {
+    const user = {
       key: 'userKey',
       custom: {
         intAttr: 33333,
         stringAttr: '33333'
       }
     };
-    var bucket = bucketContext(user, 'hashKey', 'intAttr', 'saltyA', null, 'user');
-    var bucket2 = bucketContext(user, 'hashKey', 'stringAttr', 'saltyA', null, 'user');
+    const [bucket] = bucketContext(user, 'hashKey', 'intAttr', 'saltyA', null, 'user');
+    const [bucket2] = bucketContext(user, 'hashKey', 'stringAttr', 'saltyA', null, 'user');
     expect(bucket).toBeCloseTo(0.54771423, 7);
     expect(bucket2).toBe(bucket);
   });
 
   it('cannot bucket by float value', () => {
-    var user = {
+    const user = {
       key: 'userKey',
       custom: {
         floatAttr: 33.5
       }
     };
-    var bucket = bucketContext(user, 'hashKey', 'floatAttr', 'saltyA', null, 'user');
+    const [bucket] = bucketContext(user, 'hashKey', 'floatAttr', 'saltyA', null, 'user');
     expect(bucket).toBe(0);
   });
 });
@@ -296,24 +311,24 @@ describe('bucketContext', () => {
 describe('when seed is present', () => {
   const seed = 61;
   it('gets expected bucket values for specific keys', () => {
-    var user = { key: 'userKeyA' };
-    var bucket = bucketContext(user, 'hashKey', 'key', 'saltyA', seed, 'user');
+    let user = { key: 'userKeyA' };
+    let [bucket] = bucketContext(user, 'hashKey', 'key', 'saltyA', seed, 'user');
     expect(bucket).toBeCloseTo(0.09801207, 7);
 
     user = { key: 'userKeyB' };
-    bucket = bucketContext(user, 'hashKey', 'key', 'saltyA', seed, 'user');
+    [bucket] = bucketContext(user, 'hashKey', 'key', 'saltyA', seed, 'user');
     expect(bucket).toBeCloseTo(0.14483777, 7);
 
     user = { key: 'userKeyC' };
-    bucket = bucketContext(user, 'hashKey', 'key', 'saltyA', seed, 'user');
+    [bucket] = bucketContext(user, 'hashKey', 'key', 'saltyA', seed, 'user');
     expect(bucket).toBeCloseTo(0.9242641, 7);
   });
 
   it('should not generate a different bucket when hashKey or salt are changed', () => {
     let user = { key: 'userKeyA' };
-    let bucket = bucketContext(user, 'hashKey', 'key', 'saltyA', seed, 'user');
-    let bucketDifferentHashKey = bucketContext(user, 'otherHashKey', 'key', 'saltyA', seed, 'user');
-    let bucketDifferentSalt = bucketContext(user, 'hashKey', 'key', 'otherSaltyA', seed, 'user');
+    let [bucket] = bucketContext(user, 'hashKey', 'key', 'saltyA', seed, 'user');
+    let [bucketDifferentHashKey] = bucketContext(user, 'otherHashKey', 'key', 'saltyA', seed, 'user');
+    let [bucketDifferentSalt] = bucketContext(user, 'hashKey', 'key', 'otherSaltyA', seed, 'user');
 
     expect(bucketDifferentHashKey).toBeCloseTo(bucket, 7);
     expect(bucketDifferentSalt).toBeCloseTo(bucket, 7);
@@ -321,8 +336,8 @@ describe('when seed is present', () => {
 
   it('should generate a new bucket if the seed changes', () => {
     const otherSeed = 60;
-    var user = { key: 'userKeyA' };
-    var bucket = bucketContext(user, 'hashKey', 'key', 'saltyA', otherSeed, 'user');
+    const user = { key: 'userKeyA' };
+    const [bucket] = bucketContext(user, 'hashKey', 'key', 'saltyA', otherSeed, 'user');
     expect(bucket).toBeCloseTo(0.7008816, 7);
   });
 });

@@ -4,12 +4,12 @@
   "description": "LaunchDarkly Server-Side SDK for Node.js",
   "main": "index.js",
   "scripts": {
-    "test": "jest --ci --coverage",
+    "test": "jest --ci --coverage --runInBand",
     "check-typescript": "node_modules/typescript/bin/tsc",
     "lint": "eslint --format 'node_modules/eslint-formatter-pretty' --ignore-path .eslintignore .",
     "lint-fix": "eslint --fix --format 'node_modules/eslint-formatter-pretty' --ignore-path .eslintignore .",
     "contract-test-service": "npm --prefix contract-tests install && npm --prefix contract-tests start",
-    "contract-test-harness": "curl -s https://raw.githubusercontent.com/launchdarkly/sdk-test-harness/master/downloader/run.sh \\ | VERSION=v1 PARAMS=\"-url http://localhost:8000 -debug -stop-service-at-end $TEST_HARNESS_PARAMS\" sh",
+    "contract-test-harness": "curl -s https://raw.githubusercontent.com/launchdarkly/sdk-test-harness/master/downloader/run.sh \\ | VERSION=v2 PARAMS=\"-url http://localhost:8000 -debug -stop-service-at-end $TEST_HARNESS_PARAMS\" sh",
     "contract-tests": "npm run contract-test-service & npm run contract-test-harness"
   },
   "types": "./index.d.ts",
