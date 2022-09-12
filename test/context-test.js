@@ -75,7 +75,13 @@ describe('when determining canonical keys', () => {
     [{ kind: 'org', key: 'orgtest' }, 'org:orgtest'],
     [{ kind: 'multi', user: { key: 'usertest' } }, 'user:usertest'],
     [{ kind: 'multi', user: { key: 'usertest' }, org: { key: 'orgtest' } }, 'org:orgtest:user:usertest'],
-    [{ kind: 'multi', user: { key: 'user:test' }, org: { key: 'org:test' } }, 'org:org%3Atest:user:user%3Atest']
+    [{ kind: 'multi', user: { key: 'user:test' }, org: { key: 'org:test' } }, 'org:org%3Atest:user:user%3Atest'],
+    [{ kind: 'multi', user: { key: 'user:test' }, org: { key: 'org:test' } }, 'org:org%3Atest:user:user%3Atest'],
+    [{ kind: 'multi', user: { key: 'user%test' }, org: { key: 'org%test' } }, 'org:org%25test:user:user%25test'],
+    [
+      { kind: 'multi', user: { key: 'user%:test' }, org: { key: 'org%:test' } },
+      'org:org%25%3Atest:user:user%25%3Atest',
+    ],
   ])('produces a canonical key for valid  contexts', (context, canonicalKey) => {
     expect(getCanonicalKey(context)).toEqual(canonicalKey);
   });
