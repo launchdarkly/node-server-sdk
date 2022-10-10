@@ -37,8 +37,8 @@ describe('when getting attributes by reference', () => {
     expect(AttributeReference.get({ foo: ['bar', 'baz'] }, '/foo')).toEqual(['bar', 'baz']);
   });
 
-  it('should handle indexing an array', () => {
-    expect(AttributeReference.get({ foo: ['bar', 'baz'] }, '/foo/0')).toEqual('bar');
+  it('should not allow indexing an array', () => {
+    expect(AttributeReference.get({ foo: ['bar', 'baz'] }, '/foo/0')).toBeUndefined();
   });
 
   it('should not allow indexing a non-array object', () => {

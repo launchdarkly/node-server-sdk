@@ -65,8 +65,13 @@ function get(target, reference) {
     if (
       current !== null &&
       current !== undefined &&
-      Object.prototype.hasOwnProperty.call(current, component) &&
-      typeof current === 'object'
+      typeof current === 'object' &&
+      // We do not want to allow indexing into an array.
+      !Array.isArray(current) &&
+      // For arrays and strings, in addition to objects, a hasOwnProperty check
+      // will be true for indexes (as strings or numbers), which are present
+      // in the object/string/array.
+      Object.prototype.hasOwnProperty.call(current, component)
     ) {
       current = current[component];
     } else {
