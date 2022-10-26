@@ -8,6 +8,15 @@ function validKind(kind) {
 }
 
 /**
+ * Validate a context key.
+ * @param {string} key
+ * @returns true if the key is valid.
+ */
+function validKey(key) {
+  return key !== undefined && key !== null && key !== '' && typeof key === 'string';
+}
+
+/**
  * Perform a check of basic context requirements.
  * @param {Object} context
  * @param {boolean} allowLegacyKey If true, then a legacy user can have an
@@ -22,17 +31,10 @@ function checkContext(context, allowLegacyKey) {
     const key = context.key;
     const kind = context.kind === undefined ? 'user' : context.kind;
     const kindValid = validKind(kind);
-    const keyValid = kind === 'multi' || (key !== undefined && key !== null && key !== '');
+    const keyValid = kind === 'multi' || validKey(key);
     if (kind === 'multi') {
       const kinds = Object.keys(context).filter(key => key !== 'kind');
-      return (
-        keyValid &&
-        kinds.every(key => validKind(key)) &&
-        kinds.every(key => {
-          const contextKey = context[key].key;
-          return contextKey !== undefined && contextKey !== null && contextKey !== '';
-        })
-      );
+      return keyValid && kinds.every(key => validKind(key)) && kinds.every(key => validKey(context[key].key));
     }
     return keyValid && kindValid;
   }

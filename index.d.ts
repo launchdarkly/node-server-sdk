@@ -573,17 +573,6 @@ declare module 'launchdarkly-node-server-sdk' {
    */
   export interface LDContextMeta {
     /**
-     * An optional secondary key for a context.
-     *
-     * TODO: U2C Update with new URL when available.
-     * 
-     * This affects [feature flag targeting](https://docs.launchdarkly.com/home/flags/targeting-users#targeting-rules-based-on-user-attributes) 
-     * as follows: if you have chosen to bucket context by a specific attribute, the secondary key (if set)
-     * is used to further distinguish between contexts which are otherwise identical according to that attribute.
-     */
-    secondary?: string;
-
-    /**
      * 
      * TODO: U2C Link to the pointer-like syntax and maybe a name for it?
      * 
@@ -669,22 +658,46 @@ declare module 'launchdarkly-node-server-sdk' {
   export type LDContext = LDUser | LDSingleKindContext | LDMultiKindContext;
 
   /**
-   * A LaunchDarkly user object.
+   * A legacy LaunchDarkly user object.
+   * 
+   * This type exists for easing migration to contexts, but code should be moved to use single/multi
+   * contexts.
+   *
+   * @deprecated
+   * The LDUser object is currently supported for ease of upgrade.
+   * In order to convert an LDUser into a LDSingleKindContext the following changes should
+   * be made.
+   * 
+   * 1.) Add a kind to the object. `kind: 'user'`.
+   * 
+   * 2.) Move custom attributes to the top level of the object.
+   * 
+   * 3.) Move `privateAttributeNames` to `_meta.privateAttributes`.
+   * 
+   * ```
+   * const LDUser: user = {
+   *   key: '1234',
+   *   privateAttributeNames: ['myAttr']
+   *   custom: {
+   *     myAttr: 'value'
+   *   }
+   * }
+   * 
+   * const LDSingleKindContext: context = {
+   *   kind: 'user',
+   *   key: '1234',
+   *   myAttr: 'value'
+   *   _meta: {
+   *     privateAttributes: ['myAttr']
+   *   }
+   * }
+   * ```
    */
   export interface LDUser {
     /**
      * A unique string identifying a user.
      */
     key: string;
-
-    /**
-     * An optional secondary key for a user.
-     *
-     * This affects [feature flag targeting](https://docs.launchdarkly.com/home/flags/targeting-users#targeting-rules-based-on-user-attributes)
-     * as follows: if you have chosen to bucket users by a specific attribute, the secondary key (if set)
-     * is used to further distinguish between users who are otherwise identical according to that attribute.
-     */
-    secondary?: string;
 
     /**
      * The user's name.

@@ -10,36 +10,21 @@ const {
 // Tests of flag evaluation at the clause level.
 
 describe('Evaluator - clause user contexts', () => {
-  it.each([{ key: 999 }, { kind: 'user', key: 999 }, { kind: 'multi', user: { key: 999 } }])
-    ('coerces user key to string', async (user) => {
+
+  it('coerces user key to string for legacy user', async () => {
+    const clause = { 'attribute': 'key', 'op': 'in', 'values': ['999'] };
+    const flag = makeBooleanFlagWithOneClause(clause);
+    const [err, detail, events] = await asyncEvaluate(Evaluator(), flag, { key: 999 }, eventFactory);
+    expect(detail.value).toBe(true);
+  });
+
+  it.each([{ kind: 'user', key: 999 }, { kind: 'multi', user: { key: 999 } }])
+    ('does not coerce key for contexts', async (user) => {
       const clause = { 'attribute': 'key', 'op': 'in', 'values': ['999'] };
       const flag = makeBooleanFlagWithOneClause(clause);
       const [err, detail, events] = await asyncEvaluate(Evaluator(), flag, user, eventFactory);
-      expect(detail.value).toBe(true);
-    });
-
-  it.each([
-    { key: 'userkey', secondary: 999 },
-    { kind: 'user', key: 'userkey', _meta: { secondary: 999 } },
-    { kind: 'multi', user: { key: 'userkey', _meta: { secondary: 999 } } }
-  ])
-    ('coerces secondary key to string', async (user) => {
-      // We can't really verify that the rollout calculation works correctly, but we can at least
-      // make sure it doesn't error out if there's a non-string secondary value (ch35189)
-      var rule = {
-        id: 'ruleid',
-        clauses: [
-          { attribute: 'key', op: 'in', values: ['userkey'] }
-        ],
-        rollout: {
-          salt: '',
-          variations: [{ weight: 100000, variation: 1 }]
-        }
-      };
-      const flag = makeBooleanFlagWithRules([rule]);
-      const [err, detail, events] = await asyncEvaluate(Evaluator(), flag, user, eventFactory);
-      expect(detail.value).toBe(true);
-    });
+      expect(detail.value).toBe(null);
+    })
 
   async function testClauseMatch(clause, user, shouldBe) {
     const flag = makeBooleanFlagWithOneClause(clause);

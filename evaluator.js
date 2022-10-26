@@ -2,14 +2,11 @@ const crypto = require('crypto');
 
 const operators = require('./operators');
 const util = require('util');
-const stringifyAttrs = require('./utils/stringifyAttrs');
 const { safeAsyncEachSeries } = require('./utils/asyncUtils');
 const AttributeReference = require('./attribute_reference');
 const { checkContext } = require('./context');
 
-const builtins = ['key', 'secondary', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name', 'anonymous'];
-const legacyStringAttributes = ['key', 'secondary'];
-const metaStringAttributes = ['secondary'];
+const builtins = ['key', 'ip', 'country', 'email', 'firstName', 'lastName', 'avatar', 'name', 'anonymous'];
 
 const bigSegementsStatusPriority = {
   HEALTHY: 1,
@@ -19,39 +16,14 @@ const bigSegementsStatusPriority = {
 };
 
 function stringifyContextAttrs(context) {
-  if (context.kind === undefined) {
-    return stringifyAttrs(context, legacyStringAttributes);
+  // Only legacy contexts may have non-string keys.
+  if (context.kind === undefined && typeof context.key !== 'string') {
+    return {
+      ...context,
+      key: String(context.key),
+    };
   }
-
-  const withStringAttrs = {};
-  const keys = Object.keys(context);
-
-  keys.forEach(key => {
-    if (context.kind !== 'multi') {
-      if (key === '_meta') {
-        withStringAttrs[key] = stringifyAttrs(context._meta, metaStringAttributes);
-      } else {
-        withStringAttrs[key] = key === 'key' ? String(context[key]) : context[key];
-      }
-    } else {
-      if (key === 'kind') {
-        withStringAttrs[key] = context[key];
-      } else {
-        withStringAttrs[key] = {};
-        const keysInContext = Object.keys(context[key]);
-        keysInContext.forEach(keyInContext => {
-          if (keyInContext === '_meta') {
-            withStringAttrs[key][keyInContext] = stringifyAttrs(context[key]._meta, metaStringAttributes);
-          } else {
-            withStringAttrs[key][keyInContext] =
-              keyInContext === 'key' ? String(context[key][keyInContext]) : context[key][keyInContext];
-          }
-        });
-      }
-    }
-  });
-
-  return withStringAttrs;
+  return context;
 }
 
 const noop = () => {};
@@ -585,7 +557,7 @@ function segmentRuleMatchContext(rule, context, segmentKey, salt, queries, state
         stateOut.error = [new Error('Invalid attribute reference in rule.'), errorResult('MALFORMED_FLAG')]; // eslint-disable-line no-param-reassign
         return cb(false);
       }
-      const [bucket] = bucketContext(context, segmentKey, refAttr, salt, rule.contextKind, false);
+      const [bucket] = bucketContext(context, segmentKey, refAttr, salt, rule.contextKind);
       const weight = rule.weight / 100000.0;
       return cb(bucket < weight);
     }
@@ -678,8 +650,7 @@ function variationForUser(r, context, flag) {
         refAttr,
         flag.salt,
         rollout.seed,
-        rollout.contextKind,
-        isExperiment
+        rollout.contextKind
       );
       let sum = 0;
       for (let i = 0; i < variations.length; i++) {
@@ -798,12 +769,12 @@ function validateReference(isLegacy, attr) {
  * indicates if there was a context for the value specified by `kindForRollout`. If there was not
  * a context for the specified kind, then the `inExperiment` attribute should be `false`.
  */
-function bucketContext(context, key, attr, salt, seed, kindForRollout, isExperiment) {
+function bucketContext(context, key, attr, salt, seed, kindForRollout) {
   const kindOrDefault = kindForRollout || 'user';
   //Key pre-validated. So we can disregard the validation here.
   const [, value] = contextValue(context, kindOrDefault, attr, kindForRollout === undefined);
 
-  let idHash = bucketableStringValue(value);
+  const idHash = bucketableStringValue(value);
 
   if (idHash === null) {
     // If we got a value, then we know there was a context, but if we didn't get a value, then
@@ -812,17 +783,6 @@ function bucketContext(context, key, attr, salt, seed, kindForRollout, isExperim
     const contextForKind = getContextForKind(context, kindForRollout);
 
     return [0, !!contextForKind];
-  }
-
-  const secondary =
-    context.kind === undefined || context.kind === null ? context.secondary : context._meta && context._meta.secondary;
-
-  // The secondary key should not be used for experiments.
-  if (secondary !== undefined && secondary !== null && !isExperiment) {
-    // Because secondary keys could be in any context, and we aren't processing
-    // the entire context before evaluation, we ensure here that the secondary
-    // attribute is a string.
-    idHash += '.' + String(secondary);
   }
 
   const prefix = seed ? util.format('%d.', seed) : util.format('%s.%s.', key, salt);

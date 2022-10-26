@@ -41,12 +41,6 @@ function ContextFilter(config) {
       cloned._meta.redactedAttributes = excluded;
     }
     if (cloned._meta) {
-      if (cloned._meta.secondary === null) {
-        delete cloned._meta.secondary;
-      }
-      if (cloned._meta.secondary !== undefined) {
-        cloned._meta.secondary = String(cloned._meta.secondary);
-      }
       delete cloned._meta['privateAttributes'];
       if (Object.keys(cloned._meta).length === 0) {
         delete cloned._meta;
@@ -122,10 +116,6 @@ function ContextFilter(config) {
       filtered._meta.privateAttributes = user.privateAttributeNames.map(literal =>
         literal.startsWith('/') ? AttributeReference.literalToReference(literal) : literal
       );
-    }
-    if (user.secondary !== undefined && user.secondary !== null) {
-      filtered._meta = filtered._meta || {};
-      filtered._meta.secondary = String(user.secondary);
     }
 
     return filtered;

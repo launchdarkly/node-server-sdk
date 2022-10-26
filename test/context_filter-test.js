@@ -219,23 +219,6 @@ describe('when handling single kind contexts', () => {
     'dizzle': 'ghi'
   };
 
-  const contextWithNonStringKeyKeyAndSecondary = {
-    'kind': 'rebel',
-    'key': 42,
-    '_meta': {
-      'secondary': 0,
-    }
-  }
-
-  const contextWithNullSecondary = {
-    'kind': 'rebel',
-    'key': 42,
-    '_meta': {
-      'secondary': null,
-    }
-  }
-
-
   // expected results from serializing context
   const userWithAllAttrsHidden = {
     'kind': 'organization',
@@ -273,19 +256,6 @@ describe('when handling single kind contexts', () => {
     },
   };
 
-  const contextWithStringifiedKeyKeyAndSecondary = {
-    'kind': 'rebel',
-    'key': '42',
-    '_meta': {
-      'secondary': '0',
-    }
-  }
-
-  const contextWithNullSecondaryFiltered = {
-      'kind': 'rebel',
-      'key': '42',
-  };
-
   it('includes all attributes by default', () => {
     const uf = ContextFilter({});
     expect(uf.filter(context)).toEqual(context);
@@ -314,16 +284,6 @@ describe('when handling single kind contexts', () => {
   it('context remains anonymous even when all attributes are hidden', () => {
     var uf = ContextFilter({ allAttributesPrivate: true });
     expect(uf.filter(anonymousContext)).toEqual(contextWithAllAttrsHidden);
-  });
-
-  it('handles non-string key and secondary', () => {
-    var uf = ContextFilter({ allAttributesPrivate: true });
-    expect(uf.filter(contextWithNonStringKeyKeyAndSecondary)).toEqual(contextWithStringifiedKeyKeyAndSecondary);
-  });
-
-  it('does not produce "null" as a secondary attribute', () => {
-    const cf = ContextFilter({});
-    expect(cf.filter(contextWithNullSecondary)).toEqual(contextWithNullSecondaryFiltered);
   });
 
   it('converts non-boolean anonymous to boolean.', () => {
@@ -374,7 +334,6 @@ describe('when handling mult-kind contexts', () => {
         b: 'b'
       },
       _meta: {
-        secondary: 'order',
         privateAttributes: ['letters', '/object/b']
       }
     }
@@ -391,7 +350,6 @@ describe('when handling mult-kind contexts', () => {
     user: {
       key: 'abc',
       _meta: {
-        secondary: 'order',
         redactedAttributes: ['/letters', '/name', '/object', '/order']
       }
     }
@@ -416,7 +374,6 @@ describe('when handling mult-kind contexts', () => {
         a: 'a',
       },
       _meta: {
-        secondary: 'order',
         redactedAttributes: ['/letters', '/name', '/object/b']
       }
     }
@@ -440,7 +397,6 @@ describe('when handling mult-kind contexts', () => {
         a: 'a',
       },
       _meta: {
-        secondary: 'order',
         redactedAttributes: ['/letters', '/object/b']
       }
     }
