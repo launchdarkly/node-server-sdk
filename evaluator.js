@@ -323,7 +323,7 @@ function clauseMatchContext(c, context, queries, stateOut, matchedCb, segmentsVi
 
 function getContextValueForClause(c, context) {
   const kind = c.contextKind || 'user';
-  const isKindRule = c.attribute === 'kind';
+  const isKindRule = AttributeReference.isKind(c.attribute);
 
   if (isKindRule && context.kind !== 'multi') {
     return [true, context.kind || 'user'];

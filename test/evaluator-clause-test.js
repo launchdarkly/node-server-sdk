@@ -109,8 +109,8 @@ describe('Evaluator - clause user contexts', () => {
     expect(detail.value).toEqual(true);
   });
 
-  it('matches kind of implicit user', async () => {
-    const clause = { attribute: 'kind', op: 'in', values: ['user'] };
+  it.each(['kind', '/kind'])('matches kind of implicit user', async (kind) => {
+    const clause = { attribute: kind, op: 'in', values: ['user'] };
     const flag = makeBooleanFlagWithOneClause(clause);
     const [err, detail, events] = await asyncEvaluate(Evaluator(), flag, { key: 'x', name: 'Bob' }, eventFactory);
     expect(detail.value).toBe(true);
@@ -149,18 +149,19 @@ describe('Evaluator - clause non-user single-kind contexts', () => {
     expect(detail.value).toBe(true);
   });
 
-  it('matches clauses for the kind attribute', async () => {
+  it.each(['kind', '/kind'])('matches clauses for the kind attribute', async (kind) => {
     // The context kind here should not matter, but the 'kind' attribute should.
-    const clause = { attribute: 'kind', op: 'in', values: ['org'], contextKind: 'potato' };
+    const clause = { attribute: kind, op: 'in', values: ['org'], contextKind: 'potato' };
     const flag = makeBooleanFlagWithOneClause(clause);
     const context = { kind: 'org', name: 'Bob', key: 'bobkey' }
     const [err, detail, events] = await asyncEvaluate(Evaluator(), flag, context, eventFactory);
     expect(detail.value).toBe(true);
   });
 
-  it('does not match clauses for the kind attribute if the kind does not match', async () => {
+  it.each(['kind', '/kind'])('does not match clauses for the kind attribute if the kind does not match',
+  async (kind) => {
     // The context kind here should not matter, but the 'kind' attribute should.
-    const clause = { attribute: 'kind', op: 'in', values: ['org'], contextKind: 'potato' };
+    const clause = { attribute: kind, op: 'in', values: ['org'], contextKind: 'potato' };
     const flag = makeBooleanFlagWithOneClause(clause);
     const context = { kind: 'party', name: 'Bob', key: 'bobkey' }
     const [err, detail, events] = await asyncEvaluate(Evaluator(), flag, context, eventFactory);

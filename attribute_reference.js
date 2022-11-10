@@ -196,10 +196,22 @@ function isValidReference(reference) {
   return !reference.match(/\/\/|(^\/.*~[^0|^1])|~$/);
 }
 
+/**
+ * Check if the given attribute reference is for the "kind" attribute.
+ * @param {string} reference String containing an attribute reference.
+ */
+function isKind(reference) {
+  // There are only 2 valid ways to specify the kind attribute,
+  // so this just checks them. Given the current flow of evaluation
+  // this is much less intense a process than doing full validation and parsing.
+  return reference === 'kind' || reference === '/kind';
+}
+
 module.exports = {
   cloneExcluding,
   compare,
   get,
   isValidReference,
   literalToReference,
+  isKind,
 };

@@ -479,3 +479,16 @@ describe('when given a literal', () => {
     expect(AttributeReference.literalToReference("/~why")).toEqual("/~1~0why");
   });
 });
+
+it.each([
+  ['kind', true],
+  ['/kind', true],
+  ['potato', false],
+  ['/potato', false],
+  ['', false],
+  [undefined, false],
+  ['//', false],
+  ['/', false],
+])('can check if reference isKind', (ref, is) => {
+  expect(AttributeReference.isKind(ref)).toEqual(is);
+});
