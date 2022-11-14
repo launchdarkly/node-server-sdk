@@ -362,6 +362,18 @@ declare module 'launchdarkly-node-server-sdk' {
     /**
      * The names of any context attributes that should be marked as private, and not sent
      * to LaunchDarkly.
+     * 
+     * Any contexts sent to LaunchDarkly with this configuration active will have attributes with
+     * these names removed. This is in addition to any attributes that were marked as private for an
+     * individual context with {@link LDContextMeta.privateAttributes}. Setting 
+     * {@link LDOptions.allAttributesPrivate} to true overrides this.
+     * 
+     * If and only if a parameter starts with a slash, it is interpreted as a slash-delimited path
+     * that can denote a nested property within a JSON object. For instance, "/address/street" means
+     * that if there is an attribute called "address" that is a JSON object, and one of the object's
+     * properties is "street", the "street" property will be redacted from the analytics data but
+     * other properties within "address" will still be sent. This syntax also uses the JSON Pointer
+     * convention of escaping a literal slash character as "~1" and a tilde as "~0".
      */
     privateAttributes?: Array<string>;
 
@@ -566,91 +578,158 @@ declare module 'launchdarkly-node-server-sdk' {
   }
 
   /**
-   * 
-   * TODO: U2C We will need some uniform description for this.
-   * 
    * Meta attributes are used to control behavioral aspects of the Context.
-   * They cannot be addressed in targetting rules.
+   * They cannot be addressed in targeting rules.
    */
   export interface LDContextMeta {
     /**
      * 
-     * TODO: U2C Link to the pointer-like syntax and maybe a name for it?
+     * Designate any number of Context attributes, or properties within them, as private: that is,
+     * their values will not be sent to LaunchDarkly.
      * 
-     * Specifies a list of attribute names (either built-in or custom) which should be
-     * marked as private, and not sent to LaunchDarkly in analytics events. This is in
-     * addition to any private attributes designated in the global configuration
-     * with [[LDOptions.privateAttributes]] or [[LDOptions.allAttributesPrivate]].
+     * Each parameter can be a simple attribute name, such as "email". Or, if the first character is
+     * a slash, the parameter is interpreted as a slash-delimited path to a property within a JSON
+     * object, where the first path component is a Context attribute name and each following
+     * component is a nested property name: for example, suppose the attribute "address" had the
+     * following JSON object value:
+     * 
+     * ```
+     * 	{"street": {"line1": "abc", "line2": "def"}}
+     * ```
+     * 
+     * Using ["/address/street/line1"] in this case would cause the "line1" property to be marked as
+     * private. This syntax deliberately resembles JSON Pointer, but other JSON Pointer features
+     * such as array indexing are not supported for Private.
+     * 
+     * This action only affects analytics events that involve this particular Context. To mark some
+     * (or all) Context attributes as private for all users, use the overall configuration for the
+     * SDK.
+     * See {@link LDOptions.allAttributesPrivate} and {@link LDOptions.privateAttributes}.
+     * 
+     * The attributes "kind" and "key", and the "_meta" attributes cannot be made private.
+     * 
+     * In this example, firstName is marked as private, but lastName is not:
+     * 
+     * ```
+     * const context = {
+     *   kind: 'org',
+     *   key: 'my-key',
+     *   firstName: 'Pierre',
+     *   lastName: 'Menard',
+     *   _meta: {
+     *     privateAttributes: ['firstName'], 
+     *   }
+     * };
+     * ```
+     * 
+     * This is a metadata property, rather than an attribute that can be addressed in evaluations:
+     * that is, a rule clause that references the attribute name "privateAttributes", will not use
+     * this value, but instead will use whatever value (if any) you have set for that name with a
+     * method such as SetString.
      */
     privateAttributes?: string[];
   }
 
   interface LDContextCommon {
-      /**
-       * If true, the context will _not_ appear on the Contexts page in the LaunchDarkly dashboard.
-       */
-      anonymous?: boolean;
+    /**
+     * If true, the context will _not_ appear on the Contexts page in the LaunchDarkly dashboard.
+     */
+    anonymous?: boolean;
 
-      /**
-       * A unique string identifying a context.
-       */
-      key: string;
+    /**
+     * A unique string identifying a context.
+     */
+    key: string;
 
-      /**
-       * The context's name.
-       *
-       * You can search for contexts on the Contexts page by name.
-       */
-      name?: string;
+    /**
+     * The context's name.
+     *
+     * You can search for contexts on the Contexts page by name.
+     */
+    name?: string;
 
-      /**
-       * 
-       * TODO: U2C We will need some uniform description for this.
-       * 
-       * Meta attributes are used to control behavioral aspects of the Context.
-       * They cannot be addressed in targetting rules.
-       */
-      _meta?: LDContextMeta;
+    /**
+     * Meta attributes are used to control behavioral aspects of the Context, such as private
+     * private attributes. See {@link LDContextMeta.privateAttributes} as an example.
+     *
+     * They cannot be addressed in targeting rules.
+     */
+    _meta?: LDContextMeta;
 
-      /**
-       * Any additional attributes associated with the context.
-       */
-      [attribute: string]: any;
+    /**
+     * Any additional attributes associated with the context.
+     */
+    [attribute: string]: any;
   }
 
 
   /**
+   * A context which represents a single kind.
    * 
-   * TODO: U2C How do we want to describe this?
+   * For a single kind context the 'kind' may not be 'multi'.
    * 
-   * A single-kind context.
+   * ```
+   * const myOrgContext = {
+   *   kind: 'org',
+   *   key: 'my-org-key',
+   *   someAttribute: 'my-attribute-value'
+   * };
+   * ```
+   * 
+   * The above context would be a single kind context representing an organization. It has a key
+   * for that organization, and a single attribute 'someAttribute'.
    */
   interface LDSingleKindContext extends LDContextCommon {
-      /**
-       * The kind of the context.
-       */
-      kind: string;
+    /**
+     * The kind of the context.
+     */
+    kind: string;
   }
 
   /**
+   * A context which represents multiple kinds. Each kind having its own key and attributes.
    * 
-   * TODO: U2C How do we want to describe this?
+   * A multi-context must contain `kind: 'multi'` at the root.
    * 
-   * A multi-kind context.
+   * ```
+   * const myMultiContext = {
+   *   // Multi-contexts must be of kind 'multi'.
+   *   kind: 'multi',
+   *   // The context is namespaced by its kind. This is an 'org' kind context.
+   *   org: {
+   *     // Each component context has its own key and attributes.
+   *     key: 'my-org-key',
+   *     someAttribute: 'my-attribute-value',
+   *   },
+   *   user: {
+   *     key: 'my-user-key',
+   *     firstName: 'Bob',
+   *     lastName: 'Bobberson',
+   *     _meta: {
+   *       // Each component context has its own _meta attributes. This will only apply the this
+   *       // 'user' context.
+   *       privateAttributes: ['firstName']
+   *     }
+   *   }
+   * };
+   * ```
+   * 
+   * The above multi-context contains both an 'org' and a 'user'. Each with their own key,
+   * attributes, and _meta attributes.
    */
   interface LDMultiKindContext {
-      /**
-       * The kind of the context.
-       */
-      kind: "multi",
+    /**
+     * The kind of the context.
+     */
+    kind: "multi",
 
-      /**
-       * The contexts which compose this multi-kind context.
-       * 
-       * These should be of type LDContextCommon. "multi" is to allow
-       * for the top level "kind" attribute.
-       */
-      [kind: string]: "multi" | LDContextCommon;
+    /**
+     * The contexts which compose this multi-kind context.
+     * 
+     * These should be of type LDContextCommon. "multi" is to allow
+     * for the top level "kind" attribute.
+     */
+    [kind: string]: "multi" | LDContextCommon;
   }
 
   /**
@@ -754,10 +833,10 @@ declare module 'launchdarkly-node-server-sdk' {
      */
     custom?: {
       [key: string]:
-        | string
-        | boolean
-        | number
-        | Array<string | boolean | number>;
+      | string
+      | boolean
+      | number
+      | Array<string | boolean | number>;
     };
 
     /**
@@ -1393,7 +1472,7 @@ declare module 'launchdarkly-node-server-sdk' {
  */
 declare module 'launchdarkly-node-server-sdk/integrations' {
   import { LDLogger } from 'launchdarkly-node-server-sdk';
-  
+
   /**
    * Configuration for [[FileDataSource]].
    */
@@ -1642,7 +1721,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *    variation: 0 for the first, 1 for the second, etc.
      * @return the flag builder
      */
-    fallthroughVariation(variation: boolean|number): TestDataFlagBuilder;
+    fallthroughVariation(variation: boolean | number): TestDataFlagBuilder;
 
     /**
      * Specifies the off variation for a flag. This is the variation that is
@@ -1656,7 +1735,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *    variation: 0 for the first, 1 for the second, etc.
      * @return the flag builder
      */
-    offVariation(variation: boolean|number): TestDataFlagBuilder;
+    offVariation(variation: boolean | number): TestDataFlagBuilder;
 
     /**
      * Sets the flag to always return the specified variation for all contexts.
@@ -1673,7 +1752,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *    0 for the first, 1 for the second, etc.
      * @return the flag builder
      */
-    variationForAll(variation: boolean|number): TestDataFlagBuilder;
+    variationForAll(variation: boolean | number): TestDataFlagBuilder;
 
     /**
      * Sets the flag to always return the specified variation value for all contexts.
@@ -1707,7 +1786,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *    0 for the first, 1 for the second, etc.
      * @return the flag builder
      */
-    variationForUser(contextKey: string, variation: boolean|number): TestDataFlagBuilder;
+    variationForUser(contextKey: string, variation: boolean | number): TestDataFlagBuilder;
 
     /**
      * Sets the flag to return the specified variation for a specific context key
@@ -1728,7 +1807,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *    0 for the first, 1 for the second, etc.
      * @return the flag builder
      */
-    variationForContext(contextKind: string, contextKey: string, variation: boolean|number): TestDataFlagBuilder;
+    variationForContext(contextKind: string, contextKey: string, variation: boolean | number): TestDataFlagBuilder;
 
     /**
      * Removes any existing rules from the flag. This undoes the effect of methods
@@ -1763,7 +1842,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *    a flag rule builder; call `thenReturn` to finish the rule
      *    or add more tests with another method like `andMatch`
      */
-    ifMatch(contextKind: string, attribute: string, ...values:any): TestDataRuleBuilder;
+    ifMatch(contextKind: string, attribute: string, ...values: any): TestDataRuleBuilder;
 
     /**
      * Starts defining a flag rule using the "is not one of" operator.
@@ -1782,7 +1861,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *    a flag rule builder; call `thenReturn` to finish the rule
      *    or add more tests with another method like `andNotMatch`
      */
-    ifNotMatch(contextKind: string, attribute: string, ...values:any): TestDataRuleBuilder;
+    ifNotMatch(contextKind: string, attribute: string, ...values: any): TestDataRuleBuilder;
   }
 
   /**
@@ -1815,7 +1894,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      * @param values values to compare to
      * @return the flag rule builder
      */
-    andMatch(contextKind: string, attribute: string, ...values:any): TestDataRuleBuilder;
+    andMatch(contextKind: string, attribute: string, ...values: any): TestDataRuleBuilder;
 
     /**
      * Adds another clause using the "is not one of" operator.
@@ -1833,7 +1912,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      * @param values values to compare to
      * @return the flag rule builder
      */
-    andNotMatch(contextKind: string, attribute: string, ...values:any): TestDataRuleBuilder;
+    andNotMatch(contextKind: string, attribute: string, ...values: any): TestDataRuleBuilder;
 
     /**
      * Finishes defining the rule, specifying the result value as either a boolean or an index
@@ -1849,7 +1928,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *    0 for the first, 1 for the second, etc.
      * @return the flag rule builder
      */
-    thenReturn(variation: boolean|number): TestDataFlagBuilder;
+    thenReturn(variation: boolean | number): TestDataFlagBuilder;
   }
 }
 
@@ -2084,7 +2163,7 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
    * @see [[PersistentDataStore]]
    * @see [[PersistentDataStoreNonAtomic]]
    */
-   export interface PersistentDataStoreBase {
+  export interface PersistentDataStoreBase {
     /**
      * Get an entity from the store.
      *
@@ -2178,7 +2257,7 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
    *
    * @see [[PersistentDataStore]]
    */
-   export interface PersistentDataStoreNonAtomic {
+  export interface PersistentDataStoreNonAtomic {
     /**
      * Initialize the store, overwriting any existing data.
      *
@@ -2223,7 +2302,7 @@ declare module 'launchdarkly-node-server-sdk/requestor' {
 /**
  * @ignore
  */
- declare module 'launchdarkly-node-server-sdk/feature_store' {
+declare module 'launchdarkly-node-server-sdk/feature_store' {
   import { LDFeatureStore } from 'launchdarkly-node-server-sdk';
 
   function InMemoryFeatureStore(): LDFeatureStore;
@@ -2233,15 +2312,14 @@ declare module 'launchdarkly-node-server-sdk/requestor' {
 /**
  * @ignore
  */
- declare module 'launchdarkly-node-server-sdk/caching_store_wrapper' {
+declare module 'launchdarkly-node-server-sdk/caching_store_wrapper' {
   import { LDFeatureStore } from 'launchdarkly-node-server-sdk';
   import { PersistentDataStore, PersistentDataStoreNonAtomic } from 'launchdarkly-node-server-sdk/interfaces';
 
   /**
    * A base feature store implementation used by database integrations.
    */
-  class CachingStoreWrapper implements LDFeatureStore
-  {
+  class CachingStoreWrapper implements LDFeatureStore {
     /**
      * Creates a feature store implementation with standard caching behavior for a persistent store.
      *
@@ -2275,7 +2353,7 @@ declare module 'launchdarkly-node-server-sdk/requestor' {
 /**
  * @ignore
  */
- declare module 'launchdarkly-node-server-sdk/sharedtest/store_tests' {
+declare module 'launchdarkly-node-server-sdk/sharedtest/store_tests' {
   import * as ld from 'launchdarkly-node-server-sdk';
   import * as interfaces from 'launchdarkly-node-server-sdk/interfaces';
 
