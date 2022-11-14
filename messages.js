@@ -27,3 +27,5 @@ exports.wrongOptionTypeBoolean = (name, actualType) =>
   `Config option "${name}" should be a boolean, got ${actualType}, converting to boolean`;
 
 exports.invalidTagValue = name => `Config option "${name}" must only contain letters, numbers, ., _ or -.`;
+
+exports.tagValueTooLong = name => `Value of "${name}" was longer than 64 characters and was discarded.`;

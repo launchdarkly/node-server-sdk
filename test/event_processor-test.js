@@ -1,6 +1,6 @@
 const { DiagnosticsManager, DiagnosticId } = require('../diagnostic_events');
 const EventProcessor = require('../event_processor');
-const { sleepAsync, TestHttpHandlers, TestHttpServer, withCloseable } = require('launchdarkly-js-test-helpers');
+const { failOnTimeout, TestHttpHandlers, TestHttpServer, withCloseable } = require('launchdarkly-js-test-helpers');
 
 describe('EventProcessor', () => {
 
@@ -557,8 +557,8 @@ describe('EventProcessor', () => {
       ep.sendEvent({ kind: 'identify', creationDate: 1000, context: user });
 
       // unfortunately we must wait for both the flush interval and the 1-second retry interval
-      await sleepAsync(1500);
-      expect(s.requestCount()).toEqual(2);
+      await failOnTimeout(s.nextRequest(), 500, 'timed out waiting for event payload');
+      await failOnTimeout(s.nextRequest(), 1500, 'timed out waiting for event payload');
     });
   }));
 

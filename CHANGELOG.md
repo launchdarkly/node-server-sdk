@@ -2,6 +2,24 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [6.4.3] - 2022-09-06
+### Fixed:
+- The `TestDataRuleBuilder` was using an incorrect field name for operators, which would prevent rules from working correctly with the `TestData` feature. (Thanks, [LiamMorrow](https://github.com/launchdarkly/node-server-sdk/issues/258)!)
+
+## [6.4.2] - 2022-06-06
+### Changed:
+- Enforce a 64 character limit for `application.id` and `application.version` configuration options.
+
+## [6.4.1] - 2022-04-26
+### Fixed:
+- When using polling mode (`stream: false`), if the SDK was shut down with `close()`, a timer task could still remain active for up to 30 seconds (or whatever the polling interval was set to).
+
+## [6.4.0] - 2022-03-22
+This release is functionally identical to the 6.3.1 release. It exists for compliance with semantic versioning, and to correct the changelog: the new feature described below was accidentally omitted from the changelog, and the minor version number should have been incremented.
+
+### Added:
+- `LDOptions.application`, for configuration of application metadata that may be used in LaunchDarkly analytics or other product features. This does not affect feature flag evaluations.
+
 ## [6.3.1] - 2022-03-10
 ### Fixed:
 - Removed a transitive dependency on the package `url-parse`, which was flagged in [CVE-2022-0686](https://nvd.nist.gov/vuln/detail/CVE-2022-0686).

@@ -4,35 +4,31 @@ const dataKind = require('./versioned_data_kind');
 
 function PollingProcessor(config, requestor) {
   const processor = {},
-    featureStore = config.featureStore;
+    featureStore = config.featureStore,
+    intervalMs = config.pollInterval * 1000;
+
   let stopped = false;
-  let handle = null;
+
+  let pollTask;
 
   function poll(maybeCallback) {
-    handle = null;
     const cb = maybeCallback || function () {};
 
     if (stopped) {
       return;
     }
 
-    const startTime = new Date().getTime();
     config.logger.debug('Polling LaunchDarkly for feature flag updates');
+
     requestor.requestAllData((err, respBody) => {
-      const elapsed = new Date().getTime() - startTime;
-      const sleepFor = Math.max(config.pollInterval * 1000 - elapsed, 0);
-      config.logger.debug('Elapsed: %d ms, sleeping for %d ms', elapsed, sleepFor);
       if (err) {
         if (err.status && !errors.isHttpErrorRecoverable(err.status)) {
           const message = messages.httpErrorMessage(err, 'polling request');
           config.logger.error(message);
           cb(new errors.LDPollingError(message));
+          processor.stop();
         } else {
           config.logger.warn(messages.httpErrorMessage(err, 'polling request', 'will retry'));
-          // Recursively call poll after the appropriate delay
-          handle = setTimeout(() => {
-            poll(cb);
-          }, sleepFor);
         }
       } else {
         if (respBody) {
@@ -42,30 +38,25 @@ function PollingProcessor(config, requestor) {
           initData[dataKind.segments.namespace] = allData.segments;
           featureStore.init(initData, () => {
             cb();
-            // Recursively call poll after the appropriate delay
-            handle = setTimeout(() => {
-              poll(cb);
-            }, sleepFor);
           });
-        } else {
-          // There wasn't an error but there wasn't any new data either, so just keep polling
-          handle = setTimeout(() => {
-            poll(cb);
-          }, sleepFor);
         }
+        // There wasn't an error but there wasn't any new data either, so just keep polling
       }
     });
   }
 
   processor.start = cb => {
-    poll(cb);
+    if (!pollTask && !stopped) {
+      pollTask = setInterval(() => poll(cb), intervalMs);
+      // setInterval always waits for the delay before firing the first time, but we want to do an initial poll right away
+      poll(cb);
+    }
   };
 
   processor.stop = () => {
     stopped = true;
-    if (handle) {
-      clearTimeout(handle);
-      handle = null;
+    if (pollTask) {
+      clearInterval(pollTask);
     }
   };
 

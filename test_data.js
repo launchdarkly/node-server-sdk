@@ -97,7 +97,7 @@ TestDataFlagBuilder.prototype.copy = function () {
   to._on = this._on;
   to._fallthroughVariation = this._fallthroughVariation;
   to._targetsByVariation = !this._targetsByVariation ? null : new Map(this._targetsByVariation);
-  to._rules = !this._rules ? null : JSON.parse(JSON.stringify(this._rules));
+  to._rules = !this._rules ? null : this._rules.map(r => r.copy(this));
   return to;
 };
 
@@ -276,7 +276,7 @@ TestDataRuleBuilder.prototype.andMatch = function (contextKind, attribute, ...va
   this._clauses.push({
     contextKind,
     attribute: attribute,
-    operator: 'in',
+    op: 'in',
     values: values,
     negate: false,
   });
@@ -287,7 +287,7 @@ TestDataRuleBuilder.prototype.andNotMatch = function (contextKind, attribute, ..
   this._clauses.push({
     contextKind,
     attribute: attribute,
-    operator: 'in',
+    op: 'in',
     values: values,
     negate: true,
   });
@@ -311,6 +311,13 @@ TestDataRuleBuilder.prototype.build = function (id) {
     variation: this._variation,
     clauses: this._clauses,
   };
+};
+
+TestDataRuleBuilder.prototype.copy = function (flagBuilder) {
+  const flagRuleBuilder = new TestDataRuleBuilder(flagBuilder);
+  flagRuleBuilder._clauses = JSON.parse(JSON.stringify(this._clauses));
+  flagRuleBuilder._variation = JSON.parse(JSON.stringify(this._variation));
+  return flagRuleBuilder;
 };
 
 module.exports = TestData;
