@@ -624,8 +624,7 @@ declare module 'launchdarkly-node-server-sdk' {
      * 
      * This is a metadata property, rather than an attribute that can be addressed in evaluations:
      * that is, a rule clause that references the attribute name "privateAttributes", will not use
-     * this value, but instead will use whatever value (if any) you have set for that name with a
-     * method such as SetString.
+     * this value, but would use a "privateAttributes" attribute set on the context.
      */
     privateAttributes?: string[];
   }
@@ -743,8 +742,8 @@ declare module 'launchdarkly-node-server-sdk' {
    * This type exists for easing migration to contexts, but code should be moved to use single/multi
    * contexts.
    *
-   * @deprecated
-   * The LDUser object is currently supported for ease of upgrade.
+   * The LDUser object is currently supported for ease of upgrade. It may be removed in a future
+   * release.
    * In order to convert an LDUser into a LDSingleKindContext the following changes should
    * be made.
    * 
