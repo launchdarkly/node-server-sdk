@@ -315,45 +315,37 @@ describe('LDClient - analytics events', () => {
       });
     });
 
-    it('generates event for existing feature when user key is missing', async () => {
+    it.each([
+      { name: 'Bob' },
+      undefined,
+      null,
+      {
+        kind: "multi",
+        org: {
+          // Missing key
+          name: "bad org"
+        },
+        user: {
+          key: "user-key"
+        }
+      },
+      {
+        kind: 'potato'
+      },
+      {
+        kind: 'kind',
+        key: 'bad'
+      },
+    ])('does not generate events for bad contexts', async (badContext) => {
       const td = TestData();
       td.update(td.flag('flagkey').on(true).variations('a', 'b').fallthroughVariation(1));
-      var client = stubs.createClient({ eventProcessor, updateProcessor: td });
-      var badUser = { name: 'Bob' };
+      const client = stubs.createClient({ eventProcessor, updateProcessor: td });
       await client.waitForInitialization();
-      await client.variation('flagkey', badUser, 'c');
+      await client.variation('flagkey', badContext, 'c');
 
-      expect(eventProcessor.events).toHaveLength(1);
-      var e = eventProcessor.events[0];
-      expect(e).toMatchObject({
-        kind: 'feature',
-        key: 'flagkey',
-        version: 1,
-        context: badUser,
-        variation: null,
-        value: 'c',
-        default: 'c'
-      });
+      expect(eventProcessor.events).toHaveLength(0);
     });
 
-    it('generates event for existing feature when user is null', async () => {
-      const td = TestData();
-      td.update(td.flag('flagkey').on(true).variations('a', 'b').fallthroughVariation(1));
-      var client = stubs.createClient({ eventProcessor, updateProcessor: td });
-      await client.waitForInitialization();
-      await client.variation('flagkey', null, 'c');
-
-      expect(eventProcessor.events).toHaveLength(1);
-      var e = eventProcessor.events[0];
-      expect(e).toMatchObject({
-        kind: 'feature',
-        key: 'flagkey',
-        version: 1,
-        context: null,
-        value: 'c',
-        default: 'c'
-      });
-    });
   });
 
   describe('identify', () => {

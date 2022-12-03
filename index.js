@@ -248,18 +248,24 @@ const newClient = function (sdkKey, originalConfig) {
     }
 
     config.featureStore.get(dataKind.features, key, flag => {
-      if (!flag) {
-        maybeReportError(new errors.LDClientError('Unknown feature flag "' + key + '"; returning default value'));
-        const result = errorResult('FLAG_NOT_FOUND', defaultVal);
-        eventProcessor.sendEvent(eventFactory.newUnknownFlagEvent(key, context, result));
-        return resolve(result);
-      }
-
       if (!context) {
         const variationErr = new errors.LDClientError('No context specified. Returning default value.');
         maybeReportError(variationErr);
         const result = errorResult('USER_NOT_SPECIFIED', defaultVal);
-        eventProcessor.sendEvent(eventFactory.newDefaultEvent(flag, context, result));
+        return resolve(result);
+      }
+
+      if (!checkContext(context, true)) {
+        const variationErr = new errors.LDClientError('Invalid context specified. Returning default value.');
+        maybeReportError(variationErr);
+        const result = errorResult('USER_NOT_SPECIFIED', defaultVal);
+        return resolve(result);
+      }
+
+      if (!flag) {
+        maybeReportError(new errors.LDClientError(`Unknown feature flag "${key}"; returning default value`));
+        const result = errorResult('FLAG_NOT_FOUND', defaultVal);
+        eventProcessor.sendEvent(eventFactory.newUnknownFlagEvent(key, context, result));
         return resolve(result);
       }
 
