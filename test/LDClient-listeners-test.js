@@ -1,7 +1,8 @@
 const { TestData } = require('../integrations');
 
 const { withClient } = require('./stubs');
-import { AsyncQueue, withCloseable } from 'launchdarkly-js-test-helpers';
+import { AsyncQueue } from 'launchdarkly-js-test-helpers';
+import { makeFlagWithSegmentMatch } from './evaluator_helpers';
 
 describe('LDClient event listeners', () => {
   describe('flag change events', () => {
@@ -40,6 +41,110 @@ describe('LDClient event listeners', () => {
         const flag2Change = await flag2Changes.take();
         expect(flag2Change.key).toEqual('flag2');
       });
+    });
+
+    it('sends an event when a segment used by a flag is updated', async () => {
+      const td = TestData();
+      const segment  = {
+        key: 'segment1',
+        includedContexts: [ {contextKind: 'org', values: ['org-key']} ],
+        version: 1
+      };
+
+      td.usePreconfiguredSegment(segment);
+      td.usePreconfiguredFlag(makeFlagWithSegmentMatch(segment));
+
+      await withClient({ updateProcessor: td }, async client => {
+        const flagChanges = new AsyncQueue();
+        client.on('update:feature', params => flagChanges.add(params));
+
+        td.usePreconfiguredSegment({
+          key: 'segment1',
+          includedContexts: [ {contextKind: 'org', values: ['org-key', 'second-key']} ],
+          version: 2
+        });
+
+        const flagChange = await flagChanges.take();
+        expect(flagChange.key).toEqual('feature');
+      });
+    });
+  });
+
+  it('sends an event for a nested segment update', async () => {
+    const td = TestData();
+    const segment1 = {
+      key: 'segment1',
+      includedContexts: [ {contextKind: 'org', values: ['org-key']} ],
+      version: 1
+    };
+    const segment2 = {
+      key: 'segment2',
+      rules: [
+        {
+          clauses: [ { attribute: '', op: 'segmentMatch', values: [segment1.key] } ],
+          weight: 100000
+        }
+      ],
+      version: 1
+    };
+    td.usePreconfiguredSegment(segment1);
+    td.usePreconfiguredSegment(segment2);
+    td.usePreconfiguredFlag(makeFlagWithSegmentMatch(segment2));
+
+    await withClient({ updateProcessor: td }, async client => {
+      const flagChanges = new AsyncQueue();
+      client.on('update:feature', params => flagChanges.add(params));
+
+      td.usePreconfiguredSegment({
+        key: 'segment1',
+        includedContexts: [ {contextKind: 'org', values: ['org-key', 'second-key']} ],
+        version: 2
+      });
+
+      const flagChange = await flagChanges.take();
+      expect(flagChange.key).toEqual('feature');
+    });
+  });
+
+  it('does not hang on circular segment dependencies', async () => {
+    const td = TestData();
+    const segment1 = {
+      key: 'segment1',
+      clauses: [ { attribute: '', op: 'segmentMatch', values: ['segment2'] } ],
+      version: 1
+    };
+    const segment2 = {
+      key: 'segment2',
+      rules: [
+        {
+          clauses: [ { attribute: '', op: 'segmentMatch', values: [segment1.key] } ],
+          weight: 100000
+        }
+      ],
+      version: 1
+    };
+    
+    td.usePreconfiguredSegment(segment1);
+    td.usePreconfiguredSegment(segment2);
+    td.usePreconfiguredFlag(makeFlagWithSegmentMatch(segment2));
+
+    // The implementation happens to produce the event anyway,
+    // but what we really care  about is that it doesn't hang.
+    // So, if in the future, it didn't produce an event for this malformed flag,
+    // then that would likely be ok. The malformed nature of a circular
+    // dependency should be transient.
+    await withClient({ updateProcessor: td }, async client => {
+      const flagChanges = new AsyncQueue();
+      client.on('update:feature', params => flagChanges.add(params));
+
+      td.usePreconfiguredSegment({
+        key: 'segment1',
+        includedContexts: [ {contextKind: 'org', values: ['org-key', 'second-key']} ],
+        version: 2
+      });
+
+      const flagChange = await flagChanges.take();
+      expect(flagChange.key).toEqual('feature');
     });
   });
 
