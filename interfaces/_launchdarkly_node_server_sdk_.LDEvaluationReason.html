@@ -24,9 +24,9 @@ the variations in the experiment. Otherwise it is false or undefined.</p>
 <p>The general category of the reason:</p>
 </div><div><ul>
 <li><code>&#39;OFF&#39;</code>: The flag was off and therefore returned its configured off value.</li>
-<li><code>&#39;FALLTHROUGH&#39;</code>: The flag was on but the user did not match any targets or rules.</li>
-<li><code>&#39;TARGET_MATCH&#39;</code>: The user key was specifically targeted for this flag.</li>
-<li><code>&#39;RULE_MATCH&#39;</code>: the user matched one of the flag&#39;s rules.</li>
+<li><code>&#39;FALLTHROUGH&#39;</code>: The flag was on but the context did not match any targets or rules.</li>
+<li><code>&#39;TARGET_MATCH&#39;</code>: The context key was specifically targeted for this flag.</li>
+<li><code>&#39;RULE_MATCH&#39;</code>: the context matched one of the flag&#39;s rules.</li>
 <li><code>&#39;PREREQUISITE_FAILED&#39;</code>: The flag was considered off because it had at least one
 prerequisite flag that either was off or did not return the desired variation.</li>
 <li><code>&#39;ERROR&#39;</code>: The flag could not be evaluated, e.g. because it does not exist or due
