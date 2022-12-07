@@ -19,8 +19,7 @@ function makeSdkConfig(options, tag) {
     cf.capacity = options.events.capacity;
     cf.diagnosticOptOut = !options.events.enableDiagnostics;
     cf.flushInterval = maybeTime(options.events.flushIntervalMs);
-    cf.inlineUsersInEvents = options.events.inlineUsers;
-    cf.privateAttributeNames = options.events.globalPrivateAttributes;
+    cf.privateAttributes = options.events.globalPrivateAttributes;
   }
   if (options.tags) {
     cf.application = {
@@ -65,9 +64,9 @@ async function newSdkClientEntity(options) {
       case 'evaluate': {
         const pe = params.evaluate;
         if (pe.detail) {
-          return await client.variationDetail(pe.flagKey, pe.user, pe.defaultValue);
+          return await client.variationDetail(pe.flagKey, pe.context || pe.user, pe.defaultValue);
         } else {
-          const value = await client.variation(pe.flagKey, pe.user, pe.defaultValue);
+          const value = await client.variation(pe.flagKey, pe.context || pe.user, pe.defaultValue);
           return { value };
         }
       }
@@ -79,22 +78,18 @@ async function newSdkClientEntity(options) {
           detailsOnlyForTrackedFlags: pea.detailsOnlyForTrackedFlags,
           withReasons: pea.withReasons,
         };
-        return { state: await client.allFlagsState(pea.user, eao) };
+        return { state: await client.allFlagsState(pea.context || pea.user, eao) };
       }
 
       case 'identifyEvent':
-        client.identify(params.identifyEvent.user);
+        client.identify(params.identifyEvent.context || params.identifyEvent.user);
         return undefined;
 
       case 'customEvent': {
         const pce = params.customEvent;
-        client.track(pce.eventKey, pce.user, pce.data, pce.metricValue);
+        client.track(pce.eventKey, pce.context || pce.user, pce.data, pce.metricValue);
         return undefined;
       }
-
-      case 'aliasEvent':
-        client.alias(params.aliasEvent.user, params.aliasEvent.previousUser);
-        return undefined;
 
       case 'flushEvents':
         client.flush();

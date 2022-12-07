@@ -10,8 +10,8 @@ describe('EventProcessor', () => {
     eventsUri: eventsUri,
     capacity: 100,
     flushInterval: 30,
-    userKeysCapacity: 1000,
-    userKeysFlushInterval: 300,
+    contextKeysCapacity: 1000,
+    contextKeysFlushInterval: 300,
     diagnosticRecordingInterval: 900,
     logger: {
       debug: jest.fn(),
@@ -19,12 +19,18 @@ describe('EventProcessor', () => {
     }
   };
   const user = { key: 'userKey', name: 'Red' };
+  const singleKindUser = { ...user, kind: 'user' };
   const anonUser = { key: 'anon-user', name: 'Anon', anonymous: true };
-  const filteredUser = { key: 'userKey', privateAttrs: [ 'name' ] };
-  const numericUser = { key: 1, secondary: 2, ip: 3, country: 4, email: 5, firstName: 6, lastName: 7,
-    avatar: 8, name: 9, anonymous: false, custom: { age: 99 } };
-  const stringifiedNumericUser = { key: '1', secondary: '2', ip: '3', country: '4', email: '5', firstName: '6',
-    lastName: '7', avatar: '8', name: '9', anonymous: false, custom: { age: 99 } };
+  const singleKindAnonUser = {key: 'anon-user', kind: 'user', name: 'Anon', anonymous: true };
+  const filteredUser = { key: 'userKey', kind: 'user', _meta: { redactedAttributes: ['/name'] } };
+  const numericUser = {
+    key: 1, ip: 3, country: 4, email: 5, firstName: 6, lastName: 7,
+    avatar: 8, name: 9, anonymous: false, custom: { age: 99 }
+  };
+  const stringifiedNumericUser = {
+    kind: 'user', key: '1', ip: '3', country: '4', email: '5', firstName: '6',
+    lastName: '7', avatar: '8', name: '9', age: 99,  anonymous: false
+  };
 
   function eventsServerTest(asyncCallback) {
     return async () => withCloseable(TestHttpServer.start, async server => {
@@ -60,22 +66,13 @@ describe('EventProcessor', () => {
     return { date: new Date(timestamp).toUTCString() };
   }
 
-  function checkIndexEvent(e, source, user) {
+  function checkIndexEvent(e, source, context) {
     expect(e.kind).toEqual('index');
     expect(e.creationDate).toEqual(source.creationDate);
-    expect(e.user).toEqual(user);
+    expect(e.context).toEqual(context);
   }
 
-  function checkAliasEvent(e, source) {
-    expect(e.kind).toEqual('alias');
-    expect(e.creationDate).toEqual(source.creationDate);
-    expect(e.key).toEqual(source.key);
-    expect(e.previousKey).toEqual(source.previousKey);
-    expect(e.contextKind).toEqual(source.contextKind);
-    expect(e.previousContextKind).toEqual(source.previousContextKind);
-  }
-
-  function checkFeatureEvent(e, source, debug, inlineUser) {
+  function checkFeatureEvent(e, source, debug, contextKeys, inlineContext) {
     expect(e.kind).toEqual(debug ? 'debug' : 'feature');
     expect(e.creationDate).toEqual(source.creationDate);
     expect(e.key).toEqual(source.key);
@@ -84,30 +81,21 @@ describe('EventProcessor', () => {
     expect(e.value).toEqual(source.value);
     expect(e.default).toEqual(source.default);
     expect(e.reason).toEqual(source.reason);
-    if (inlineUser) {
-      expect(e.user).toEqual(inlineUser);
+    if (inlineContext) {
+      expect(e.context).toEqual(inlineContext);
     } else {
-      expect(e.userKey).toEqual(String(source.user.key));
-    }
-    if (source.user.anonymous) {
-      expect(e.contextKind).toEqual('anonymousUser');
+      expect(e.contextKeys).toEqual(contextKeys);
     }
   }
 
-  function checkCustomEvent(e, source, inlineUser) {
+  function checkCustomEvent(e, source, contextKeys) {
     expect(e.kind).toEqual('custom');
     expect(e.creationDate).toEqual(source.creationDate);
     expect(e.key).toEqual(source.key);
     expect(e.data).toEqual(source.data);
     expect(e.metricValue).toBe(source.metricValue);
-    if (inlineUser) {
-      expect(e.user).toEqual(inlineUser);
-    } else {
-      expect(e.userKey).toEqual(source.user.key);
-    }
-    if (source.user.anonymous) {
-      expect(e.contextKind).toEqual('anonymousUser');
-    }
+
+    expect(e.contextKeys).toEqual(contextKeys);
   }
 
   function checkSummaryEvent(e) {
@@ -120,7 +108,7 @@ describe('EventProcessor', () => {
 
   it('queues identify event', eventsServerTest(async s => {
     await withEventProcessor(defaultConfig, s, async ep => {
-      const e = { kind: 'identify', creationDate: 1000, user: user };
+      const e = { kind: 'identify', creationDate: 1000, context: user };
       ep.sendEvent(e);
       await ep.flush();
 
@@ -128,8 +116,7 @@ describe('EventProcessor', () => {
       expect(output).toEqual([{
         kind: 'identify',
         creationDate: 1000,
-        key: user.key,
-        user: user
+        context: singleKindUser
       }]);
     });
   }));
@@ -137,7 +124,7 @@ describe('EventProcessor', () => {
   it('filters user in identify event', eventsServerTest(async s => {
     const config = Object.assign({}, defaultConfig, { allAttributesPrivate: true });
     await withEventProcessor(config, s, async ep => {
-      const e = { kind: 'identify', creationDate: 1000, user: user };
+      const e = { kind: 'identify', creationDate: 1000, context: user };
       ep.sendEvent(e);
       await ep.flush();
 
@@ -145,15 +132,14 @@ describe('EventProcessor', () => {
       expect(output).toEqual([{
         kind: 'identify',
         creationDate: 1000,
-        key: user.key,
-        user: filteredUser
+        context: filteredUser
       }]);
     });
   }));
 
   it('stringifies user attributes in identify event', eventsServerTest(async s => {
     await withEventProcessor(defaultConfig, s, async ep => {
-      const e = { kind: 'identify', creationDate: 1000, user: numericUser };
+      const e = { kind: 'identify', creationDate: 1000, context: numericUser };
       ep.sendEvent(e);
       await ep.flush();
 
@@ -161,53 +147,56 @@ describe('EventProcessor', () => {
       expect(output).toEqual([{
         kind: 'identify',
         creationDate: 1000,
-        key: stringifiedNumericUser.key,
-        user: stringifiedNumericUser
+        context: stringifiedNumericUser
       }]);
     });
   }));
 
   it('queues individual feature event with index event', eventsServerTest(async s => {
     await withEventProcessor(defaultConfig, s, async ep => {
-      const e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
-        version: 11, variation: 1, value: 'value', trackEvents: true };
+      const e = {
+        kind: 'feature', creationDate: 1000, context: user, key: 'flagkey',
+        version: 11, variation: 1, value: 'value', trackEvents: true
+      };
       ep.sendEvent(e);
       await ep.flush();
 
       const output = await getJsonRequest(s);
       expect(output.length).toEqual(3);
-      checkIndexEvent(output[0], e, user);
-      checkFeatureEvent(output[1], e, false);
+      checkIndexEvent(output[0], e, singleKindUser);
+      checkFeatureEvent(output[1], e, false, {user: 'userKey'});
       checkSummaryEvent(output[2]);
     });
   }));
 
   it('handles the version being 0', eventsServerTest(async s => {
     await withEventProcessor(defaultConfig, s, async ep => {
-      const e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
+      const e = { kind: 'feature', creationDate: 1000, context: user, key: 'flagkey',
         version: 0, variation: 1, value: 'value', trackEvents: true };
       ep.sendEvent(e);
       await ep.flush();
 
       const output = await getJsonRequest(s);
       expect(output.length).toEqual(3);
-      checkIndexEvent(output[0], e, user);
-      checkFeatureEvent(output[1], e, false);
+      checkIndexEvent(output[0], e, singleKindUser);
+      checkFeatureEvent(output[1], e, false, {user: 'userKey'});
       checkSummaryEvent(output[2]);
     });
   }));
 
   it('queues individual feature event with index event for anonymous user', eventsServerTest(async s => {
     await withEventProcessor(defaultConfig, s, async ep => {
-      const e = { kind: 'feature', creationDate: 1000, user: anonUser, key: 'flagkey',
-        version: 11, variation: 1, value: 'value', contextKind: 'anonymousUser', trackEvents: true };
+      const e = {
+        kind: 'feature', creationDate: 1000, context: anonUser, key: 'flagkey',
+        version: 11, variation: 1, value: 'value', trackEvents: true
+      };
       ep.sendEvent(e);
       await ep.flush();
 
       const output = await getJsonRequest(s);
       expect(output.length).toEqual(3);
-      checkIndexEvent(output[0], e, anonUser);
-      checkFeatureEvent(output[1], e, false);
+      checkIndexEvent(output[0], e, singleKindAnonUser);
+      checkFeatureEvent(output[1], e, false, {user: 'anon-user'});
       checkSummaryEvent(output[2]);
     });
   }));
@@ -215,123 +204,70 @@ describe('EventProcessor', () => {
   it('filters user in index event', eventsServerTest(async s => {
     const config = Object.assign({}, defaultConfig, { allAttributesPrivate: true });
     await withEventProcessor(config, s, async ep => {
-      const e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
-        version: 11, variation: 1, value: 'value', trackEvents: true };
+      const e = {
+        kind: 'feature', creationDate: 1000, context: user, key: 'flagkey',
+        version: 11, variation: 1, value: 'value', trackEvents: true
+      };
       ep.sendEvent(e);
       await ep.flush();
 
       const output = await getJsonRequest(s);
       expect(output.length).toEqual(3);
       checkIndexEvent(output[0], e, filteredUser);
-      checkFeatureEvent(output[1], e, false);
+      checkFeatureEvent(output[1], e, false, {user: 'userKey'});
       checkSummaryEvent(output[2]);
     });
   }));
 
   it('stringifies user attributes in index event', eventsServerTest(async s => {
     await withEventProcessor(defaultConfig, s, async ep => {
-      const e = { kind: 'feature', creationDate: 1000, user: numericUser, key: 'flagkey',
-        version: 11, variation: 1, value: 'value', trackEvents: true };
+      const e = {
+        kind: 'feature', creationDate: 1000, context: numericUser, key: 'flagkey',
+        version: 11, variation: 1, value: 'value', trackEvents: true
+      };
       ep.sendEvent(e);
       await ep.flush();
 
       const output = await getJsonRequest(s);
       expect(output.length).toEqual(3);
       checkIndexEvent(output[0], e, stringifiedNumericUser);
-      checkFeatureEvent(output[1], e, false);
+      checkFeatureEvent(output[1], e, false, {user: '1'});
       checkSummaryEvent(output[2]);
     });
   }));
 
-  it('can include inline user in feature event', eventsServerTest(async s => {
-    const config = Object.assign({}, defaultConfig, { inlineUsersInEvents: true });
-    await withEventProcessor(config, s, async ep => {
-      const e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
-        version: 11, variation: 1, value: 'value', trackEvents: true };
-      ep.sendEvent(e);
-      await ep.flush();
-
-      const output = await getJsonRequest(s);
-      expect(output.length).toEqual(2);
-      checkFeatureEvent(output[0], e, false, user);
-      checkSummaryEvent(output[1]);
-    });
-  }));
-
-  it('filters user in feature event', eventsServerTest(async s => {
-    const config = Object.assign({}, defaultConfig, { allAttributesPrivate: true,
-      inlineUsersInEvents: true });
-    await withEventProcessor(config, s, async ep => {
-      const e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
-        version: 11, variation: 1, value: 'value', trackEvents: true };
-      ep.sendEvent(e);
-      await ep.flush();
-
-      const output = await getJsonRequest(s);
-      expect(output.length).toEqual(2);
-      checkFeatureEvent(output[0], e, false, filteredUser);
-      checkSummaryEvent(output[1]);
-    });
-  }));
-
-  it('stringifies user attributes in feature event', eventsServerTest(async s => {
-    const config = Object.assign({}, defaultConfig, { inlineUsersInEvents: true });
-    await withEventProcessor(config, s, async ep => {
-      const e = { kind: 'feature', creationDate: 1000, user: numericUser, key: 'flagkey',
-        version: 11, variation: 1, value: 'value', trackEvents: true };
-      ep.sendEvent(e);
-      await ep.flush();
-
-      const output = await getJsonRequest(s);
-      expect(output.length).toEqual(2);
-      checkFeatureEvent(output[0], e, false, stringifiedNumericUser);
-      checkSummaryEvent(output[1]);
-    });
-  }));
-
   it('can include reason in feature event', eventsServerTest(async s => {
-    const config = Object.assign({}, defaultConfig, { inlineUsersInEvents: true });
-    await withEventProcessor(config, s, async ep => {
-      const e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
+    await withEventProcessor(defaultConfig, s, async ep => {
+      const e = {
+        kind: 'feature', creationDate: 1000, context: user, key: 'flagkey',
         version: 11, variation: 1, value: 'value', trackEvents: true,
-        reason: { kind: 'FALLTHROUGH' } };
+        reason: { kind: 'FALLTHROUGH' }
+      };
       ep.sendEvent(e);
       await ep.flush();
 
       const output = await getJsonRequest(s);
-      expect(output.length).toEqual(2);
-      checkFeatureEvent(output[0], e, false, user);
-      checkSummaryEvent(output[1]);
-    });
-  }));
-
-  it('still generates index event if inlineUsers is true but feature event is not tracked', eventsServerTest(async s => {
-    const config = Object.assign({}, defaultConfig, { inlineUsersInEvents: true });
-    await withEventProcessor(config, s, async ep => {
-      const e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
-        version: 11, variation: 1, value: 'value', trackEvents: false };
-      ep.sendEvent(e);
-      await ep.flush();
-
-      const output = await getJsonRequest(s);
-      expect(output.length).toEqual(2);
-      checkIndexEvent(output[0], e, user);
-      checkSummaryEvent(output[1]);
+      expect(output.length).toEqual(3);
+      checkIndexEvent(output[0], e, singleKindUser);
+      checkFeatureEvent(output[1], e, false, {user: 'userKey'});
+      checkSummaryEvent(output[2]);
     });
   }));
 
   it('sets event kind to debug if event is temporarily in debug mode', eventsServerTest(async s => {
     await withEventProcessor(defaultConfig, s, async ep => {
       var futureTime = new Date().getTime() + 1000000;
-      const e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
-        version: 11, variation: 1, value: 'value', trackEvents: false, debugEventsUntilDate: futureTime };
+      const e = {
+        kind: 'feature', creationDate: 1000, context: user, key: 'flagkey',
+        version: 11, variation: 1, value: 'value', trackEvents: false, debugEventsUntilDate: futureTime
+      };
       ep.sendEvent(e);
       await ep.flush();
 
       const output = await getJsonRequest(s);
       expect(output.length).toEqual(3);
-      checkIndexEvent(output[0], e, user);
-      checkFeatureEvent(output[1], e, true, user);
+      checkIndexEvent(output[0], e, singleKindUser);
+      checkFeatureEvent(output[1], e, true, {user: 'userKey'}, singleKindUser);
       checkSummaryEvent(output[2]);
     });
   }));
@@ -339,16 +275,18 @@ describe('EventProcessor', () => {
   it('can both track and debug an event', eventsServerTest(async s => {
     await withEventProcessor(defaultConfig, s, async ep => {
       const futureTime = new Date().getTime() + 1000000;
-      const e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
-        version: 11, variation: 1, value: 'value', trackEvents: true, debugEventsUntilDate: futureTime };
+      const e = {
+        kind: 'feature', creationDate: 1000, context: user, key: 'flagkey',
+        version: 11, variation: 1, value: 'value', trackEvents: true, debugEventsUntilDate: futureTime
+      };
       ep.sendEvent(e);
       await ep.flush();
 
       const output = await getJsonRequest(s);
       expect(output.length).toEqual(4);
-      checkIndexEvent(output[0], e, user);
-      checkFeatureEvent(output[1], e, false);
-      checkFeatureEvent(output[2], e, true, user);
+      checkIndexEvent(output[0], e, singleKindUser);
+      checkFeatureEvent(output[1], e, false, {user: 'userKey'});
+      checkFeatureEvent(output[2], e, true, {user: 'userKey'}, singleKindUser);
       checkSummaryEvent(output[3]);
     });
   }));
@@ -360,22 +298,24 @@ describe('EventProcessor', () => {
       s.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(200, headersWithDate(serverTime)));
 
       // Send and flush an event we don't care about, just to set the last server time        
-      ep.sendEvent({ kind: 'identify', user: { key: 'otherUser' } });
+      ep.sendEvent({ kind: 'identify', context: { key: 'otherUser' } });
       await ep.flush();
       await s.nextRequest();
 
       // Now send an event with debug mode on, with a "debug until" time that is further in
       // the future than the server time, but in the past compared to the client.
       const debugUntil = serverTime + 1000;
-      const e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
-        version: 11, variation: 1, value: 'value', trackEvents: false, debugEventsUntilDate: debugUntil };
+      const e = {
+        kind: 'feature', creationDate: 1000, context: user, key: 'flagkey',
+        version: 11, variation: 1, value: 'value', trackEvents: false, debugEventsUntilDate: debugUntil
+      };
       ep.sendEvent(e);
       await ep.flush();
 
       // Should get a summary event only, not a full feature event
       const output = await getJsonRequest(s);
       expect(output.length).toEqual(2);
-      checkIndexEvent(output[0], e, user);
+      checkIndexEvent(output[0], e, singleKindUser);
       checkSummaryEvent(output[1]);
     });
   }));
@@ -387,58 +327,68 @@ describe('EventProcessor', () => {
       s.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(200, headersWithDate(serverTime)));
 
       // Send and flush an event we don't care about, just to set the last server time
-      ep.sendEvent({ kind: 'identify', user: { key: 'otherUser' } });
+      ep.sendEvent({ kind: 'identify', context: { key: 'otherUser' } });
       await ep.flush();
       await s.nextRequest();
 
       // Now send an event with debug mode on, with a "debug until" time that is further in
       // the future than the client time, but in the past compared to the server.
       const debugUntil = serverTime - 1000;
-      const e = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey',
-        version: 11, variation: 1, value: 'value', trackEvents: false, debugEventsUntilDate: debugUntil };
+      const e = {
+        kind: 'feature', creationDate: 1000, context: user, key: 'flagkey',
+        version: 11, variation: 1, value: 'value', trackEvents: false, debugEventsUntilDate: debugUntil
+      };
       ep.sendEvent(e);
       await ep.flush();
 
       // Should get a summary event only, not a full feature event
       const output = await getJsonRequest(s);
       expect(output.length).toEqual(2);
-      checkIndexEvent(output[0], e, user);
+      checkIndexEvent(output[0], e, singleKindUser);
       checkSummaryEvent(output[1]);
     });
   }));
 
   it('generates only one index event from two feature events for same user', eventsServerTest(async s => {
     await withEventProcessor(defaultConfig, s, async ep => {
-      const e1 = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey1',
-        version: 11, variation: 1, value: 'value', trackEvents: true };
-      const e2 = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey2',
-        version: 11, variation: 1, value: 'value', trackEvents: true };
+      const e1 = {
+        kind: 'feature', creationDate: 1000, context: user, key: 'flagkey1',
+        version: 11, variation: 1, value: 'value', trackEvents: true
+      };
+      const e2 = {
+        kind: 'feature', creationDate: 1000, context: user, key: 'flagkey2',
+        version: 11, variation: 1, value: 'value', trackEvents: true
+      };
       ep.sendEvent(e1);
       ep.sendEvent(e2);
       await ep.flush();
 
       const output = await getJsonRequest(s);
       expect(output.length).toEqual(4);
-      checkIndexEvent(output[0], e1, user);
-      checkFeatureEvent(output[1], e1, false);
-      checkFeatureEvent(output[2], e2, false);
+      checkIndexEvent(output[0], e1, singleKindUser);
+      checkFeatureEvent(output[1], e1, false, {user: 'userKey'});
+      checkFeatureEvent(output[2], e2, false, {user: 'userKey'});
       checkSummaryEvent(output[3]);
     });
   }));
 
   it('summarizes nontracked events', eventsServerTest(async s => {
     await withEventProcessor(defaultConfig, s, async ep => {
-      const e1 = { kind: 'feature', creationDate: 1000, user: user, key: 'flagkey1',
-        version: 11, variation: 1, value: 'value1', default: 'default1', trackEvents: false };
-      const e2 = { kind: 'feature', creationDate: 2000, user: user, key: 'flagkey2',
-        version: 22, variation: 1, value: 'value2', default: 'default2', trackEvents: false };
+      const e1 = {
+        kind: 'feature', creationDate: 1000, context: user, key: 'flagkey1',
+        version: 11, variation: 1, value: 'value1', default: 'default1', trackEvents: false
+      };
+      const e2 = {
+        kind: 'feature', creationDate: 2000, context: user, key: 'flagkey2',
+        version: 22, variation: 1, value: 'value2', default: 'default2', trackEvents: false
+      };
       ep.sendEvent(e1);
       ep.sendEvent(e2);
       await ep.flush();
 
       const output = await getJsonRequest(s);
       expect(output.length).toEqual(2);
-      checkIndexEvent(output[0], e1, user);
+      checkIndexEvent(output[0], e1, singleKindUser);
       const se = output[1];
       checkSummaryEvent(se);
       expect(se.startDate).toEqual(1000);
@@ -446,111 +396,62 @@ describe('EventProcessor', () => {
       expect(se.features).toEqual({
         flagkey1: {
           default: 'default1',
-          counters: [ { version: 11, variation: 1, value: 'value1', count: 1 } ]
+          counters: [{ version: 11, variation: 1, value: 'value1', count: 1 }],
+          contextKinds: ['user']
         },
         flagkey2: {
           default: 'default2',
-          counters: [ { version: 22, variation: 1, value: 'value2', count: 1 } ]
+          counters: [{ version: 22, variation: 1, value: 'value2', count: 1 }],
+          contextKinds: ['user']
         }
       });
     });
   }));
 
-  it('queues alias event', eventsServerTest(async s => {
-    await withEventProcessor(defaultConfig, s, async ep => {
-      const e = { kind: 'alias', creationDate: 1000, contextKind: 'user',
-        previousContextKind: 'anonymousUser', key: 'known-user', previousKey: 'anon-user' };
-      ep.sendEvent(e);
-      await ep.flush();
-
-      const output = await getJsonRequest(s);
-      expect(output.length).toEqual(1);
-      checkAliasEvent(output[0], e);
-    });
-  }));
-
   it('queues custom event with user', eventsServerTest(async s => {
     await withEventProcessor(defaultConfig, s, async ep => {
-      const e = { kind: 'custom', creationDate: 1000, user: user, key: 'eventkey',
-        data: { thing: 'stuff' } };
+      const e = {
+        kind: 'custom', creationDate: 1000, context: user, key: 'eventkey',
+        data: { thing: 'stuff' }
+      };
       ep.sendEvent(e);
       await ep.flush();
 
       const output = await getJsonRequest(s);
       expect(output.length).toEqual(2);
-      checkIndexEvent(output[0], e, user);
-      checkCustomEvent(output[1], e);
+      checkIndexEvent(output[0], e, singleKindUser);
+      checkCustomEvent(output[1], e, {user: 'userKey'});
     });
   }));
 
   it('queues custom event with anonymous user', eventsServerTest(async s => {
     await withEventProcessor(defaultConfig, s, async ep => {
-      const e = { kind: 'custom', creationDate: 1000, user: anonUser, key: 'eventkey',
-      contextKind: 'anonymousUser', data: { thing: 'stuff' } };
+      const e = {
+        kind: 'custom', creationDate: 1000, context: anonUser, key: 'eventkey', data: { thing: 'stuff' }
+      };
       ep.sendEvent(e);
       await ep.flush();
 
       const output = await getJsonRequest(s);
       expect(output.length).toEqual(2);
-      checkIndexEvent(output[0], e, anonUser);
-      checkCustomEvent(output[1], e);
+      checkIndexEvent(output[0], e, singleKindAnonUser);
+      checkCustomEvent(output[1], e, {user: 'anon-user'});
     });
   }));
 
   it('can include metric value in custom event', eventsServerTest(async s => {
     await withEventProcessor(defaultConfig, s, async ep => {
-      const e = { kind: 'custom', creationDate: 1000, user: user, key: 'eventkey',
-        data: { thing: 'stuff' }, metricValue: 1.5 };
+      const e = {
+        kind: 'custom', creationDate: 1000, context: user, key: 'eventkey',
+        data: { thing: 'stuff' }, metricValue: 1.5
+      };
       ep.sendEvent(e);
       await ep.flush();
 
       const output = await getJsonRequest(s);
       expect(output.length).toEqual(2);
-      checkIndexEvent(output[0], e, user);
-      checkCustomEvent(output[1], e);
-    });
-  }));
-
-  it('can include inline user in custom event', eventsServerTest(async s => {
-    const config = Object.assign({}, defaultConfig, { inlineUsersInEvents: true });
-    await withEventProcessor(config, s, async ep => {
-      const e = { kind: 'custom', creationDate: 1000, user: user, key: 'eventkey',
-        data: { thing: 'stuff' } };
-      ep.sendEvent(e);
-      await ep.flush();
-
-      const output = await getJsonRequest(s);
-      expect(output.length).toEqual(1);
-      checkCustomEvent(output[0], e, user);
-    });
-  }));
-
-  it('stringifies user attributes in custom event', eventsServerTest(async s => {
-    const config = Object.assign({}, defaultConfig, { inlineUsersInEvents: true });
-    await withEventProcessor(config, s, async ep => {
-      const e = { kind: 'custom', creationDate: 1000, user: numericUser, key: 'eventkey',
-        data: { thing: 'stuff' } };
-      ep.sendEvent(e);
-      await ep.flush();
-
-      const output = await getJsonRequest(s);
-      expect(output.length).toEqual(1);
-      checkCustomEvent(output[0], e, stringifiedNumericUser);
-    });
-  }));
-
-  it('filters user in custom event', eventsServerTest(async s => {
-    const config = Object.assign({}, defaultConfig, { allAttributesPrivate: true,
-      inlineUsersInEvents: true });
-    await withEventProcessor(config, s, async ep => {
-      const e = { kind: 'custom', creationDate: 1000, user: user, key: 'eventkey',
-        data: { thing: 'stuff' } };
-      ep.sendEvent(e);
-      await ep.flush();
-
-      const output = await getJsonRequest(s);
-      expect(output.length).toEqual(1);
-      checkCustomEvent(output[0], e, filteredUser);
+      checkIndexEvent(output[0], e, singleKindUser);
+      checkCustomEvent(output[1], e, {user: 'userKey'});
     });
   }));
 
@@ -563,7 +464,7 @@ describe('EventProcessor', () => {
 
   it('sends SDK key', eventsServerTest(async s => {
     await withEventProcessor(defaultConfig, s, async ep => {
-      const e = { kind: 'identify', creationDate: 1000, user: user };
+      const e = { kind: 'identify', creationDate: 1000, context: user };
       ep.sendEvent(e);
       await ep.flush();
 
@@ -574,7 +475,7 @@ describe('EventProcessor', () => {
 
   it('sends unique payload IDs', eventsServerTest(async s => {
     await withEventProcessor(defaultConfig, s, async ep => {
-      const e = { kind: 'identify', creationDate: 1000, user: user };
+      const e = { kind: 'identify', creationDate: 1000, context: user };
       ep.sendEvent(e);
       await ep.flush();
       ep.sendEvent(e);
@@ -594,7 +495,7 @@ describe('EventProcessor', () => {
     return eventsServerTest(async s => {
       s.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(status));
       await withEventProcessor(defaultConfig, s, async ep => {
-        const e = { kind: 'identify', creationDate: 1000, user: user };
+        const e = { kind: 'identify', creationDate: 1000, context: user };
         ep.sendEvent(e);
         await expect(ep.flush()).rejects.toThrow('error ' + status);
 
@@ -612,7 +513,7 @@ describe('EventProcessor', () => {
     return eventsServerTest(async s => {
       s.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(status));
       await withEventProcessor(defaultConfig, s, async ep => {
-        var e = { kind: 'identify', creationDate: 1000, user: user };
+        var e = { kind: 'identify', creationDate: 1000, context: user };
         ep.sendEvent(e);
         await expect(ep.flush()).rejects.toThrow('error ' + status);
 
@@ -648,12 +549,12 @@ describe('EventProcessor', () => {
   it('swallows errors from failed background flush', eventsServerTest(async s => {
     // This test verifies that when a background flush fails, we don't emit an unhandled
     // promise rejection. Jest will fail the test if we do that.
-    
+
     const config = Object.assign({}, defaultConfig, { flushInterval: 0.25 });
     await withEventProcessor(config, s, async ep => {
       s.forMethodAndPath('post', '/bulk', TestHttpHandlers.respond(500));
 
-      ep.sendEvent({ kind: 'identify', creationDate: 1000, user: user });
+      ep.sendEvent({ kind: 'identify', creationDate: 1000, context: user });
 
       // unfortunately we must wait for both the flush interval and the 1-second retry interval
       await failOnTimeout(s.nextRequest(), 500, 'timed out waiting for event payload');
@@ -676,14 +577,14 @@ describe('EventProcessor', () => {
         expect(data.platform).toMatchObject({ name: 'Node' });
       });
     }));
-  
+
     it('sends periodic diagnostic event', eventsServerTest(async s => {
       const startTime = new Date().getTime();
       const config = Object.assign({}, defaultConfig, { diagnosticRecordingInterval: 0.1 });
       await withDiagnosticEventProcessor(config, s, async (ep, id) => {
         const req0 = await s.nextRequest();
         expect(req0.path).toEqual('/diagnostic');
-        
+
         const req1 = await s.nextRequest();
         expect(req1.path).toEqual('/diagnostic');
         const data = JSON.parse(req1.body);
@@ -696,7 +597,7 @@ describe('EventProcessor', () => {
         expect(data.eventsInLastBatch).toEqual(0);
       });
     }));
-  
+
     it('counts events in queue from last flush and dropped events', eventsServerTest(async s => {
       const startTime = new Date().getTime();
       const config = Object.assign({}, defaultConfig, { diagnosticRecordingInterval: 0.1, capacity: 2 });
@@ -704,9 +605,9 @@ describe('EventProcessor', () => {
         const req0 = await s.nextRequest();
         expect(req0.path).toEqual('/diagnostic');
 
-        ep.sendEvent({ kind: 'identify', creationDate: 1000, user: user });
-        ep.sendEvent({ kind: 'identify', creationDate: 1001, user: user });
-        ep.sendEvent({ kind: 'identify', creationDate: 1002, user: user });
+        ep.sendEvent({ kind: 'identify', creationDate: 1000, context: user });
+        ep.sendEvent({ kind: 'identify', creationDate: 1001, context: user });
+        ep.sendEvent({ kind: 'identify', creationDate: 1002, context: user });
         await ep.flush();
 
         // We can't be sure which will be posted first, the regular events or the diagnostic event
@@ -732,11 +633,11 @@ describe('EventProcessor', () => {
             droppedEvents: 1,
             deduplicatedUsers: 0,
             eventsInLastBatch: 2,
-         }),
+          }),
         });
       });
     }));
-  
+
     it('counts deduplicated users', eventsServerTest(async s => {
       const startTime = new Date().getTime();
       const config = Object.assign({}, defaultConfig, { diagnosticRecordingInterval: 0.1 });
@@ -744,8 +645,8 @@ describe('EventProcessor', () => {
         const req0 = await s.nextRequest();
         expect(req0.path).toEqual('/diagnostic');
 
-        ep.sendEvent({ kind: 'track', key: 'eventkey1', creationDate: 1000, user: user });
-        ep.sendEvent({ kind: 'track', key: 'eventkey2', creationDate: 1001, user: user });
+        ep.sendEvent({ kind: 'track', key: 'eventkey1', creationDate: 1000, context: user });
+        ep.sendEvent({ kind: 'track', key: 'eventkey2', creationDate: 1001, context: user });
         await ep.flush();
 
         // We can't be sure which will be posted first, the regular events or the diagnostic event
@@ -771,7 +672,7 @@ describe('EventProcessor', () => {
             droppedEvents: 0,
             deduplicatedUsers: 1,
             eventsInLastBatch: 3, // 2 "track" + 1 "index"
-         }),
+          }),
         });
       });
     }));

@@ -113,9 +113,9 @@ declare module 'launchdarkly-node-server-sdk' {
      * The general category of the reason:
      *
      * - `'OFF'`: The flag was off and therefore returned its configured off value.
-     * - `'FALLTHROUGH'`: The flag was on but the user did not match any targets or rules.
-     * - `'TARGET_MATCH'`: The user key was specifically targeted for this flag.
-     * - `'RULE_MATCH'`: the user matched one of the flag's rules.
+     * - `'FALLTHROUGH'`: The flag was on but the context did not match any targets or rules.
+     * - `'TARGET_MATCH'`: The context key was specifically targeted for this flag.
+     * - `'RULE_MATCH'`: the context matched one of the flag's rules.
      * - `'PREREQUISITE_FAILED'`: The flag was considered off because it had at least one
      *   prerequisite flag that either was off or did not return the desired variation.
      * - `'ERROR'`: The flag could not be evaluated, e.g. because it does not exist or due
@@ -352,7 +352,7 @@ declare module 'launchdarkly-node-server-sdk' {
     sendEvents?: boolean;
 
     /**
-     * Whether all user attributes (except the user key) should be marked as private, and
+     * Whether all context attributes (except the contexy key) should be marked as private, and
      * not sent to LaunchDarkly.
      *
      * By default, this is false.
@@ -360,24 +360,46 @@ declare module 'launchdarkly-node-server-sdk' {
     allAttributesPrivate?: boolean;
 
     /**
-     * The names of any user attributes that should be marked as private, and not sent
+     * The names of any context attributes that should be marked as private, and not sent
      * to LaunchDarkly.
+     * 
+     * Any contexts sent to LaunchDarkly with this configuration active will have attributes with
+     * these names removed. This is in addition to any attributes that were marked as private for an
+     * individual context with {@link LDContextMeta.privateAttributes}. Setting 
+     * {@link LDOptions.allAttributesPrivate} to true overrides this.
+     * 
+     * If and only if a parameter starts with a slash, it is interpreted as a slash-delimited path
+     * that can denote a nested property within a JSON object. For instance, "/address/street" means
+     * that if there is an attribute called "address" that is a JSON object, and one of the object's
+     * properties is "street", the "street" property will be redacted from the analytics data but
+     * other properties within "address" will still be sent. This syntax also uses the JSON Pointer
+     * convention of escaping a literal slash character as "~1" and a tilde as "~0".
      */
-    privateAttributeNames?: Array<string>;
+    privateAttributes?: Array<string>;
 
     /**
-     * Whether to include full user details in every analytics event.
+     * The number of context keys that the event processor can remember at any one time,
+     * so that duplicate context details will not be sent in analytics events.
      *
-     * The default is `false`: events will only include the user key, except for one "index" event
-     * that provides the full details for the user.
+     * Defaults to 1000.
      */
-    inlineUsersInEvents?: boolean;
+    contextKeysCapacity?: number;
+
+    /**
+     * The interval (in seconds) at which the event processor will reset its set of
+     * known context keys.
+     *
+     * Defaults to 300.
+     */
+    contextKeysFlushInterval?: number;
 
     /**
      * The number of user keys that the event processor can remember at any one time,
      * so that duplicate user details will not be sent in analytics events.
      *
      * Defaults to 1000.
+     * 
+     * @deprecated Use contextKeysCapacity instead.
      */
     userKeysCapacity?: number;
 
@@ -386,6 +408,8 @@ declare module 'launchdarkly-node-server-sdk' {
      * known user keys.
      *
      * Defaults to 300.
+     * 
+     * @deprecated Use contextKeysFlushInterval instead.
      */
     userKeysFlushInterval?: number;
 
@@ -554,22 +578,205 @@ declare module 'launchdarkly-node-server-sdk' {
   }
 
   /**
-   * A LaunchDarkly user object.
+   * Meta attributes are used to control behavioral aspects of the Context.
+   * They cannot be addressed in targeting rules.
+   */
+  export interface LDContextMeta {
+    /**
+     * 
+     * Designate any number of Context attributes, or properties within them, as private: that is,
+     * their values will not be sent to LaunchDarkly.
+     * 
+     * Each parameter can be a simple attribute name, such as "email". Or, if the first character is
+     * a slash, the parameter is interpreted as a slash-delimited path to a property within a JSON
+     * object, where the first path component is a Context attribute name and each following
+     * component is a nested property name: for example, suppose the attribute "address" had the
+     * following JSON object value:
+     * 
+     * ```
+     * 	{"street": {"line1": "abc", "line2": "def"}}
+     * ```
+     * 
+     * Using ["/address/street/line1"] in this case would cause the "line1" property to be marked as
+     * private. This syntax deliberately resembles JSON Pointer, but other JSON Pointer features
+     * such as array indexing are not supported for Private.
+     * 
+     * This action only affects analytics events that involve this particular Context. To mark some
+     * (or all) Context attributes as private for all users, use the overall configuration for the
+     * SDK.
+     * See {@link LDOptions.allAttributesPrivate} and {@link LDOptions.privateAttributes}.
+     * 
+     * The attributes "kind" and "key", and the "_meta" attributes cannot be made private.
+     * 
+     * In this example, firstName is marked as private, but lastName is not:
+     * 
+     * ```
+     * const context = {
+     *   kind: 'org',
+     *   key: 'my-key',
+     *   firstName: 'Pierre',
+     *   lastName: 'Menard',
+     *   _meta: {
+     *     privateAttributes: ['firstName'], 
+     *   }
+     * };
+     * ```
+     * 
+     * This is a metadata property, rather than an attribute that can be addressed in evaluations:
+     * that is, a rule clause that references the attribute name "privateAttributes", will not use
+     * this value, but would use a "privateAttributes" attribute set on the context.
+     */
+    privateAttributes?: string[];
+  }
+
+  interface LDContextCommon {
+    /**
+     * If true, the context will _not_ appear on the Contexts page in the LaunchDarkly dashboard.
+     */
+    anonymous?: boolean;
+
+    /**
+     * A unique string identifying a context.
+     */
+    key: string;
+
+    /**
+     * The context's name.
+     *
+     * You can search for contexts on the Contexts page by name.
+     */
+    name?: string;
+
+    /**
+     * Meta attributes are used to control behavioral aspects of the Context, such as private
+     * private attributes. See {@link LDContextMeta.privateAttributes} as an example.
+     *
+     * They cannot be addressed in targeting rules.
+     */
+    _meta?: LDContextMeta;
+
+    /**
+     * Any additional attributes associated with the context.
+     */
+    [attribute: string]: any;
+  }
+
+
+  /**
+   * A context which represents a single kind.
+   * 
+   * For a single kind context the 'kind' may not be 'multi'.
+   * 
+   * ```
+   * const myOrgContext = {
+   *   kind: 'org',
+   *   key: 'my-org-key',
+   *   someAttribute: 'my-attribute-value'
+   * };
+   * ```
+   * 
+   * The above context would be a single kind context representing an organization. It has a key
+   * for that organization, and a single attribute 'someAttribute'.
+   */
+  interface LDSingleKindContext extends LDContextCommon {
+    /**
+     * The kind of the context.
+     */
+    kind: string;
+  }
+
+  /**
+   * A context which represents multiple kinds. Each kind having its own key and attributes.
+   * 
+   * A multi-context must contain `kind: 'multi'` at the root.
+   * 
+   * ```
+   * const myMultiContext = {
+   *   // Multi-contexts must be of kind 'multi'.
+   *   kind: 'multi',
+   *   // The context is namespaced by its kind. This is an 'org' kind context.
+   *   org: {
+   *     // Each component context has its own key and attributes.
+   *     key: 'my-org-key',
+   *     someAttribute: 'my-attribute-value',
+   *   },
+   *   user: {
+   *     key: 'my-user-key',
+   *     firstName: 'Bob',
+   *     lastName: 'Bobberson',
+   *     _meta: {
+   *       // Each component context has its own _meta attributes. This will only apply the this
+   *       // 'user' context.
+   *       privateAttributes: ['firstName']
+   *     }
+   *   }
+   * };
+   * ```
+   * 
+   * The above multi-context contains both an 'org' and a 'user'. Each with their own key,
+   * attributes, and _meta attributes.
+   */
+  interface LDMultiKindContext {
+    /**
+     * The kind of the context.
+     */
+    kind: "multi",
+
+    /**
+     * The contexts which compose this multi-kind context.
+     * 
+     * These should be of type LDContextCommon. "multi" is to allow
+     * for the top level "kind" attribute.
+     */
+    [kind: string]: "multi" | LDContextCommon;
+  }
+
+  /**
+   * A LaunchDarkly context object.
+   */
+  export type LDContext = LDUser | LDSingleKindContext | LDMultiKindContext;
+
+  /**
+   * A legacy LaunchDarkly user object.
+   * 
+   * This type exists for easing migration to contexts, but code should be moved to use single/multi
+   * contexts.
+   *
+   * The LDUser object is currently supported for ease of upgrade. It may be removed in a future
+   * release.
+   * In order to convert an LDUser into a LDSingleKindContext the following changes should
+   * be made.
+   * 
+   * 1.) Add a kind to the object. `kind: 'user'`.
+   * 
+   * 2.) Move custom attributes to the top level of the object.
+   * 
+   * 3.) Move `privateAttributeNames` to `_meta.privateAttributes`.
+   * 
+   * ```
+   * const LDUser: user = {
+   *   key: '1234',
+   *   privateAttributeNames: ['myAttr']
+   *   custom: {
+   *     myAttr: 'value'
+   *   }
+   * }
+   * 
+   * const LDSingleKindContext: context = {
+   *   kind: 'user',
+   *   key: '1234',
+   *   myAttr: 'value'
+   *   _meta: {
+   *     privateAttributes: ['myAttr']
+   *   }
+   * }
+   * ```
    */
   export interface LDUser {
     /**
      * A unique string identifying a user.
      */
     key: string;
-
-    /**
-     * An optional secondary key for a user.
-     *
-     * This affects [feature flag targeting](https://docs.launchdarkly.com/home/flags/targeting-users#targeting-rules-based-on-user-attributes)
-     * as follows: if you have chosen to bucket users by a specific attribute, the secondary key (if set)
-     * is used to further distinguish between users who are otherwise identical according to that attribute.
-     */
-    secondary?: string;
 
     /**
      * The user's name.
@@ -625,10 +832,10 @@ declare module 'launchdarkly-node-server-sdk' {
      */
     custom?: {
       [key: string]:
-        | string
-        | boolean
-        | number
-        | Array<string | boolean | number>;
+      | string
+      | boolean
+      | number
+      | Array<string | boolean | number>;
     };
 
     /**
@@ -937,13 +1144,13 @@ declare module 'launchdarkly-node-server-sdk' {
     waitForInitialization(): Promise<LDClient>;
 
     /**
-     * Determines the variation of a feature flag for a user.
+     * Determines the variation of a feature flag for a context.
      *
      * @param key
      *   The unique key of the feature flag.
-     * @param user
-     *   The end user requesting the flag. The client will generate an analytics event to register
-     *   this user with LaunchDarkly if the user does not already exist.
+     * @param context
+     *   The context requesting the flag. The client will generate an analytics event to register
+     *   this context with LaunchDarkly if the context does not already exist.
      * @param defaultValue
      *   The default value of the flag, to be used if the value is not available from LaunchDarkly.
      * @param callback
@@ -954,13 +1161,13 @@ declare module 'launchdarkly-node-server-sdk' {
      */
     variation(
       key: string,
-      user: LDUser,
+      context: LDContext,
       defaultValue: LDFlagValue,
       callback?: (err: any, res: LDFlagValue) => void
     ): Promise<LDFlagValue>;
 
     /**
-     * Determines the variation of a feature flag for a user, along with information about how it was
+     * Determines the variation of a feature flag for a context, along with information about how it was
      * calculated.
      *
      * The `reason` property of the result will also be included in analytics events, if you are
@@ -970,9 +1177,9 @@ declare module 'launchdarkly-node-server-sdk' {
      *
      * @param key
      *   The unique key of the feature flag.
-     * @param user
-     *   The end user requesting the flag. The client will generate an analytics event to register
-     *   this user with LaunchDarkly if the user does not already exist.
+     * @param context
+     *   The context requesting the flag. The client will generate an analytics event to register
+     *   this context with LaunchDarkly if the context does not already exist.
      * @param defaultValue
      *   The default value of the flag, to be used if the value is not available from LaunchDarkly.
      * @param callback
@@ -984,13 +1191,13 @@ declare module 'launchdarkly-node-server-sdk' {
      */
     variationDetail(
       key: string,
-      user: LDUser,
+      context: LDContext,
       defaultValue: LDFlagValue,
       callback?: (err: any, res: LDEvaluationDetail) => void
     ): Promise<LDEvaluationDetail>;
 
     /**
-     * Builds an object that encapsulates the state of all feature flags for a given user.
+     * Builds an object that encapsulates the state of all feature flags for a given context.
      * This includes the flag values and also metadata that can be used on the front end. This
      * method does not send analytics events back to LaunchDarkly.
      *
@@ -998,8 +1205,8 @@ declare module 'launchdarkly-node-server-sdk' {
      * feature flags from a back-end service. Call the `toJSON()` method of the returned object
      * to convert it to the data structure used by the client-side SDK.
      *
-     * @param user
-     *   The end user requesting the feature flags.
+     * @param context
+     *   The context requesting the feature flags.
      * @param options
      *   Optional [[LDFlagsStateOptions]] to determine how the state is computed.
      * @param callback
@@ -1010,24 +1217,24 @@ declare module 'launchdarkly-node-server-sdk' {
      *   with the result as an [[LDFlagsState]].
      */
     allFlagsState(
-      user: LDUser,
+      context: LDContext,
       options?: LDFlagsStateOptions,
       callback?: (err: Error, res: LDFlagsState) => void
     ): Promise<LDFlagsState>;
 
     /**
-     * Computes an HMAC signature of a user signed with the client's SDK key.
+     * Computes an HMAC signature of a context signed with the client's SDK key.
      *
      * For more information, see the JavaScript SDK Reference Guide on
      * [Secure mode](https://github.com/launchdarkly/js-client#secure-mode).
      *
-     * @param user
-     *   The user properties.
+     * @param context
+     *   The context properties.
      *
      * @returns
      *   The hash string.
      */
-    secureModeHash(user: LDUser): string;
+    secureModeHash(context: LDContext): string;
 
     /**
      * Discards all network connections, background tasks, and other resources held by the client.
@@ -1045,7 +1252,7 @@ declare module 'launchdarkly-node-server-sdk' {
     isOffline(): boolean;
 
     /**
-     * Tracks that a user performed an event.
+     * Tracks that a context performed an event.
      *
      * LaunchDarkly automatically tracks pageviews and clicks that are specified in the Goals
      * section of the dashboard. This can be used to track custom goals or other events that do
@@ -1054,12 +1261,12 @@ declare module 'launchdarkly-node-server-sdk' {
      * Note that event delivery is asynchronous, so the event may not actually be sent until later;
      * see [[flush]].
      *
-     * If the user is omitted or has no key, the client will log a warning and will not send an event.
+     * If the context is omitted or has no key, the client will log a warning and will not send an event.
      *
      * @param key
      *   The name of the event, which may correspond to a goal in A/B tests.
-     * @param user
-     *   The user to track.
+     * @param context
+     *   The context to track.
      * @param data
      *   Optional additional information to associate with the event.
      * @param metricValue
@@ -1067,37 +1274,22 @@ declare module 'launchdarkly-node-server-sdk' {
      *   be omitted if this event is used by only non-numeric metrics. This field will also be returned
      *   as part of the custom event for Data Export.
      */
-    track(key: string, user: LDUser, data?: any, metricValue?: number): void;
+    track(key: string, context: LDContext, data?: any, metricValue?: number): void;
 
     /**
-     * Associates two users for analytics purposes.
-     *
-     * This can be helpful in the situation where a person is represented by multiple
-     * LaunchDarkly users. This may happen, for example, when a person initially logs into
-     * an application-- the person might be represented by an anonymous user prior to logging
-     * in and a different user after logging in, as denoted by a different user key.
-     *
-     * @param user
-     *   The newly identified user.
-     * @param previousUser
-     *   The previously identified user.
-     */
-    alias(user: LDUser, previousUser: LDUser): void;
-
-    /**
-     * Identifies a user to LaunchDarkly.
+     * Identifies a context to LaunchDarkly.
      *
      * This simply creates an analytics event that will transmit the given user properties to
-     * LaunchDarkly, so that the user will be visible on your dashboard even if you have not
+     * LaunchDarkly, so that the context will be visible on your dashboard even if you have not
      * evaluated any flags for that user. It has no other effect.
      *
-     * If the user is omitted or has no key, the client will log a warning
+     * If the context is omitted or has no key, the client will log a warning
      * and will not send an event.
      *
-     * @param user
-     *   The user properties. Must contain at least the `key` property.
+     * @param context
+     *   The context properties. Must contain at least the `key` property.
      */
-    identify(user: LDUser): void;
+    identify(context: LDContext): void;
 
     /**
      * Flushes all pending analytics events.
@@ -1143,7 +1335,7 @@ declare module 'launchdarkly-node-server-sdk' {
      * (such as a network error).
      * - `"update"`: The client has received a change to a feature flag. The event parameter is an object
      * containing a single property, `key`, the flag key. Note that this does not necessarily mean the flag's
-     * value has changed for any particular user, only that some part of the flag configuration was changed.
+     * value has changed for any particular context, only that some part of the flag configuration was changed.
      * - `"update:KEY"`: The client has received a change to the feature flag whose key is KEY. This is the
      * same as `"update"` but allows you to listen for a specific flag.
      *
@@ -1279,7 +1471,7 @@ declare module 'launchdarkly-node-server-sdk' {
  */
 declare module 'launchdarkly-node-server-sdk/integrations' {
   import { LDLogger } from 'launchdarkly-node-server-sdk';
-  
+
   /**
    * Configuration for [[FileDataSource]].
    */
@@ -1354,12 +1546,12 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
    *     const { TestData } = require('launchdarkly-node-server-sdk/interfaces');
    * 
    *     const td = TestData();
-   *     testData.update(td.flag("flag-key-1").booleanFlag().variationForAllUsers(true));
+   *     testData.update(td.flag("flag-key-1").booleanFlag().variationForAll(true));
    *     const client = new LDClient(sdkKey, { updateProcessor: td });
    *
    *     // flags can be updated at any time:
    *     td.update(td.flag("flag-key-2")
-   *         .variationForUser("some-user-key", true)
+   *         .variationForContext("user", "some-user-key", true)
    *         .fallthroughVariation(false));
    */
   export function TestData(): TestData;
@@ -1375,12 +1567,12 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
    *     const { TestData } = require('launchdarkly-node-server-sdk/interfaces');
    * 
    *     const td = TestData();
-   *     testData.update(td.flag("flag-key-1").booleanFlag().variationForAllUsers(true));
+   *     testData.update(td.flag("flag-key-1").booleanFlag().variationForAll(true));
    *     const client = new LDClient(sdkKey, { updateProcessor: td });
    *
    *     // flags can be updated at any time:
    *     td.update(td.flag("flag-key-2")
-   *         .variationForUser("some-user-key", true)
+   *         .variationForContext("user", "some-user-key", true)
    *         .fallthroughVariation(false));
    *
    * The above example uses a simple boolean flag, but more complex configurations are possible using
@@ -1455,15 +1647,15 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
     usePreconfiguredFlag(flagConfig: any): Promise<any>;
 
     /**
-     * Copies a full user segment data model object into the test data.
+     * Copies a full segment data model object into the test data.
      *
      * It immediately propagates the change to any [[LDClient]] instance(s) that you have already
      * configured to use this `TestData`. If no [[LDClient]] has been started yet, it simply adds
      * this segment to the test data which will be provided to any LDClient that you subsequently
      * configure.
      *
-     * This method is currently the only way to inject user segment data, since there is no builder
-     * API for segments. It is mainly intended for the SDK's own tests of user segment functionality,
+     * This method is currently the only way to inject segment data, since there is no builder
+     * API for segments. It is mainly intended for the SDK's own tests of segment functionality,
      * since application tests that need to produce a desired evaluation state could do so more easily
      * by just setting flag values.
      * 
@@ -1528,7 +1720,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *    variation: 0 for the first, 1 for the second, etc.
      * @return the flag builder
      */
-    fallthroughVariation(variation: boolean|number): TestDataFlagBuilder;
+    fallthroughVariation(variation: boolean | number): TestDataFlagBuilder;
 
     /**
      * Specifies the off variation for a flag. This is the variation that is
@@ -1542,10 +1734,10 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *    variation: 0 for the first, 1 for the second, etc.
      * @return the flag builder
      */
-    offVariation(variation: boolean|number): TestDataFlagBuilder;
+    offVariation(variation: boolean | number): TestDataFlagBuilder;
 
     /**
-     * Sets the flag to always return the specified variation for all users.
+     * Sets the flag to always return the specified variation for all contexts.
      *
      * Targeting is switched on, any existing targets or rules are removed,
      * and the fallthrough variation is set to the specified value. The off
@@ -1559,23 +1751,44 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *    0 for the first, 1 for the second, etc.
      * @return the flag builder
      */
-    variationForAllUsers(variation: boolean|number): TestDataFlagBuilder;
+    variationForAll(variation: boolean | number): TestDataFlagBuilder;
 
     /**
-     * Sets the flag to always return the specified variation value for all users.
+     * Sets the flag to always return the specified variation value for all contexts.
      *
      * The value may be of any valid JSON type. This method changes the flag to have
      * only a single variation, which is this value, and to return the same variation
      * regardless of whether targeting is on or off. Any existing targets or rules
      * are removed.
      *
-     * @param value The desired value to be returned for all users.
+     * @param value The desired value to be returned for all contexts.
      * @return the flag builder
      */
-    valueForAllUsers(value: any): TestDataFlagBuilder;
+    valueForAll(value: any): TestDataFlagBuilder;
 
     /**
-     * Sets the flag to return the specified variation for a specific user key
+     * Sets the flag to return the specified variation for a specific context key
+     * when targeting is on. The context kind for contexts created with this method
+     * will be 'user'.
+     *
+     * This has no effect when targeting is turned off for the flag.
+     *
+     * If the variation is a boolean value and the flag was not already a boolean
+     * flag, this also changes it to be a boolean flag.
+     *
+     * If the variation is an integer, it specifies a variation out of whatever
+     * variation values have already been defined.
+     *
+     * @param contextKey a context key
+     * @param variation
+     *    either `true` or `false` or the index of the desired variation:
+     *    0 for the first, 1 for the second, etc.
+     * @return the flag builder
+     */
+    variationForUser(contextKey: string, variation: boolean | number): TestDataFlagBuilder;
+
+    /**
+     * Sets the flag to return the specified variation for a specific context key
      * when targeting is on.
      *
      * This has no effect when targeting is turned off for the flag.
@@ -1586,13 +1799,14 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      * If the variation is an integer, it specifies a variation out of whatever
      * variation values have already been defined.
      *
-     * @param userKey a user key
+     * @param contextKind a context kind
+     * @param contextKey a context key
      * @param variation
      *    either `true` or `false` or the index of the desired variation:
      *    0 for the first, 1 for the second, etc.
      * @return the flag builder
      */
-    variationForUser(userKey: string, variation: boolean|number): TestDataFlagBuilder;
+    variationForContext(contextKind: string, contextKey: string, variation: boolean | number): TestDataFlagBuilder;
 
     /**
      * Removes any existing rules from the flag. This undoes the effect of methods
@@ -1603,12 +1817,12 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
     clearRules(): TestDataFlagBuilder;
 
     /**
-     * Removes any existing user targets from the flag. This undoes the effect of
-     * methods like [[variationForUser]].
+     * Removes any existing targets from the flag. This undoes the effect of
+     * methods like [[variationForContext]].
      *
      * @return the same flag builder
      */
-    clearUserTargets(): TestDataFlagBuilder;
+    clearAlltargets(): TestDataFlagBuilder;
 
     /**
      * Starts defining a flag rule using the "is one of" operator.
@@ -1617,16 +1831,17 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      * "Patsy" or "Edina":
      *
      *     testData.flag('flag')
-     *             .ifMatch('name', 'Patsy', 'Edina')
+     *             .ifMatch('user', name', 'Patsy', 'Edina')
      *             .thenReturn(true)
      *
-     * @param attribute the user attribute to match against
+     * @param contextKind the kind of the context
+     * @param attribute the context attribute to match against
      * @param values values to compare to
      * @return
      *    a flag rule builder; call `thenReturn` to finish the rule
      *    or add more tests with another method like `andMatch`
      */
-    ifMatch(userAttribute: string, ...values:any): TestDataRuleBuilder;
+    ifMatch(contextKind: string, attribute: string, ...values: any): TestDataRuleBuilder;
 
     /**
      * Starts defining a flag rule using the "is not one of" operator.
@@ -1635,16 +1850,17 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      * neither "Saffron" nor "Bubble":
      *
      *     testData.flag('flag')
-     *             .ifNotMatch('name', 'Saffron', 'Bubble')
+     *             .ifNotMatch('user', 'name', 'Saffron', 'Bubble')
      *             .thenReturn(true)
      *
+     * @param contextKind the kind of the context
      * @param attribute the user attribute to match against
      * @param values values to compare to
      * @return
      *    a flag rule builder; call `thenReturn` to finish the rule
      *    or add more tests with another method like `andNotMatch`
      */
-    ifNotMatch(userAttribute: string, ...values:any): TestDataRuleBuilder;
+    ifNotMatch(contextKind: string, attribute: string, ...values: any): TestDataRuleBuilder;
   }
 
   /**
@@ -1672,11 +1888,12 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *             .andMatch('country', 'gb')
      *             .thenReturn(true)
      *
+     * @param contextKind the kind of the context
      * @param attribute the user attribute to match against
      * @param values values to compare to
      * @return the flag rule builder
      */
-    andMatch(userAttribute: string, ...values:any): TestDataRuleBuilder;
+    andMatch(contextKind: string, attribute: string, ...values: any): TestDataRuleBuilder;
 
     /**
      * Adds another clause using the "is not one of" operator.
@@ -1689,11 +1906,12 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *             .andNotMatch('country', 'gb')
      *             .thenReturn(true)
      *
+     * @param contextKind the kind of the context
      * @param attribute the user attribute to match against
      * @param values values to compare to
      * @return the flag rule builder
      */
-    andNotMatch(userAttribute: string, ...values:any): TestDataRuleBuilder;
+    andNotMatch(contextKind: string, attribute: string, ...values: any): TestDataRuleBuilder;
 
     /**
      * Finishes defining the rule, specifying the result value as either a boolean or an index
@@ -1709,7 +1927,7 @@ declare module 'launchdarkly-node-server-sdk/integrations' {
      *    0 for the first, 1 for the second, etc.
      * @return the flag rule builder
      */
-    thenReturn(variation: boolean|number): TestDataFlagBuilder;
+    thenReturn(variation: boolean | number): TestDataFlagBuilder;
   }
 }
 
@@ -1944,7 +2162,7 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
    * @see [[PersistentDataStore]]
    * @see [[PersistentDataStoreNonAtomic]]
    */
-   export interface PersistentDataStoreBase {
+  export interface PersistentDataStoreBase {
     /**
      * Get an entity from the store.
      *
@@ -2038,7 +2256,7 @@ declare module 'launchdarkly-node-server-sdk/interfaces' {
    *
    * @see [[PersistentDataStore]]
    */
-   export interface PersistentDataStoreNonAtomic {
+  export interface PersistentDataStoreNonAtomic {
     /**
      * Initialize the store, overwriting any existing data.
      *
@@ -2083,7 +2301,7 @@ declare module 'launchdarkly-node-server-sdk/requestor' {
 /**
  * @ignore
  */
- declare module 'launchdarkly-node-server-sdk/feature_store' {
+declare module 'launchdarkly-node-server-sdk/feature_store' {
   import { LDFeatureStore } from 'launchdarkly-node-server-sdk';
 
   function InMemoryFeatureStore(): LDFeatureStore;
@@ -2093,15 +2311,14 @@ declare module 'launchdarkly-node-server-sdk/requestor' {
 /**
  * @ignore
  */
- declare module 'launchdarkly-node-server-sdk/caching_store_wrapper' {
+declare module 'launchdarkly-node-server-sdk/caching_store_wrapper' {
   import { LDFeatureStore } from 'launchdarkly-node-server-sdk';
   import { PersistentDataStore, PersistentDataStoreNonAtomic } from 'launchdarkly-node-server-sdk/interfaces';
 
   /**
    * A base feature store implementation used by database integrations.
    */
-  class CachingStoreWrapper implements LDFeatureStore
-  {
+  class CachingStoreWrapper implements LDFeatureStore {
     /**
      * Creates a feature store implementation with standard caching behavior for a persistent store.
      *
@@ -2135,7 +2352,7 @@ declare module 'launchdarkly-node-server-sdk/requestor' {
 /**
  * @ignore
  */
- declare module 'launchdarkly-node-server-sdk/sharedtest/store_tests' {
+declare module 'launchdarkly-node-server-sdk/sharedtest/store_tests' {
   import * as ld from 'launchdarkly-node-server-sdk';
   import * as interfaces from 'launchdarkly-node-server-sdk/interfaces';
 

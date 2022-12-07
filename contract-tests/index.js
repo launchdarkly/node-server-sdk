@@ -25,6 +25,7 @@ app.get('/', (req, res) => {
       'all-flags-details-only-for-tracked-flags',
       'all-flags-with-reasons',
       'tags',
+      'user-type',
     ],
   });
 });

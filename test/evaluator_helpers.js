@@ -1,6 +1,10 @@
 const { EventFactory } = require('../event_factory');
 
+// All three of these users should represent the same user.
 const basicUser = { key: 'userkey' };
+const basicSingleKindUser = { kind: 'user', key: 'userkey' };
+const basicMultiKindUser = { kind: 'multi', user: { key: 'userkey' } };
+
 const eventFactory = EventFactory(false);
 
 // Evaluator.evaluate uses a callback instead of a promise because it's a slightly more efficient
@@ -10,7 +14,7 @@ const eventFactory = EventFactory(false);
 // (because the other parameters can still be non-null even if there's an error).
 function asyncEvaluate(evaluator, flag, user, eventFactory) {
   return new Promise(resolve => {
-    evaluator.evaluate(flag, user, eventFactory, (err, detail, events) => resolve([ err, detail, events ]));
+    evaluator.evaluate(flag, user, eventFactory, (err, detail, events) => resolve([err, detail, events]));
   });
 }
 
@@ -39,13 +43,13 @@ function makeBooleanFlagWithRules(rules) {
     salt: '',
     fallthrough: { variation: 0 },
     offVariation: 0,
-    variations: [ false, true ],
+    variations: [false, true],
     version: 1
   };
 }
 
 function makeBooleanFlagWithOneClause(clause) {
-  return makeBooleanFlagWithRules([ { clauses: [ clause ], variation: 1 } ]);
+  return makeBooleanFlagWithRules([{ clauses: [clause], variation: 1 }]);
 }
 
 function makeFlagWithSegmentMatch(segment) {
@@ -53,15 +57,15 @@ function makeFlagWithSegmentMatch(segment) {
 }
 
 function makeClauseThatMatchesUser(user) {
-  return { attribute: 'key', op: 'in', values: [ user.key ] };
+  return { attribute: 'key', op: 'in', values: [user.key] };
 }
 
 function makeClauseThatDoesNotMatchUser(user) {
-  return { attribute: 'key', op: 'in', values: [ 'not-' + user.key ] };
+  return { attribute: 'key', op: 'in', values: ['not-' + user.key] };
 }
 
 function makeSegmentMatchClause(segment) {
-  return { attribute: '', op: 'segmentMatch', values: [ segment.key ]};
+  return { attribute: '', op: 'segmentMatch', values: [segment.key] };
 }
 
 function prepareQueries(data) {
@@ -77,7 +81,7 @@ function prepareQueries(data) {
     getSegment: (key, cb) => cb(segmentsMap[key]),
     getBigSegmentsMembership: (key, cb) => {
       if (data.bigSegments) {
-        cb([ data.bigSegments[key], 'HEALTHY' ]);
+        cb([data.bigSegments[key], 'HEALTHY']);
       } else {
         cb(null);
       }
@@ -87,6 +91,8 @@ function prepareQueries(data) {
 
 module.exports = {
   basicUser,
+  basicSingleKindUser,
+  basicMultiKindUser,
   eventFactory,
   asyncEvaluate,
   makeFlagWithRules,

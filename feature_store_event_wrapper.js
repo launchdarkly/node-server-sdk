@@ -139,6 +139,9 @@ function FeatureStoreEventWrapper(featureStore, emitter) {
       for (const prereq of item.prerequisites || []) {
         ret.set(dataKind.features.namespace, prereq.key, true);
       }
+    }
+
+    if (kind === dataKind.features || kind === dataKind.segments) {
       for (const rule of item.rules || []) {
         for (const clause of rule.clauses || []) {
           if (clause.op === 'segmentMatch') {

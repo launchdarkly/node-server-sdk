@@ -93,8 +93,8 @@ describe('configuration', function() {
   checkNumericProperty('capacity', 500);
   checkNumericProperty('flushInterval', 45);
   checkNumericProperty('pollInterval', 45);
-  checkNumericProperty('userKeysCapacity', 500);
-  checkNumericProperty('userKeysFlushInterval', 45);
+  checkNumericProperty('contextKeysCapacity', 500);
+  checkNumericProperty('contextKeysFlushInterval', 45);
   checkNumericProperty('diagnosticRecordingInterval', 110);
 
   function checkNumericRange(name, minimum, maximum) {
@@ -141,22 +141,22 @@ describe('configuration', function() {
   checkUriProperty('streamUri');
   checkUriProperty('eventsUri');
 
-  it('enforces array value for privateAttributeNames', () => {
+  it('enforces array value for privateAttributes', () => {
     const configIn0 = emptyConfigWithMockLogger();
     const config0 = configuration.validate(configIn0);
-    expect(config0.privateAttributeNames).toEqual([]);
+    expect(config0.privateAttributes).toEqual([]);
     expect(configIn0.logger.warn).not.toHaveBeenCalled();
 
     const configIn1 = emptyConfigWithMockLogger();
-    configIn1.privateAttributeNames = [ 'a' ];
+    configIn1.privateAttributes = [ 'a' ];
     const config1 = configuration.validate(configIn1);
-    expect(config1.privateAttributeNames).toEqual([ 'a' ]);
+    expect(config1.privateAttributes).toEqual([ 'a' ]);
     expect(configIn1.logger.warn).not.toHaveBeenCalled();
 
     const configIn2 = emptyConfigWithMockLogger();
-    configIn2.privateAttributeNames = 'no';
+    configIn2.privateAttributes = 'no';
     const config2 = configuration.validate(configIn2);
-    expect(config2.privateAttributeNames).toEqual([]);
+    expect(config2.privateAttributes).toEqual([]);
     expect(configIn2.logger.warn).toHaveBeenCalledTimes(1);
   });
 
@@ -219,5 +219,31 @@ describe('configuration', function() {
   it('includes application id and version in tags when present', () => {
     expect(configuration.getTags({application: {id: 'test-id', version: 'test-version'}}))
       .toEqual({'application-id': ['test-id'], 'application-version': ['test-version']});
+  });
+
+  it('handles the conversion of renamed options', () => {
+    const configIn = emptyConfigWithMockLogger();
+    configIn.userKeysCapacity = 1234;
+    configIn.userKeysFlushInterval = 5678;
+    const updatedConfig = configuration.validate(configIn);
+    expect(updatedConfig.contextKeysCapacity).toEqual(1234);
+    expect(updatedConfig.contextKeysFlushInterval).toEqual(5678);
+    expect(updatedConfig.userKeysCapacity).toBeUndefined();
+    expect(updatedConfig.userKeysFlushInterval).toBeUndefined();
+  });
+
+  it('does not override keys with renamed keys', () => {
+    const configIn = emptyConfigWithMockLogger();
+    configIn.contextKeysCapacity = 9999;
+    configIn.contextKeysFlushInterval = 8888;
+
+    configIn.userKeysCapacity = 1234;
+    configIn.userKeysFlushInterval = 5678;
+
+    const updatedConfig = configuration.validate(configIn);
+    expect(updatedConfig.contextKeysCapacity).toEqual(9999);
+    expect(updatedConfig.contextKeysFlushInterval).toEqual(8888);
+    expect(updatedConfig.userKeysCapacity).toBeUndefined();
+    expect(updatedConfig.userKeysFlushInterval).toBeUndefined();
   });
 });

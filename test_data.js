@@ -96,7 +96,7 @@ TestDataFlagBuilder.prototype.copy = function () {
   to._offVariation = this._offVariation;
   to._on = this._on;
   to._fallthroughVariation = this._fallthroughVariation;
-  to._targets = !this._targets ? null : new Map(this._targets);
+  to._targetsByVariation = !this._targetsByVariation ? null : new Map(this._targetsByVariation);
   to._rules = !this._rules ? null : this._rules.map(r => r.copy(this));
   return to;
 };
@@ -145,8 +145,8 @@ TestDataFlagBuilder.prototype.variations = function (...values) {
   return this;
 };
 
-TestDataFlagBuilder.prototype.clearUserTargets = function () {
-  this._targets = null;
+TestDataFlagBuilder.prototype.clearAllTargets = function () {
+  this._targetsByVariation = null;
   return this;
 };
 
@@ -155,51 +155,64 @@ TestDataFlagBuilder.prototype.clearRules = function () {
   return this;
 };
 
-TestDataFlagBuilder.prototype.variationForAllUsers = function (variation) {
-  return this.on(true).clearRules().clearUserTargets().fallthroughVariation(variation);
+TestDataFlagBuilder.prototype.variationForAll = function (variation) {
+  return this.on(true).clearRules().clearAllTargets().fallthroughVariation(variation);
 };
 
-TestDataFlagBuilder.prototype.valueForAllUsers = function (value) {
-  return this.variations(value).variationForAllUsers(0);
+TestDataFlagBuilder.prototype.valueForAll = function (value) {
+  return this.variations(value).variationForAll(0);
 };
 
-TestDataFlagBuilder.prototype.variationForUser = function (userKey, variation) {
+TestDataFlagBuilder.prototype.variationForContext = function (contextKind, contextKey, variation) {
   if (typeof variation === 'boolean') {
-    return this.booleanFlag().variationForUser(userKey, variationForBoolean(variation));
+    return this.booleanFlag().variationForContext(contextKind, contextKey, variationForBoolean(variation));
   }
 
-  if (!this._targets) {
-    this._targets = new Map();
+  if (!this._targetsByVariation) {
+    this._targetsByVariation = new Map();
   }
 
   this._variations.forEach((_, i) => {
     if (i === variation) {
-      //If there is no set at the current variation then set it to the empty array
-      let targetForVariation;
-      if (this._targets.has(i)) {
-        targetForVariation = this._targets.get(i);
-      } else {
-        targetForVariation = [];
+      //If there is nothing set at the current variation then set it to the empty array
+      const targetsForVariation = this._targetsByVariation.get(i) || new Map();
+
+      if (!targetsForVariation.has(contextKind)) {
+        targetsForVariation.set(contextKind, []);
       }
-      // Add user to current variation set if they arent already there
-      if (targetForVariation.indexOf(userKey) === -1) {
-        targetForVariation.push(userKey);
+      const exists = targetsForVariation.get(contextKind).indexOf(contextKey) !== -1;
+      // Add context to current variation set if they arent already there
+      if (!exists) {
+        targetsForVariation.get(contextKind).push(contextKey);
       }
 
-      this._targets.set(i, targetForVariation);
+      this._targetsByVariation.set(i, targetsForVariation);
     } else {
       // remove user from other variation set if necessary
-      if (this._targets.has(i)) {
-        const targetForVariation = this._targets.get(i);
-        const userIndex = targetForVariation.indexOf(userKey);
-        if (userIndex !== -1) {
-          this._targets.set(i, targetForVariation.splice(userIndex));
+      const targetsForVariation = this._targetsByVariation.get(i);
+      if (targetsForVariation) {
+        const targetsForContextKind = targetsForVariation.get(contextKind);
+        if (targetsForContextKind) {
+          const targetIndex = targetsForContextKind.indexOf(contextKey);
+          if (targetIndex !== -1) {
+            targetsForContextKind.splice(targetIndex, 1);
+            if (!targetsForContextKind.length) {
+              targetsForVariation.delete(contextKind);
+            }
+          }
+        }
+        if (!targetsForVariation.size) {
+          this._targetsByVariation.delete(i);
         }
       }
     }
   });
 
   return this;
+};
+
+TestDataFlagBuilder.prototype.variationForUser = function (key, variation) {
+  return this.variationForContext('user', key, variation);
 };
 
 TestDataFlagBuilder.prototype.addRule = function (flagRuleBuilder) {
@@ -209,14 +222,14 @@ TestDataFlagBuilder.prototype.addRule = function (flagRuleBuilder) {
   this._rules.push(flagRuleBuilder);
 };
 
-TestDataFlagBuilder.prototype.ifMatch = function (attribute, ...values) {
+TestDataFlagBuilder.prototype.ifMatch = function (contextKind, attribute, ...values) {
   const flagRuleBuilder = new TestDataRuleBuilder(this);
-  return flagRuleBuilder.andMatch(attribute, ...values);
+  return flagRuleBuilder.andMatch(contextKind, attribute, ...values);
 };
 
-TestDataFlagBuilder.prototype.ifNotMatch = function (attribute, ...values) {
+TestDataFlagBuilder.prototype.ifNotMatch = function (contextKind, attribute, ...values) {
   const flagRuleBuilder = new TestDataRuleBuilder(this);
-  return flagRuleBuilder.andNotMatch(attribute, ...values);
+  return flagRuleBuilder.andNotMatch(contextKind, attribute, ...values);
 };
 
 TestDataFlagBuilder.prototype.build = function (version) {
@@ -231,15 +244,18 @@ TestDataFlagBuilder.prototype.build = function (version) {
     variations: [...this._variations],
   };
 
-  if (this._targets) {
-    const targets = [];
-    for (const [variationIndex, userKeys] of this._targets) {
-      targets.push({
-        variation: variationIndex,
-        values: userKeys,
-      });
+  if (this._targetsByVariation) {
+    const contextTargets = [];
+    for (const [variation, contextTargetsForVariation] of this._targetsByVariation) {
+      for (const [contextKind, values] of contextTargetsForVariation) {
+        contextTargets.push({
+          contextKind,
+          values,
+          variation,
+        });
+      }
     }
-    baseFlagObject.targets = targets;
+    baseFlagObject.contextTargets = contextTargets;
   }
 
   if (this._rules) {
@@ -256,8 +272,9 @@ function TestDataRuleBuilder(flagBuilder) {
   this._variation = null;
 }
 
-TestDataRuleBuilder.prototype.andMatch = function (attribute, ...values) {
+TestDataRuleBuilder.prototype.andMatch = function (contextKind, attribute, ...values) {
   this._clauses.push({
+    contextKind,
     attribute: attribute,
     op: 'in',
     values: values,
@@ -266,8 +283,9 @@ TestDataRuleBuilder.prototype.andMatch = function (attribute, ...values) {
   return this;
 };
 
-TestDataRuleBuilder.prototype.andNotMatch = function (attribute, ...values) {
+TestDataRuleBuilder.prototype.andNotMatch = function (contextKind, attribute, ...values) {
   this._clauses.push({
+    contextKind,
     attribute: attribute,
     op: 'in',
     values: values,

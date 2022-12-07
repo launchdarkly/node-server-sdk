@@ -64,6 +64,7 @@ describe('PollingProcessor', () => {
     expect(flags).toEqual(allData.flags);
     const segments = await promisifySingle(store.all)(dataKind.segments);
     expect(segments).toEqual(allData.segments);
+    processor.stop();
   });
 
   it('polls repeatedly', async() => {

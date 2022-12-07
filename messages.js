@@ -13,7 +13,7 @@ exports.httpErrorMessage = (err, context, retryMessage) => {
   return `Received ${desc} for ${context} - ${action}`;
 };
 
-exports.missingUserKeyNoEvent = () => 'User was unspecified or had no key; event will not be sent';
+exports.missingContextKeyNoEvent = () => 'User was unspecified or had no key; event will not be sent';
 
 exports.optionBelowMinimum = (name, value, min) =>
   `Config option "${name}" had invalid value of ${value}, using minimum of ${min} instead`;

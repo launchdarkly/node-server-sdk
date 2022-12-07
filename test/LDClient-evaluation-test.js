@@ -24,7 +24,7 @@ describe('LDClient', () => {
 
     it('returns default if client is offline', async () => {
       const td = TestData();
-      td.update(td.flag('flagkey').variations('value').variationForAllUsers(0));
+      td.update(td.flag('flagkey').variations('value').variationForAll(0));
       var logger = stubs.stubLogger();
       var client = stubs.createClient({ offline: true, updateProcessor: td, logger });
       await client.waitForInitialization();
