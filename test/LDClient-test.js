@@ -42,6 +42,18 @@ describe('LDClient', () => {
       var hash = client.secureModeHash({"key": "Message"});
       expect(hash).toEqual("aa747c502a898200f9e4fa21bac68136f886a0e27aec70ba06daf2e2a5cb5597");
     });
+
+    it.each([
+      [{key: 'Message'}, 'aa747c502a898200f9e4fa21bac68136f886a0e27aec70ba06daf2e2a5cb5597'],
+      [{kind: 'user', key: 'Message'}, 'aa747c502a898200f9e4fa21bac68136f886a0e27aec70ba06daf2e2a5cb5597'],
+      [{kind: 'org', key: 'orgtest'}, '40bc9b2e66a842e269ab98dad813e4e15203bbbfd91e8c96b92f3ae6f3f5e223'],
+      [{kind: 'multi', user: {key: 'user:test'}, org: {key: 'org:test'}}, '607cc91526c615823e320dabca7967ce544fbe83bcb2b7287163f2d1c7aa210f']
+  ])('it uses the canonical key', (context, expectedHash) => {
+      const client = LDClient.init('secret', {offline: true});
+      const hash = client.secureModeHash(context);
+
+      expect(hash).toEqual(expectedHash);
+    });
   });
 
   describe('waitForInitialization()', () => {

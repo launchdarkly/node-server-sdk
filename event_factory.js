@@ -24,13 +24,13 @@ function isExperiment(flag, reason) {
 function EventFactory(withReasons) {
   const ef = {};
 
-  ef.newEvalEvent = (flag, user, detail, defaultVal, prereqOfFlag) => {
+  ef.newEvalEvent = (flag, context, detail, defaultVal, prereqOfFlag) => {
     const addExperimentData = isExperiment(flag, detail.reason);
     const e = {
       kind: 'feature',
       creationDate: new Date().getTime(),
       key: flag.key,
-      user: user,
+      context,
       value: detail.value,
       variation: detail.variationIndex,
       default: defaultVal,
@@ -52,12 +52,12 @@ function EventFactory(withReasons) {
     return e;
   };
 
-  ef.newDefaultEvent = (flag, user, detail) => {
+  ef.newDefaultEvent = (flag, context, detail) => {
     const e = {
       kind: 'feature',
       creationDate: new Date().getTime(),
       key: flag.key,
-      user: user,
+      context,
       value: detail.value,
       default: detail.value,
       version: flag.version,
@@ -75,12 +75,12 @@ function EventFactory(withReasons) {
     return e;
   };
 
-  ef.newUnknownFlagEvent = (key, user, detail) => {
+  ef.newUnknownFlagEvent = (key, context, detail) => {
     const e = {
       kind: 'feature',
       creationDate: new Date().getTime(),
       key: key,
-      user: user,
+      context,
       value: detail.value,
       default: detail.value,
     };
@@ -90,19 +90,18 @@ function EventFactory(withReasons) {
     return e;
   };
 
-  ef.newIdentifyEvent = user => ({
+  ef.newIdentifyEvent = context => ({
     kind: 'identify',
     creationDate: new Date().getTime(),
-    key: user.key,
-    user: user,
+    context,
   });
 
-  ef.newCustomEvent = (eventName, user, data, metricValue) => {
+  ef.newCustomEvent = (eventName, context, data, metricValue) => {
     const e = {
       kind: 'custom',
       creationDate: new Date().getTime(),
       key: eventName,
-      user: user,
+      context,
     };
     if (data !== null && data !== undefined) {
       e.data = data;
@@ -111,18 +110,6 @@ function EventFactory(withReasons) {
       e.metricValue = metricValue;
     }
     return e;
-  };
-
-  ef.newAliasEvent = (user, previousUser) => {
-    const userContextKind = u => (u.anonymous ? 'anonymousUser' : 'user');
-    return {
-      kind: 'alias',
-      key: user.key,
-      contextKind: userContextKind(user),
-      previousKey: previousUser.key,
-      previousContextKind: userContextKind(previousUser),
-      creationDate: new Date().getTime(),
-    };
   };
 
   return ef;

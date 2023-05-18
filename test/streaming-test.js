@@ -4,7 +4,7 @@ const StreamProcessor = require('../streaming');
 import * as httpUtils from '../utils/httpUtils';
 const dataKind = require('../versioned_data_kind');
 
-const { promisifySingle, sleepAsync } = require('launchdarkly-js-test-helpers');
+const { failOnResolve, failOnTimeout, promisifySingle } = require('launchdarkly-js-test-helpers');
 const stubs = require('./stubs');
 
 describe('StreamProcessor', () => {
@@ -241,8 +241,9 @@ describe('StreamProcessor', () => {
   });
 
   async function testRecoverableError(err) {
+    const logCapture = stubs.asyncLogCapture();
     const featureStore = InMemoryFeatureStore();
-    const config = { featureStore: featureStore, logger: stubs.stubLogger() };
+    const config = { featureStore: featureStore, logger: logCapture.logger };
     const id = DiagnosticId('sdk-key');
     const manager = DiagnosticsManager(config, id, 100000);
     const startTime = new Date().getTime();
@@ -252,15 +253,15 @@ describe('StreamProcessor', () => {
 
     // Note that the callback for start() will *not* be called; it only reports failure and provides the
     // error object if it's an unrecovable error.
-    let errReceived;
-    sp.start(e => { errReceived = e; });
+    const waitForStart = promisifySingle(sp.start)(); 
 
     es.instance.simulateError(err);
-    await sleepAsync(300);
 
-    expect(config.logger.warn).toHaveBeenCalledTimes(1);
-    expect(config.logger.error).not.toHaveBeenCalled();
-    expect(errReceived).toBeUndefined();
+    await failOnTimeout(logCapture.warn.take(), 1000, 'timed out waiting for log message');
+
+    await failOnResolve(waitForStart, 50, 'initialization completed unexpectedly');
+    await failOnResolve(logCapture.error.take(), 50, 'got unexpected log error');
+
     expect(es.closed).not.toBeTruthy();
 
     const event = manager.createStatsEventAndReset(0, 0, 0);
@@ -271,23 +272,21 @@ describe('StreamProcessor', () => {
     expect(si.durationMillis).toBeGreaterThanOrEqual(0);
   }
   
-  function testRecoverableHttpError(status) {
-    const err = new Error('sorry');
-    err.status = status;
-    it('continues retrying after error ' + status, async () => await testRecoverableError(err));
-  }
-
-  testRecoverableHttpError(400);
-  testRecoverableHttpError(408);
-  testRecoverableHttpError(429);
-  testRecoverableHttpError(500);
-  testRecoverableHttpError(503);
+  it.each([400, 408, 429, 500, 503])(
+    'continues retrying after error %d',
+    async (status) => {
+      const err = new Error('sorry');
+      err.status = status;
+      await testRecoverableError(err);
+    }
+  );
 
   it('continues retrying after I/O error', async () => await testRecoverableError(new Error('sorry')));
 
   async function testUnrecoverableError(err) {
+    const logCapture = stubs.asyncLogCapture();
     const featureStore = InMemoryFeatureStore();
-    const config = { featureStore: featureStore, logger: stubs.stubLogger() };
+    const config = { featureStore: featureStore, logger: logCapture.logger };
     const id = DiagnosticId('sdk-key');
     const manager = DiagnosticsManager(config, id, 100000);
     const startTime = new Date().getTime();
@@ -297,10 +296,12 @@ describe('StreamProcessor', () => {
 
     const waitForStart = promisifySingle(sp.start)();  
     es.instance.simulateError(err);
-    const errReceived = await waitForStart;
+    const errReceived = await failOnTimeout(waitForStart, 1000, 'timed out waiting for error result');
 
     expect(errReceived).toEqual(err);
-    expect(config.logger.error).toHaveBeenCalledTimes(1);
+
+    await failOnTimeout(logCapture.error.take(), 50, 'timed out waiting for log error');
+
     expect(es.closed).toBe(true);
 
     const event = manager.createStatsEventAndReset(0, 0, 0);
@@ -311,12 +312,12 @@ describe('StreamProcessor', () => {
     expect(si.durationMillis).toBeGreaterThanOrEqual(0);
   }
   
-  function testUnrecoverableHttpError(status) {
-    const err = new Error('sorry');
-    err.status = status;
-    it('stops retrying after error ' + status, async () => await testUnrecoverableError(err));
-  }
-
-  testUnrecoverableHttpError(401);
-  testUnrecoverableHttpError(403);
+  it.each([401, 403])(
+    'stops retrying after error %d',
+    async (status) => {
+      const err = new Error('sorry');
+      err.status = status;
+      await testUnrecoverableError(err);
+    }
+  );
 });

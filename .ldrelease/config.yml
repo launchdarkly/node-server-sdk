@@ -5,8 +5,9 @@ repo:
   private: node-server-sdk-private
 
 branches:
-  - name: master
-    description: 6.x
+  - name: main
+    description: 7.x
+  - name: 6.x
   - name: 5.x
 
 publications:

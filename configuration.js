@@ -18,10 +18,9 @@ module.exports = (function () {
       offline: false,
       useLdd: false,
       allAttributesPrivate: false,
-      privateAttributeNames: [],
-      inlineUsersInEvents: false,
-      userKeysCapacity: 1000,
-      userKeysFlushInterval: 300,
+      privateAttributes: [],
+      contextKeysCapacity: 1000,
+      contextKeysFlushInterval: 300,
       diagnosticOptOut: false,
       diagnosticRecordingInterval: 900,
       featureStore: InMemoryFeatureStore(),
@@ -63,6 +62,10 @@ module.exports = (function () {
       config.logger.warn(messages.invalidTagValue(name));
       return undefined;
     }
+    if (tagValue.length > 64) {
+      config.logger.warn(messages.tagValueTooLong(name));
+      return undefined;
+    }
     return tagValue;
   }
 
@@ -85,7 +88,10 @@ module.exports = (function () {
   };
 
   /* eslint-disable camelcase */
-  const deprecatedOptions = {};
+  const deprecatedOptions = {
+    userKeysCapacity: 'contextKeysCapacity',
+    userKeysFlushInterval: 'contextKeysFlushInterval',
+  };
   /* eslint-enable camelcase */
 
   function checkDeprecatedOptions(configIn) {
@@ -133,6 +139,7 @@ module.exports = (function () {
       }
       return 'object';
     };
+
     Object.keys(config).forEach(name => {
       const value = config[name];
       if (value !== null && value !== undefined) {

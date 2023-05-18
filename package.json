@@ -1,14 +1,15 @@
 {
   "name": "launchdarkly-node-server-sdk",
-  "version": "6.3.1",
+  "version": "7.0.1",
   "description": "LaunchDarkly Server-Side SDK for Node.js",
   "main": "index.js",
   "scripts": {
-    "test": "jest --ci",
+    "test": "jest --ci --coverage --runInBand",
     "check-typescript": "node_modules/typescript/bin/tsc",
     "lint": "eslint --format 'node_modules/eslint-formatter-pretty' --ignore-path .eslintignore .",
+    "lint-fix": "eslint --fix --format 'node_modules/eslint-formatter-pretty' --ignore-path .eslintignore .",
     "contract-test-service": "npm --prefix contract-tests install && npm --prefix contract-tests start",
-    "contract-test-harness": "curl -s https://raw.githubusercontent.com/launchdarkly/sdk-test-harness/master/downloader/run.sh \\ | VERSION=v1 PARAMS=\"-url http://localhost:8000 -debug -stop-service-at-end $TEST_HARNESS_PARAMS\" sh",
+    "contract-test-harness": "curl -s https://raw.githubusercontent.com/launchdarkly/sdk-test-harness/master/downloader/run.sh \\ | VERSION=v2 PARAMS=\"-url http://localhost:8000 -debug -stop-service-at-end $TEST_HARNESS_PARAMS\" sh",
     "contract-tests": "npm run contract-test-service & npm run contract-test-harness"
   },
   "types": "./index.d.ts",
@@ -27,7 +28,7 @@
   },
   "homepage": "https://github.com/launchdarkly/node-server-sdk",
   "dependencies": {
-    "async": "^3.1.0",
+    "async": "^3.2.4",
     "launchdarkly-eventsource": "1.4.4",
     "lru-cache": "^6.0.0",
     "node-cache": "^5.1.0",
@@ -41,6 +42,7 @@
   "devDependencies": {
     "@babel/core": "^7.14.6",
     "@babel/preset-env": "^7.14.5",
+    "@types/jest": "^27.4.0",
     "@types/node": "^15.12.2",
     "babel-jest": "^27.0.2",
     "eslint": "^7.28.0",
@@ -49,7 +51,7 @@
     "eslint-plugin-prettier": "^3.4.0",
     "jest": "^27.0.4",
     "jest-junit": "^12.2.0",
-    "launchdarkly-js-test-helpers": "^1.2.1",
+    "launchdarkly-js-test-helpers": "^2.2.0",
     "prettier": "^2.3.1",
     "tmp": "^0.2.1",
     "typescript": "~4.4.4",

@@ -8,8 +8,8 @@ const httpUtils = require('./utils/httpUtils');
  * could use the Requestor to make a polling request even in streaming mode, for very large data sets,
  * but the LD infrastructure no longer uses that behavior.
  *
- * @param {String} the SDK key
- * @param {Object} the LaunchDarkly client configuration object
+ * @param {String} sdkKey the SDK key
+ * @param {Object} config the LaunchDarkly client configuration object
  **/
 function Requestor(sdkKey, config) {
   const requestor = {};

@@ -2,9 +2,9 @@ import * as LDClient from '../index';
 
 import {
   AsyncQueue,
-  sleepAsync,
   TestHttpHandlers,
   TestHttpServer,
+  failOnTimeout,
   withCloseable
 } from 'launchdarkly-js-test-helpers';
 import * as stubs from './stubs';
@@ -36,18 +36,20 @@ describe('LDClient TLS configuration', () => {
     await withCloseable(TestHttpServer.startSecure, async server => {
       server.forMethodAndPath('get', '/sdk/latest-all', TestHttpHandlers.respondJson({}));
 
+      const logCapture = stubs.asyncLogCapture();
       const config = {
         baseUri: server.url,
         sendEvents: false,
         stream: false,
-        logger: stubs.stubLogger(),
+        logger: logCapture.logger,
         diagnosticOptOut: true,
       };
 
       await withCloseable(LDClient.init(sdkKey, config), async client => {
-        await sleepAsync(300); // the client won't signal an unrecoverable error, but it should log a message
-        expect(config.logger.warn.mock.calls.length).toEqual(2);
-        expect(config.logger.warn.mock.calls[1][0]).toMatch(/self.signed/);
+        const message1 = await failOnTimeout(logCapture.warn.take(), 1000, 'timed out waiting for log message');
+        expect(message1).toMatch(/only disable the streaming API/); // irrelevant message due to our use of polling mode
+        const message2 = await failOnTimeout(logCapture.warn.take(), 1000, 'timed out waiting for log message');
+        expect(message2).toMatch(/self.signed/);
       });
     });
   });

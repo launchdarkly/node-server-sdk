@@ -19,6 +19,7 @@ const errors = require('./errors');
 const { safeAsyncEach } = require('./utils/asyncUtils');
 const wrapPromiseCallback = require('./utils/wrapPromiseCallback');
 const dataKind = require('./versioned_data_kind');
+const { checkContext, getCanonicalKey } = require('./context');
 
 function createErrorReporter(emitter, logger) {
   return error => {
@@ -175,12 +176,12 @@ const newClient = function (sdkKey, originalConfig) {
     return waitForInitializationPromise;
   };
 
-  client.variation = (key, user, defaultVal, callback) =>
+  client.variation = (key, context, defaultVal, callback) =>
     wrapPromiseCallback(
       new Promise((resolve, reject) => {
         evaluateIfPossible(
           key,
-          user,
+          context,
           defaultVal,
           eventFactoryDefault,
           detail => {
@@ -192,10 +193,10 @@ const newClient = function (sdkKey, originalConfig) {
       callback
     );
 
-  client.variationDetail = (key, user, defaultVal, callback) =>
+  client.variationDetail = (key, context, defaultVal, callback) =>
     wrapPromiseCallback(
       new Promise((resolve, reject) => {
-        evaluateIfPossible(key, user, defaultVal, eventFactoryWithReasons, resolve, reject);
+        evaluateIfPossible(key, context, defaultVal, eventFactoryWithReasons, resolve, reject);
       }),
       callback
     );
@@ -204,31 +205,31 @@ const newClient = function (sdkKey, originalConfig) {
     return { value: defaultVal, variationIndex: null, reason: { kind: 'ERROR', errorKind: errorKind } };
   }
 
-  function evaluateIfPossible(key, user, defaultVal, eventFactory, resolve, reject) {
+  function evaluateIfPossible(key, context, defaultVal, eventFactory, resolve, reject) {
     if (!initComplete) {
       config.featureStore.initialized(storeInited => {
         if (storeInited) {
           config.logger.warn(
             "Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using last known values from feature store"
           );
-          variationInternal(key, user, defaultVal, eventFactory, resolve, reject);
+          variationInternal(key, context, defaultVal, eventFactory, resolve, reject);
         } else {
           const err = new errors.LDClientError(
             "Variation called before LaunchDarkly client initialization completed (did you wait for the 'ready' event?) - using default value"
           );
           maybeReportError(err);
           const result = errorResult('CLIENT_NOT_READY', defaultVal);
-          eventProcessor.sendEvent(eventFactory.newUnknownFlagEvent(key, user, result));
+          eventProcessor.sendEvent(eventFactory.newUnknownFlagEvent(key, context, result));
           return resolve(result);
         }
       });
     } else {
-      variationInternal(key, user, defaultVal, eventFactory, resolve, reject);
+      variationInternal(key, context, defaultVal, eventFactory, resolve, reject);
     }
   }
 
   // resolves to a "detail" object with properties "value", "variationIndex", "reason"
-  function variationInternal(key, user, defaultVal, eventFactory, resolve) {
+  function variationInternal(key, context, defaultVal, eventFactory, resolve) {
     if (client.isOffline()) {
       config.logger.info('Variation called in offline mode. Returning default value.');
       return resolve(errorResult('CLIENT_NOT_READY', defaultVal));
@@ -238,29 +239,37 @@ const newClient = function (sdkKey, originalConfig) {
       return resolve(errorResult('FLAG_NOT_FOUND', defaultVal));
     }
 
-    if (user && user.key === '') {
+    // This only will handle single kind contexts with empty keys.
+    // Keys of multi-kind contexts are not touched until evaluation.
+    if (context && (!context.kind || context.kind !== 'multi') && context.key === '') {
       config.logger.warn(
         'User key is blank. Flag evaluation will proceed, but the user will not be stored in LaunchDarkly'
       );
     }
 
     config.featureStore.get(dataKind.features, key, flag => {
-      if (!flag) {
-        maybeReportError(new errors.LDClientError('Unknown feature flag "' + key + '"; returning default value'));
-        const result = errorResult('FLAG_NOT_FOUND', defaultVal);
-        eventProcessor.sendEvent(eventFactory.newUnknownFlagEvent(key, user, result));
-        return resolve(result);
-      }
-
-      if (!user) {
-        const variationErr = new errors.LDClientError('No user specified. Returning default value.');
+      if (!context) {
+        const variationErr = new errors.LDClientError('No context specified. Returning default value.');
         maybeReportError(variationErr);
         const result = errorResult('USER_NOT_SPECIFIED', defaultVal);
-        eventProcessor.sendEvent(eventFactory.newDefaultEvent(flag, user, result));
         return resolve(result);
       }
 
-      evaluator.evaluate(flag, user, eventFactory, (err, detailIn, events) => {
+      if (!checkContext(context, true)) {
+        const variationErr = new errors.LDClientError('Invalid context specified. Returning default value.');
+        maybeReportError(variationErr);
+        const result = errorResult('USER_NOT_SPECIFIED', defaultVal);
+        return resolve(result);
+      }
+
+      if (!flag) {
+        maybeReportError(new errors.LDClientError(`Unknown feature flag "${key}"; returning default value`));
+        const result = errorResult('FLAG_NOT_FOUND', defaultVal);
+        eventProcessor.sendEvent(eventFactory.newUnknownFlagEvent(key, context, result));
+        return resolve(result);
+      }
+
+      evaluator.evaluate(flag, context, eventFactory, (err, detailIn, events) => {
         const detail = detailIn;
         if (err) {
           maybeReportError(
@@ -282,13 +291,13 @@ const newClient = function (sdkKey, originalConfig) {
           config.logger.debug('Result value is null in variation');
           detail.value = defaultVal;
         }
-        eventProcessor.sendEvent(eventFactory.newEvalEvent(flag, user, detail, defaultVal));
+        eventProcessor.sendEvent(eventFactory.newEvalEvent(flag, context, detail, defaultVal));
         return resolve(detail);
       });
     });
   }
 
-  client.allFlagsState = (user, specifiedOptions, specifiedCallback) => {
+  client.allFlagsState = (context, specifiedOptions, specifiedCallback) => {
     let callback = specifiedCallback,
       options = specifiedOptions;
     if (callback === undefined && typeof options === 'function') {
@@ -304,8 +313,8 @@ const newClient = function (sdkKey, originalConfig) {
           return FlagsStateBuilder(false).build();
         }
 
-        if (!user) {
-          config.logger.info('allFlagsState() called without user. Returning empty state.');
+        if (!context) {
+          config.logger.info('allFlagsState() called without context. Returning empty state.');
           return FlagsStateBuilder(false).build();
         }
 
@@ -338,7 +347,7 @@ const newClient = function (sdkKey, originalConfig) {
                   iterateeCb();
                 } else {
                   // At the moment, we don't send any events here
-                  evaluator.evaluate(flag, user, eventFactoryDefault, (err, detail) => {
+                  evaluator.evaluate(flag, context, eventFactoryDefault, (err, detail) => {
                     if (err !== null) {
                       maybeReportError(
                         new Error('Error for feature flag "' + flag.key + '" while evaluating all flags: ' + err)
@@ -367,9 +376,10 @@ const newClient = function (sdkKey, originalConfig) {
     );
   };
 
-  client.secureModeHash = user => {
+  client.secureModeHash = context => {
+    const key = getCanonicalKey(context);
     const hmac = crypto.createHmac('sha256', sdkKey);
-    hmac.update(user.key);
+    hmac.update(key);
     return hmac.digest('hex');
   };
 
@@ -384,39 +394,23 @@ const newClient = function (sdkKey, originalConfig) {
 
   client.isOffline = () => config.offline;
 
-  client.alias = (user, previousUser) => {
-    if (!user || !previousUser) {
+  client.track = (eventName, context, data, metricValue) => {
+    if (!checkContext(context, false)) {
+      config.logger.warn(messages.missingContextKeyNoEvent());
       return;
     }
-
-    eventProcessor.sendEvent(eventFactoryDefault.newAliasEvent(user, previousUser));
+    eventProcessor.sendEvent(eventFactoryDefault.newCustomEvent(eventName, context, data, metricValue));
   };
 
-  client.track = (eventName, user, data, metricValue) => {
-    if (!userExistsAndHasKey(user)) {
-      config.logger.warn(messages.missingUserKeyNoEvent());
+  client.identify = context => {
+    if (!checkContext(context, false)) {
+      config.logger.warn(messages.missingContextKeyNoEvent());
       return;
     }
-    eventProcessor.sendEvent(eventFactoryDefault.newCustomEvent(eventName, user, data, metricValue));
-  };
-
-  client.identify = user => {
-    if (!userExistsAndHasKey(user)) {
-      config.logger.warn(messages.missingUserKeyNoEvent());
-      return;
-    }
-    eventProcessor.sendEvent(eventFactoryDefault.newIdentifyEvent(user));
+    eventProcessor.sendEvent(eventFactoryDefault.newIdentifyEvent(context));
   };
 
   client.flush = callback => eventProcessor.flush(callback);
-
-  function userExistsAndHasKey(user) {
-    if (user) {
-      const key = user.key;
-      return key !== undefined && key !== null && key !== '';
-    }
-    return false;
-  }
 
   /* eslint-disable no-unused-vars */
   // We may not currently have any deprecated methods, but if we do, we should

@@ -13,7 +13,7 @@ exports.httpErrorMessage = (err, context, retryMessage) => {
   return `Received ${desc} for ${context} - ${action}`;
 };
 
-exports.missingUserKeyNoEvent = () => 'User was unspecified or had no key; event will not be sent';
+exports.missingContextKeyNoEvent = () => 'User was unspecified or had no key; event will not be sent';
 
 exports.optionBelowMinimum = (name, value, min) =>
   `Config option "${name}" had invalid value of ${value}, using minimum of ${min} instead`;
@@ -27,3 +27,5 @@ exports.wrongOptionTypeBoolean = (name, actualType) =>
   `Config option "${name}" should be a boolean, got ${actualType}, converting to boolean`;
 
 exports.invalidTagValue = name => `Config option "${name}" must only contain letters, numbers, ., _ or -.`;
+
+exports.tagValueTooLong = name => `Value of "${name}" was longer than 64 characters and was discarded.`;
