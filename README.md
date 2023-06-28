@@ -1,5 +1,11 @@
 # LaunchDarkly Server-Side SDK for Node.js
 
+# Important note
+
+As mentioned in the [repository changelog](https://github.com/launchdarkly/node-server-sdk/blob/main/CHANGELOG.md), the `launchdarkly-node-server-sdk` project has been renamed to `@launchdarkly/node-server-sdk`. All future releases will be made from the [new repository](https://github.com/launchdarkly/js-core/tree/main/packages/sdk/server-node). Please consider upgrading and filing potential requests in that repository's [issue tracker](https://github.com/launchdarkly/js-core/issues?q=is%3Aissue+is%3Aopen+label%3A%22package%3A+sdk%2Fserver-node%22+sort%3Aupdated-desc).
+
+## v7.x readme
+
 [![NPM](https://img.shields.io/npm/v/launchdarkly-node-server-sdk.svg?style=flat-square)](https://www.npmjs.com/package/launchdarkly-node-server-sdk)
 [![CircleCI](https://circleci.com/gh/launchdarkly/node-server-sdk.svg?style=svg)](https://circleci.com/gh/launchdarkly/node-server-sdk)
 [![Documentation](https://img.shields.io/static/v1?label=GitHub+Pages&message=API+reference&color=00add8)](https://launchdarkly.github.io/node-server-sdk)
@@ -10,7 +16,7 @@ For using LaunchDarkly in *client-side* Node.js applications, refer to our [Clie
 
 ## LaunchDarkly overview
 
-[LaunchDarkly](https://www.launchdarkly.com) is a feature management platform that serves over 100 billion feature flags daily to help teams build better software, faster. [Get started](https://docs.launchdarkly.com/home/getting-started) using LaunchDarkly today!
+[LaunchDarkly](https://www.launchdarkly.com) is a feature management platform that serves trillions of feature flags daily to help teams build better software, faster. [Get started](https://docs.launchdarkly.com/home/getting-started) using LaunchDarkly today!
 
 [![Twitter Follow](https://img.shields.io/twitter/follow/launchdarkly.svg?style=social&label=Follow&maxAge=2592000)](https://twitter.com/intent/follow?screen_name=launchdarkly)
 
@@ -24,7 +30,7 @@ Refer to the [SDK reference guide](https://docs.launchdarkly.com/sdk/server-side
 
 ## Learn more
 
-Check out our [documentation](http://docs.launchdarkly.com) for in-depth instructions on configuring and using LaunchDarkly. You can also head straight to the [complete reference guide for this SDK](https://docs.launchdarkly.com/sdk/server-side/node-js).
+Read our [documentation](http://docs.launchdarkly.com) for in-depth instructions on configuring and using LaunchDarkly. You can also head straight to the [complete reference guide for this SDK](https://docs.launchdarkly.com/sdk/server-side/node-js).
 
 The authoritative description of all properties and methods is in the [TypeScript documentation](https://launchdarkly.github.io/node-server-sdk/).
 
@@ -43,7 +49,7 @@ We encourage pull requests and other contributions from the community. Check out
     * Gradually roll out a feature to an increasing percentage of users, and track the effect that the feature has on key metrics (for instance, how likely is a user to complete a purchase if they have feature A versus feature B?).
     * Turn off a feature that you realize is causing performance problems in production, without needing to re-deploy, or even restart the application with a changed configuration file.
     * Grant access to certain features based on user attributes, like payment plan (eg: users on the ‘gold’ plan get access to more features than users in the ‘silver’ plan). Disable parts of your application to facilitate maintenance, without taking everything offline.
-* LaunchDarkly provides feature flag SDKs for a wide variety of languages and technologies. Check out [our documentation](https://docs.launchdarkly.com/sdk) for a complete list.
+* LaunchDarkly provides feature flag SDKs for a wide variety of languages and technologies. Read [our documentation](https://docs.launchdarkly.com/sdk) for a complete list.
 * Explore LaunchDarkly
     * [launchdarkly.com](https://www.launchdarkly.com/ "LaunchDarkly Main Website") for more information
     * [docs.launchdarkly.com](https://docs.launchdarkly.com/  "LaunchDarkly Documentation") for our documentation and SDK reference guides
