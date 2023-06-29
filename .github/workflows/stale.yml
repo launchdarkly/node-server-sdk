@@ -1,0 +1,8 @@
+name: 'Close stale issues and PRs'
+on:
+  schedule:
+    - cron: '30 1 * * *'
+
+jobs:
+  stale:
+    uses: launchdarkly/gh-actions/.github/workflows/sdk-stale.yml@main
