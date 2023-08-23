@@ -94,14 +94,14 @@ same as <code>&quot;update&quot;</code> but allows you to listen for a specific 
 </div></div></li></ul><h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><div><p>  The hash string.</p>
 </div></li></ul></section><section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="track" class="tsd-anchor"></a><h3 class="tsd-anchor-link">track<a href="#track" aria-label="Permalink" class="tsd-anchor-icon"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5"></path><path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5"></path></svg></a></h3><ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface"><li class="tsd-signature tsd-kind-icon">track<span class="tsd-signature-symbol">(</span>key<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, context<span class="tsd-signature-symbol">: </span><a href="../modules/_launchdarkly_node_server_sdk_.html#LDContext" class="tsd-signature-type" data-tsd-kind="Type alias">LDContext</a>, data<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">any</span>, metricValue<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li></ul><ul class="tsd-descriptions"><li class="tsd-description"><aside class="tsd-sources"><ul><li>Defined in index.d.ts:1277</li></ul></aside><div class="tsd-comment tsd-typography"><div class="lead">
 <p>Tracks that a context performed an event.</p>
-</div><div><p>LaunchDarkly automatically tracks pageviews and clicks that are specified in the Goals
-section of the dashboard. This can be used to track custom goals or other events that do
-not currently have goals.</p>
+</div><div><p>LaunchDarkly automatically tracks pageviews and clicks that are specified in the Metrics
+section of the dashboard. This can be used to track custom metrics (goals) or other events that do
+not currently have metrics.</p>
 <p>Note that event delivery is asynchronous, so the event may not actually be sent until later;
 see <a href="_launchdarkly_node_server_sdk_.LDClient.html#flush">flush</a>.</p>
 <p>If the context is omitted or has no key, the client will log a warning and will not send an event.</p>
 </div></div><h4 class="tsd-parameters-title">Parameters</h4><ul class="tsd-parameters"><li><h5>key: <span class="tsd-signature-type">string</span></h5><div class="tsd-comment tsd-typography"><div class="lead">
-<p>  The name of the event, which may correspond to a goal in A/B tests.</p>
+<p>  The name of the event, which may correspond to a metric in experiments.</p>
 </div></div></li><li><h5>context: <a href="../modules/_launchdarkly_node_server_sdk_.html#LDContext" class="tsd-signature-type" data-tsd-kind="Type alias">LDContext</a></h5><div class="tsd-comment tsd-typography"><div class="lead">
 <p>  The context to track.</p>
 </div></div></li><li><h5><span class="tsd-flag ts-flagOptional">Optional</span> data: <span class="tsd-signature-type">any</span></h5><div class="tsd-comment tsd-typography"><div class="lead">
