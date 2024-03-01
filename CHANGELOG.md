@@ -2,6 +2,9 @@
 
 All notable changes to the LaunchDarkly Server-Side SDK for Node.js will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [7.0.4] - 2024-03-01
+This release contains no code changes. It updates the README file to emphasize that this is not the most recent package.
+
 ## [7.0.3] - 2023-08-23
 ### Changed:
 - Updated semver from `7.3.0` to `7.5.3`. (Thanks! [Nicholas-Arthur-Cook](https://github.com/launchdarkly/node-server-sdk/pull/285))
