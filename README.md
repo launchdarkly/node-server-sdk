@@ -1,8 +1,10 @@
 # LaunchDarkly Server-Side SDK for Node.js
 
-# Important note
+# Use [@launchdarkly/node-server-sdk](https://www.npmjs.com/package/@launchdarkly/node-server-sdk) instead of this package.
 
 As mentioned in the [repository changelog](https://github.com/launchdarkly/node-server-sdk/blob/main/CHANGELOG.md), the `launchdarkly-node-server-sdk` project has been renamed to `@launchdarkly/node-server-sdk`. All future releases will be made from the [new repository](https://github.com/launchdarkly/js-core/tree/main/packages/sdk/server-node). Please consider upgrading and filing potential requests in that repository's [issue tracker](https://github.com/launchdarkly/js-core/issues?q=is%3Aissue+is%3Aopen+label%3A%22package%3A+sdk%2Fserver-node%22+sort%3Aupdated-desc).
+
+# ☝️☝️☝️☝️☝️☝️
 
 ## v7.x readme
 
